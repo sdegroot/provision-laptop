@@ -14,9 +14,11 @@ credentials.json
 
 # VM artifacts
 tests/vm/*.iso
+tests/vm/*.iso.bak
 tests/vm/*.qcow2
 tests/vm/*.fd
 tests/vm/pid/
+tests/vm/.ks-work/
 
 # OS artifacts
 .DS_Store

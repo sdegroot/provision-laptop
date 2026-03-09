@@ -16,7 +16,7 @@ network --hostname=silverblue-workstation
 rootpw --lock
 
 # User account
-user --name=admin --groups=wheel --plaintext --password=changeme
+user --name=sdegroot --groups=wheel --plaintext --password=changeme
 
 # SELinux and firewall
 selinux --enforcing

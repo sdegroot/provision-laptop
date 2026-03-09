@@ -1,31 +1,32 @@
 # vm-single-disk.ks — Fedora Silverblue kickstart for VM testing.
 #
-# Usage: Boot ISO with inst.ks=<url-to-this-file>
+# This file uses %include with relative paths that only work when served
+# from the ISO or when flattened by tests/vm/kickstart-install.sh.
+# For automated VM installs, the flatten script inlines all includes.
 
 # Include common configuration
-%include /run/install/repo/base.ks
+%include base.ks
 
 # Include VM partitioning
-%include /run/install/repo/includes/partitioning-vm.ks
+%include includes/partitioning-vm.ks
 
-# Select Silverblue environment
+# Select Silverblue environment (aarch64 for Apple Silicon VM)
 ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/41/aarch64/silverblue --nogpg
 
 # Post-install script
 %post --log=/root/kickstart-post.log
 
-# Ensure admin user has passwordless sudo (for provisioning)
-echo "admin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/admin
-chmod 0440 /etc/sudoers.d/admin
+# Set up passwordless sudo for provisioning user
+echo "sdegroot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sdegroot
+chmod 0440 /etc/sudoers.d/sdegroot
+
+# Enable password authentication for SSH (needed for initial VM access)
+cat > /etc/ssh/sshd_config.d/99-allow-password.conf <<SSHEOF
+PasswordAuthentication yes
+SSHEOF
 
 # Install git for repo cloning (will be available after reboot)
 rpm-ostree install git --allow-inactive
-
-# Clone the provisioning repository
-if command -v git &>/dev/null; then
-    git clone https://github.com/sdegroot/provision-laptop.git /home/admin/provision-laptop || true
-    chown -R admin:admin /home/admin/provision-laptop
-fi
 
 echo "Kickstart post-install complete."
 %end

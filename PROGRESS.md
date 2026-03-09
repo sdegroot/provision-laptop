@@ -12,13 +12,14 @@ Tracking implementation status per phase from `plan.md`.
 - [x] `Makefile`
 - [x] Verified: VM boots, Fedora Silverblue 41 aarch64 installed, SSH works
 
-## Phase 1: Kickstart — Files Written, Not Yet Tested
-- [x] `kickstart/base.ks`
-- [x] `kickstart/vm-single-disk.ks`
+## Phase 1: Kickstart — Implemented, Testing In Progress
+- [x] `kickstart/base.ks` — updated: user=sdegroot
+- [x] `kickstart/vm-single-disk.ks` — updated: sdegroot user, SSH password auth, passwordless sudo
 - [x] `kickstart/laptop-dual-disk.ks`
-- [x] `kickstart/includes/partitioning-vm.ks`
+- [x] `kickstart/includes/partitioning-vm.ks` — LUKS2 + Btrfs with test passphrase
 - [x] `kickstart/includes/partitioning-laptop.ks`
-- [ ] Kickstart HTTP serving integration in `tests/vm/create-vm.sh`
+- [x] `tests/vm/kickstart-install.sh` — flattens kickstart, extracts kernel/initrd, HTTP serve, QEMU boot
+- [x] `Makefile` — added `vm-kickstart` target
 - [ ] End-to-end kickstart install test
 
 ## Phase 2: Bootstrap — Files Written, Not Yet Tested

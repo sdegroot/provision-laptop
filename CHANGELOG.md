@@ -6,11 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Automated kickstart install script (`tests/vm/kickstart-install.sh`): flattens modular
+  kickstart files, extracts kernel/initrd from ISO, serves kickstart via HTTP, boots QEMU
+  with `inst.ks=` parameter for fully unattended installation
+- `make vm-kickstart` target for one-command automated VM install
+
 ### Fixed
 - dev-web toolbox: added `sudo` to `npm install -g` for global package installs
 - dev-python toolbox: install pipx via dnf instead of pip (fixes PATH issue)
 - dev-infra toolbox: add HashiCorp repo for terraform, removed from dnf packages list
 - dev-infra toolbox: detect architecture for correct AWS CLI installer URL
+
+### Changed
+- Kickstart user changed from `admin` to `sdegroot`
+- VM kickstart now sets up SSH password auth and passwordless sudo automatically
+- VM partitioning uses LUKS2 + Btrfs with test passphrase (`temppass`)
 
 ### Added
 - Project skeleton with README, .gitignore, Makefile
