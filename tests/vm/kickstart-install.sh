@@ -264,6 +264,5 @@ qemu-system-aarch64 "${QEMU_ARGS[@]}" \
 echo ""
 echo "VM window closed. If the install completed successfully:"
 echo "  1. Start the VM:  tests/vm/start-vm.sh"
-echo "  2. Enter LUKS passphrase when prompted: temppass"
-echo "  3. Connect:       tests/vm/ssh-vm.sh"
-echo "  4. SSH password:  changeme"
+echo "  2. Connect:       tests/vm/ssh-vm.sh"
+echo "  3. SSH password:  changeme"
