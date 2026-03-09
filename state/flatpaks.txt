@@ -9,7 +9,7 @@ com.jetbrains.IntelliJ-IDEA-Ultimate
 com.visualstudio.code
 
 # Communication
-org.signal.Signal
+[x86_64] org.signal.Signal
 com.slack.Slack
 com.mattermost.Desktop
 im.riot.Riot

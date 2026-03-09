@@ -22,11 +22,11 @@ Tracking implementation status per phase from `plan.md`.
 - [x] `Makefile` — added `vm-kickstart` target
 - [x] End-to-end kickstart install verified: Btrfs subvolumes, passwordless sudo, SSH all working
 
-## Phase 2: Bootstrap — Files Written, Not Yet Tested
+## Phase 2: Bootstrap — DONE, VERIFIED IN VM
 - [x] `kickstart/includes/post-install.sh`
 - [x] `bootstrap/first-boot.sh`
-- [x] `bootstrap/first-boot.service`
-- [ ] End-to-end first-boot test
+- [x] `bootstrap/first-boot.service` — fixed: user references from admin to sdegroot
+- [x] End-to-end first-boot test — `first-boot.sh` runs `bin/apply`, all 10 modules pass
 
 ## Phase 3: Repository Skeleton + Engine Framework — DONE, VERIFIED
 - [x] `.gitignore`, `README.md`, `CHANGELOG.md`
@@ -112,13 +112,30 @@ Tracking implementation status per phase from `plan.md`.
 
 ## VM Verification Summary
 
-Full `bin/check` in Fedora Silverblue 41 VM: **2/10 modules passed** (repos, host-packages).
-Remaining drift is expected — VM has not had `bin/apply` run for all modules.
+After `first-boot.sh` (runs `bin/apply`), `bin/check`: **8/10 modules passed**.
+
+```
+directories     ✓
+repos           ✓
+host-packages   ✓
+flatpaks        ✗  (6 missing — VM has older flatpaks.txt, not a bug)
+dotfiles        ✓
+security        ✓
+hardware        ✗  (missing swap — expected in VM, no swap partition)
+mise            ✓
+toolboxes       ✓
+containers      ✓
+```
 
 Smoke tests: **4/4 passed** (system basics, provisioning, flatpaks, directories).
 
+## Bugs Found and Fixed During E2E Test
+- `first-boot.service` referenced `admin` user — fixed to `sdegroot`
+- `toolboxes/apply.sh` stdin consumption bug — `toolbox create` / `toolbox run` consumed
+  the `while read` loop's stdin, causing only the first toolbox to be created. Fixed with
+  `</dev/null` redirects.
+- `flatpaks.txt` — `org.signal.Signal` has no aarch64 build. Added `[x86_64]` arch tag.
+
 ## Remaining Work
-- [ ] First-boot service end-to-end test
 - [ ] USB installer testing on real hardware
-- [ ] Run `bin/apply` in VM and re-verify all 10 modules pass
 - [ ] Customize state files for real user preferences

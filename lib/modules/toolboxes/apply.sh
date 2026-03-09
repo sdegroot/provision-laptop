@@ -33,19 +33,21 @@ while IFS= read -r profile; do
     log_info "Creating toolbox: ${profile} (image: ${image})"
 
     # Create the toolbox
-    toolbox create --assumeyes --image "$image" "$profile"
+    # Redirect stdin to /dev/null to prevent toolbox/podman from consuming
+    # the while-read loop's input (classic stdin consumption bug).
+    toolbox create --assumeyes --image "$image" "$profile" </dev/null
 
     # Run base setup with packages
     if [[ -n "$packages" ]]; then
         log_info "Installing packages in ${profile}: ${packages}"
         # shellcheck disable=SC2086
-        toolbox run -c "$profile" bash "$BASE_SETUP" $packages
+        toolbox run -c "$profile" bash "$BASE_SETUP" $packages </dev/null
     fi
 
     # Run profile-specific setup script
     if [[ -n "$setup_script" && -f "${PROFILES_DIR}/${setup_script}" ]]; then
         log_info "Running setup script for ${profile}: ${setup_script}"
-        toolbox run -c "$profile" bash "${PROFILES_DIR}/${setup_script}"
+        toolbox run -c "$profile" bash "${PROFILES_DIR}/${setup_script}" </dev/null
     fi
 
     changes_made=1

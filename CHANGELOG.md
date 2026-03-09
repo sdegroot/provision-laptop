@@ -17,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Directories for AI sandbox config (`~/.config/ai-sandbox`) and logs
   (`~/.local/share/ai-sandbox/logs`)
 
+### Fixed
+- **toolboxes module** — stdin consumption bug where `toolbox create` / `toolbox run`
+  consumed the `while read` loop's input, causing only the first toolbox to be created.
+  Fixed with `</dev/null` redirects.
+- **first-boot.service** — user references changed from `admin` to `sdegroot`
+- **flatpaks** — `org.signal.Signal` arch-tagged to `[x86_64]` (no aarch64 build)
+
 ### Removed
 - `containers/ai-sandbox/run.sh` — replaced by `bin/ai-sandbox`
 

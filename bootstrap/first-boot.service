@@ -6,14 +6,14 @@ ConditionPathExists=!/var/lib/provision-first-boot.done
 
 [Service]
 Type=oneshot
-ExecStart=/home/admin/provision-laptop/bootstrap/first-boot.sh
+ExecStart=/home/sdegroot/provision-laptop/bootstrap/first-boot.sh
 ExecStartPost=/usr/bin/touch /var/lib/provision-first-boot.done
 RemainAfterExit=yes
 StandardOutput=journal+console
 StandardError=journal+console
-Environment=HOME=/home/admin
-Environment=USER=admin
-User=admin
+Environment=HOME=/home/sdegroot
+Environment=USER=sdegroot
+User=sdegroot
 
 [Install]
 WantedBy=multi-user.target
