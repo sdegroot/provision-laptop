@@ -5,17 +5,24 @@
 org.mozilla.firefox
 
 # Development
-com.jetbrains.IntelliJ-IDEA-Community
+com.jetbrains.IntelliJ-IDEA-Ultimate
 com.visualstudio.code
 
 # Communication
 org.signal.Signal
+com.slack.Slack
+com.mattermost.Desktop
+im.riot.Riot
 
 # Security
 com.onepassword.OnePassword
 
 # Media
 org.videolan.VLC
+
+# Connectivity
+org.kde.kdeconnect
+org.localsend.localsend_app
 
 # Utilities
 org.gnome.Calculator

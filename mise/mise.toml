@@ -8,6 +8,11 @@ python = "3.12"
 go = "latest"
 java = "21"
 
+# AI coding assistants (installed globally via npm)
+"npm:@anthropic-ai/claude-code" = "latest"
+"npm:@openai/codex" = "latest"
+"npm:@google/gemini-cli" = "latest"
+
 [settings]
 # Automatically install missing tools
 auto_install = true
