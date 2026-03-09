@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mise/check.sh — Verify mise is installed and configured.
+# mise/check.sh — Verify mise is installed, configured, and JDK symlinks exist.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
@@ -30,6 +30,34 @@ elif [[ -f "$MISE_CONFIG" ]]; then
 else
     log_error "Mise global config missing: ${MISE_CONFIG}"
     drift_found=1
+fi
+
+# -------------------------------------------------------------------------
+# Check ~/.jdks/ symlinks for IntelliJ auto-discovery
+# -------------------------------------------------------------------------
+
+JDKS_DIR="${PROVISION_ROOT}${HOME}/.jdks"
+MISE_INSTALLS="${HOME}/.local/share/mise/installs"
+
+if [[ -z "$PROVISION_ROOT" ]] && [[ -d "${MISE_INSTALLS}/java" ]]; then
+    for java_dir in "${MISE_INSTALLS}/java/"*/; do
+        [[ -d "$java_dir" ]] || continue
+        version="$(basename "$java_dir")"
+        link="${JDKS_DIR}/java-${version}"
+
+        if [[ -L "$link" ]]; then
+            current_target="$(readlink "$link")"
+            if [[ "$current_target" == "$java_dir" ]]; then
+                log_ok "JDK symlink: java-${version}"
+            else
+                log_error "JDK symlink points to wrong target: java-${version}"
+                drift_found=1
+            fi
+        else
+            log_error "Missing JDK symlink: java-${version}"
+            drift_found=1
+        fi
+    done
 fi
 
 if [[ $drift_found -eq 0 ]]; then

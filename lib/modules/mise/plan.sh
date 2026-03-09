@@ -27,6 +27,26 @@ elif [[ ! -e "$MISE_CONFIG" ]]; then
     changes_planned=1
 fi
 
+# -------------------------------------------------------------------------
+# Check ~/.jdks/ symlinks
+# -------------------------------------------------------------------------
+
+JDKS_DIR="${PROVISION_ROOT}${HOME}/.jdks"
+MISE_INSTALLS="${HOME}/.local/share/mise/installs"
+
+if [[ -z "$PROVISION_ROOT" ]] && [[ -d "${MISE_INSTALLS}/java" ]]; then
+    for java_dir in "${MISE_INSTALLS}/java/"*/; do
+        [[ -d "$java_dir" ]] || continue
+        version="$(basename "$java_dir")"
+        link="${JDKS_DIR}/java-${version}"
+
+        if [[ ! -L "$link" ]] || [[ "$(readlink "$link")" != "$java_dir" ]]; then
+            log_plan "Would create JDK symlink: java-${version}"
+            changes_planned=1
+        fi
+    done
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No mise changes needed"
 fi

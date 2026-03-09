@@ -132,6 +132,27 @@ profiles:
     setup_script: dev-base.sh
 ```
 
+## `state/flatpak-overrides.conf`
+
+**Module:** `flatpaks`
+
+Flatpak permission overrides applied with `flatpak override --user`. Format: `app_id permission_type permission_value`
+
+Supported permission types:
+
+| Type | Maps to | Example |
+|------|---------|---------|
+| `filesystem` | `--filesystem=` | `~/.local/share/mise:ro` |
+| `env` | `--env=` | `MY_VAR=value` |
+
+```
+# Give IntelliJ access to mise-managed SDKs
+com.jetbrains.IntelliJ-IDEA-Ultimate filesystem ~/.local/share/mise:ro
+com.jetbrains.IntelliJ-IDEA-Ultimate filesystem ~/.jdks:ro
+```
+
+This is used to give Flatpak applications access to directories they need but can't see due to sandboxing. IntelliJ needs access to mise-managed SDKs for auto-discovery.
+
 ## `state/containers.conf`
 
 **Module:** `containers`

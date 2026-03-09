@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# flatpaks/apply.sh — Install missing Flatpak applications.
+# flatpaks/apply.sh — Install missing Flatpak applications and apply overrides.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
 STATE_FILE="$(state_file_path "flatpaks.txt")"
+OVERRIDES_FILE="$(state_file_path "flatpak-overrides.conf")"
 changes_made=0
 
 if ! has_command flatpak; then
@@ -32,6 +33,36 @@ while IFS= read -r app_id; do
         log_error "Failed to install: ${app_id}"
     fi
 done < <(parse_state_file "$STATE_FILE")
+
+# Apply Flatpak overrides
+if [[ -f "$OVERRIDES_FILE" ]]; then
+    while IFS= read -r line; do
+        read -r app_id perm_type perm_value <<< "$line"
+
+        case "$perm_type" in
+            filesystem)
+                # Check if override is already set
+                current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
+                if ! echo "$current" | grep -q "$perm_value"; then
+                    log_info "Setting Flatpak override: ${app_id} --filesystem=${perm_value}"
+                    flatpak override --user --filesystem="$perm_value" "$app_id"
+                    changes_made=1
+                fi
+                ;;
+            env)
+                current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
+                if ! echo "$current" | grep -q "$perm_value"; then
+                    log_info "Setting Flatpak override: ${app_id} --env=${perm_value}"
+                    flatpak override --user --env="$perm_value" "$app_id"
+                    changes_made=1
+                fi
+                ;;
+            *)
+                log_warn "Unknown override type: ${perm_type} (for ${app_id})"
+                ;;
+        esac
+    done < <(parse_state_file "$OVERRIDES_FILE")
+fi
 
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All Flatpak applications already installed"
