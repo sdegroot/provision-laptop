@@ -35,5 +35,5 @@ if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
 fi
 
 log_info "Installing ${#missing_pkgs[@]} packages: ${missing_pkgs[*]}"
-rpm-ostree install --idempotent --allow-inactive "${missing_pkgs[@]}"
+sudo rpm-ostree install --idempotent --allow-inactive "${missing_pkgs[@]}"
 log_ok "Host packages applied (reboot may be required)"

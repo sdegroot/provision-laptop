@@ -9,7 +9,7 @@ com.jetbrains.IntelliJ-IDEA-Community
 com.visualstudio.code
 
 # Communication
-org.signal.Signal
+# org.signal.Signal  # not available on aarch64
 
 # Security
 com.onepassword.OnePassword

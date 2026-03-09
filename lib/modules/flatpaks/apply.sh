@@ -14,7 +14,7 @@ fi
 # Ensure Flathub remote is configured
 if ! flatpak remote-list --columns=name 2>/dev/null | grep -q "^flathub$"; then
     log_info "Adding Flathub remote..."
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 fi
 
 installed="$(flatpak list --app --columns=application 2>/dev/null || true)"
@@ -25,7 +25,7 @@ while IFS= read -r app_id; do
     fi
 
     log_info "Installing Flatpak: ${app_id}"
-    if flatpak install -y --noninteractive flathub "$app_id"; then
+    if sudo flatpak install -y --noninteractive flathub "$app_id"; then
         log_ok "Installed: ${app_id}"
         changes_made=1
     else
