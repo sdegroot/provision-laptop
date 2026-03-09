@@ -1,0 +1,27 @@
+# AI Sandbox Container
+# Isolated environment for running AI tools with limited filesystem access.
+FROM registry.fedoraproject.org/fedora:41
+
+RUN dnf install -y \
+    python3 \
+    python3-pip \
+    git \
+    curl \
+    && dnf clean all
+
+# Create a non-root user
+RUN useradd -m -s /bin/bash sandbox
+
+# Set working directory
+WORKDIR /workspace
+
+USER sandbox
+
+# Install common AI/ML Python packages
+RUN pip3 install --user \
+    openai \
+    anthropic \
+    langchain \
+    requests
+
+CMD ["/bin/bash"]
