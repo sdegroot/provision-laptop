@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # repos/plan.sh — Show planned repo changes (dry-run).
+#
+# Checks /etc/yum.repos.d/ for repo presence (works on Silverblue without dnf).
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
@@ -11,7 +13,13 @@ if ! is_silverblue; then
     exit 0
 fi
 
-enabled_repos="$(dnf repolist --enabled 2>/dev/null | tail -n +2 || true)"
+# Check if a repo is present by scanning /etc/yum.repos.d/
+repo_exists() {
+    local name="$1"
+    local repo_dir="${PROVISION_ROOT}/etc/yum.repos.d"
+    ls "${repo_dir}"/*"${name}"* &>/dev/null 2>&1 || \
+    grep -rql "\[.*${name}.*\]" "${repo_dir}/" &>/dev/null 2>&1
+}
 
 while IFS= read -r line; do
     read -r repo_type repo_arg <<< "$line"
@@ -19,19 +27,19 @@ while IFS= read -r line; do
     case "$repo_type" in
         repofile)
             repo_name="$(basename "$repo_arg" .repo)"
-            if ! echo "$enabled_repos" | grep -qi "$repo_name"; then
+            if ! repo_exists "$repo_name"; then
                 log_plan "Would add repo: ${repo_name} (from ${repo_arg})"
                 changes_planned=1
             fi
             ;;
         rpmfusion-free)
-            if ! echo "$enabled_repos" | grep -q "rpmfusion-free"; then
+            if ! repo_exists "rpmfusion-free"; then
                 log_plan "Would add RPM Fusion Free"
                 changes_planned=1
             fi
             ;;
         rpmfusion-nonfree)
-            if ! echo "$enabled_repos" | grep -q "rpmfusion-nonfree"; then
+            if ! repo_exists "rpmfusion-nonfree"; then
                 log_plan "Would add RPM Fusion Non-Free"
                 changes_planned=1
             fi
@@ -39,7 +47,8 @@ while IFS= read -r line; do
         copr)
             copr_owner="$(echo "$repo_arg" | cut -d/ -f1)"
             copr_project="$(echo "$repo_arg" | cut -d/ -f2)"
-            if ! echo "$enabled_repos" | grep -q "${copr_owner}.*${copr_project}"; then
+            if ! repo_exists "${copr_owner}.*${copr_project}" && \
+               ! repo_exists "_copr.*${copr_owner}.*${copr_project}"; then
                 log_plan "Would enable COPR: ${repo_arg}"
                 changes_planned=1
             fi

@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # repos/apply.sh — Configure third-party repos.
+#
+# Silverblue does not ship dnf — repo management uses:
+#   - curl to download .repo files into /etc/yum.repos.d/
+#   - rpm-ostree install for RPM Fusion release packages
+#   - COPR .repo files via the Fedora COPR API
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
@@ -11,8 +16,15 @@ if ! is_silverblue; then
     exit 0
 fi
 
-enabled_repos="$(dnf repolist --enabled 2>/dev/null | tail -n +2 || true)"
 fedora_version="$(rpm -E %fedora)"
+
+# Check if a repo is already present by looking for .repo files or rpm-ostree packages
+repo_exists() {
+    local name="$1"
+    # Check /etc/yum.repos.d/ for matching .repo files
+    ls /etc/yum.repos.d/*"${name}"* &>/dev/null 2>&1 || \
+    grep -rql "\[.*${name}.*\]" /etc/yum.repos.d/ &>/dev/null 2>&1
+}
 
 while IFS= read -r line; do
     read -r repo_type repo_arg <<< "$line"
@@ -20,14 +32,14 @@ while IFS= read -r line; do
     case "$repo_type" in
         repofile)
             repo_name="$(basename "$repo_arg" .repo)"
-            if ! echo "$enabled_repos" | grep -qi "$repo_name"; then
+            if ! repo_exists "$repo_name"; then
                 log_info "Adding repo from: ${repo_arg}"
-                sudo dnf config-manager addrepo --from-repofile="$repo_arg"
+                sudo curl -fsSL -o "/etc/yum.repos.d/${repo_name}.repo" "$repo_arg"
                 changes_made=1
             fi
             ;;
         rpmfusion-free)
-            if ! echo "$enabled_repos" | grep -q "rpmfusion-free"; then
+            if ! repo_exists "rpmfusion-free"; then
                 log_info "Adding RPM Fusion Free"
                 sudo rpm-ostree install --idempotent --allow-inactive \
                     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"
@@ -35,7 +47,7 @@ while IFS= read -r line; do
             fi
             ;;
         rpmfusion-nonfree)
-            if ! echo "$enabled_repos" | grep -q "rpmfusion-nonfree"; then
+            if ! repo_exists "rpmfusion-nonfree"; then
                 log_info "Adding RPM Fusion Non-Free"
                 sudo rpm-ostree install --idempotent --allow-inactive \
                     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"
@@ -45,9 +57,12 @@ while IFS= read -r line; do
         copr)
             copr_owner="$(echo "$repo_arg" | cut -d/ -f1)"
             copr_project="$(echo "$repo_arg" | cut -d/ -f2)"
-            if ! echo "$enabled_repos" | grep -q "${copr_owner}.*${copr_project}"; then
+            if ! repo_exists "${copr_owner}.*${copr_project}" && \
+               ! repo_exists "_copr.*${copr_owner}.*${copr_project}"; then
                 log_info "Enabling COPR: ${repo_arg}"
-                sudo dnf copr enable "$repo_arg" -y
+                # Download .repo file directly from COPR API (no dnf needed)
+                copr_repo_url="https://copr.fedorainfracloud.org/coprs/${copr_owner}/${copr_project}/repo/fedora-${fedora_version}/${copr_owner}-${copr_project}-fedora-${fedora_version}.repo"
+                sudo curl -fsSL -o "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${copr_owner}:${copr_project}.repo" "$copr_repo_url"
                 changes_made=1
             fi
             ;;
