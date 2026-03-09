@@ -9,8 +9,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 VM_SSH_PORT="${VM_SSH_PORT:-2222}"
-VM_USER="${VM_USER:-admin}"
-SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p ${VM_SSH_PORT} ${VM_USER}@localhost"
+VM_USER="${VM_USER:-sdegroot}"
+VM_PASSWORD="${VM_PASSWORD:-changeme}"
+
+# Disable identity agent to prevent 1Password SSH agent from exhausting auth
+# attempts before password auth can be tried.
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o IdentityAgent=none -o IdentitiesOnly=yes"
+
+if command -v sshpass &>/dev/null; then
+    SSH_CMD="sshpass -p ${VM_PASSWORD} ssh ${SSH_OPTS} -p ${VM_SSH_PORT} ${VM_USER}@localhost"
+else
+    echo "WARNING: sshpass not found — SSH may prompt for password (install: brew install sshpass)"
+    SSH_CMD="ssh ${SSH_OPTS} -p ${VM_SSH_PORT} ${VM_USER}@localhost"
+fi
 
 TESTS_DIR="${SCRIPT_DIR}/../smoke"
 pass_count=0
