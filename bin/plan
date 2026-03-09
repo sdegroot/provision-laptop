@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# bin/plan - Show what changes would be made (dry-run).
+#
+# Usage: bin/plan [--module <name>]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../lib/engine.sh"
+
+log_info "Planning changes (dry-run)..."
+parse_engine_args "plan" "$@"

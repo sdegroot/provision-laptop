@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# bin/apply - Enforce desired state on the system.
+#
+# Usage: bin/apply [--module <name>]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../lib/engine.sh"
+
+log_info "Applying desired state..."
+parse_engine_args "apply" "$@"

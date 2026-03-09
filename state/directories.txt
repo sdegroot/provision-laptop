@@ -1,0 +1,14 @@
+# Desired directories
+# Format: path:owner:mode
+# owner is optional (defaults to current user)
+# mode is optional (defaults to 0755)
+
+# User directories
+~/.config:${USER}:0700
+~/.local/bin:${USER}:0755
+~/.local/share:${USER}:0755
+~/.ssh:${USER}:0700
+
+# Development
+~/Projects:${USER}:0755
+~/Sandbox:${USER}:0755

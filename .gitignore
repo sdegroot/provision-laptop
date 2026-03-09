@@ -1,0 +1,23 @@
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Environment and secrets
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# VM artifacts
+tests/vm/*.iso
+tests/vm/*.qcow2
+tests/vm/*.fd
+tests/vm/pid/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

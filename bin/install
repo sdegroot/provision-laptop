@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# bin/install - First-time setup for a new machine.
+#
+# This script prepares the system and then runs bin/apply.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../lib/common.sh"
+
+log_info "Starting first-time installation..."
+
+# Verify we're on a supported system.
+if ! is_silverblue; then
+    log_warn "Not running on Fedora Silverblue. Some modules may not work correctly."
+fi
+
+# Run apply to enforce desired state.
+log_info "Running apply to enforce desired state..."
+exec "${SCRIPT_DIR}/apply" "$@"
