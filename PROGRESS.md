@@ -12,15 +12,15 @@ Tracking implementation status per phase from `plan.md`.
 - [x] `Makefile`
 - [x] Verified: VM boots, Fedora Silverblue 41 aarch64 installed, SSH works
 
-## Phase 1: Kickstart — Implemented, Testing In Progress
+## Phase 1: Kickstart — DONE, VERIFIED IN VM
 - [x] `kickstart/base.ks` — updated: user=sdegroot
-- [x] `kickstart/vm-single-disk.ks` — updated: sdegroot user, SSH password auth, passwordless sudo
-- [x] `kickstart/laptop-dual-disk.ks`
-- [x] `kickstart/includes/partitioning-vm.ks` — LUKS2 + Btrfs with test passphrase
-- [x] `kickstart/includes/partitioning-laptop.ks`
-- [x] `tests/vm/kickstart-install.sh` — flattens kickstart, extracts kernel/initrd, HTTP serve, QEMU boot
+- [x] `kickstart/vm-single-disk.ks` — sdegroot user, SSH password auth, passwordless sudo
+- [x] `kickstart/laptop-dual-disk.ks` — LUKS2 on both NVMe drives (not yet tested)
+- [x] `kickstart/includes/partitioning-vm.ks` — Btrfs, no LUKS (VM only)
+- [x] `kickstart/includes/partitioning-laptop.ks` — LUKS2 + Btrfs (for real hardware)
+- [x] `tests/vm/kickstart-install.sh` — OEMDRV approach: flattens kickstart, creates FAT12 disk, QEMU boot
 - [x] `Makefile` — added `vm-kickstart` target
-- [ ] End-to-end kickstart install test
+- [x] End-to-end kickstart install verified: Btrfs subvolumes, passwordless sudo, SSH all working
 
 ## Phase 2: Bootstrap — Files Written, Not Yet Tested
 - [x] `kickstart/includes/post-install.sh`
