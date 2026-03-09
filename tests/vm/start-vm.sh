@@ -83,7 +83,7 @@ QEMU_ARGS=(
 # Use cocoa display on macOS for GUI (needed for Anaconda installer)
 # Pass --nographic to skip the GUI and run headless
 if [[ "${VM_NOGRAPHIC:-}" == "1" ]]; then
-    QEMU_ARGS+=(-nographic)
+    QEMU_ARGS+=(-display none)
     QEMU_ARGS+=(-daemonize)
 else
     QEMU_ARGS+=(-device ramfb)
