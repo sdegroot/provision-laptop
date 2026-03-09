@@ -82,9 +82,8 @@ if [[ -z "$ISO_PATH" ]]; then
             break
         fi
     done
-    echo "Download the x86_64 ISO from:"
-    echo "  https://fedoraproject.org/silverblue/download"
-    echo "Place it in: tests/vm/"
+    echo "Download it with:"
+    echo "  tests/vm/download-iso.sh --arch x86_64"
     exit 1
 fi
 
