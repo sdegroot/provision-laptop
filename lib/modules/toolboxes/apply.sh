@@ -33,7 +33,7 @@ while IFS= read -r profile; do
     log_info "Creating toolbox: ${profile} (image: ${image})"
 
     # Create the toolbox
-    toolbox create --image "$image" "$profile"
+    toolbox create --assumeyes --image "$image" "$profile"
 
     # Run base setup with packages
     if [[ -n "$packages" ]]; then

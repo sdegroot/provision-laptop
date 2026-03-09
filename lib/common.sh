@@ -18,6 +18,9 @@ PROVISION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # never touch the real filesystem.
 PROVISION_ROOT="${PROVISION_ROOT:-}"
 
+# Ensure ~/.local/bin is in PATH (not always set in non-interactive shells)
+[[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
+
 # ---------------------------------------------------------------------------
 # Color support
 # ---------------------------------------------------------------------------

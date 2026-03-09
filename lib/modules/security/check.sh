@@ -54,7 +54,7 @@ fi
 # Check firewall (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then
-        if firewall-cmd --state &>/dev/null; then
+        if sudo firewall-cmd --state &>/dev/null; then
             log_ok "Firewall is active"
         else
             log_error "Firewall is not active"
