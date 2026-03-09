@@ -1,0 +1,24 @@
+# Flatpak applications
+# One application ID per line
+
+# Browsers
+org.mozilla.firefox
+
+# Development
+com.jetbrains.IntelliJ-IDEA-Community
+com.visualstudio.code
+
+# Communication
+org.signal.Signal
+
+# Security
+com.onepassword.OnePassword
+
+# Media
+org.videolan.VLC
+
+# Utilities
+org.gnome.Calculator
+org.gnome.TextEditor
+org.gnome.Evince
+com.github.tchx84.Flatseal

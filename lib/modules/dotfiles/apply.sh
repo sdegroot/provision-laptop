@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# dotfiles/apply.sh — Symlink dotfiles into $HOME.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
+
+DOTFILES_DIR="${PROVISION_DIR}/dotfiles"
+TARGET_HOME="${PROVISION_ROOT}${HOME}"
+BACKUP_DIR="${TARGET_HOME}/.dotfiles-backup"
+changes_made=0
+
+if [[ ! -d "$DOTFILES_DIR" ]]; then
+    log_warn "No dotfiles directory found: ${DOTFILES_DIR}"
+    exit 0
+fi
+
+while IFS= read -r src_file; do
+    rel_path="${src_file#${DOTFILES_DIR}/}"
+    target="${TARGET_HOME}/${rel_path}"
+    target_dir="$(dirname "$target")"
+
+    # Skip if already correctly symlinked
+    if [[ -L "$target" ]]; then
+        link_dest="$(readlink "$target")"
+        if [[ "$link_dest" == "$src_file" ]]; then
+            continue
+        fi
+        # Wrong symlink — remove and recreate
+        log_info "Fixing symlink: ${rel_path}"
+        rm "$target"
+    elif [[ -e "$target" ]]; then
+        # Back up existing file
+        backup_path="${BACKUP_DIR}/${rel_path}"
+        backup_parent="$(dirname "$backup_path")"
+        mkdir -p "$backup_parent"
+        log_info "Backing up existing file: ${rel_path} -> ${backup_path}"
+        mv "$target" "$backup_path"
+    fi
+
+    # Ensure parent directory exists
+    mkdir -p "$target_dir"
+
+    # Create symlink
+    log_info "Linking: ${rel_path} -> ${src_file}"
+    ln -s "$src_file" "$target"
+    changes_made=1
+done < <(find "$DOTFILES_DIR" -type f | sort)
+
+if [[ $changes_made -eq 0 ]]; then
+    log_ok "All dotfiles already linked"
+else
+    log_ok "Dotfiles applied"
+fi

@@ -1,0 +1,13 @@
+# rpm-ostree layered packages
+# Keep this list minimal — prefer Flatpak and Toolbox over host packages.
+
+# Essential tools
+vim-enhanced
+htop
+git
+
+# Firmware and hardware
+fwupd
+
+# Shells
+zsh

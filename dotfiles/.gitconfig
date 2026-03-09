@@ -1,0 +1,35 @@
+[user]
+    # Set your name and email
+    # name = Your Name
+    # email = your@email.com
+
+[core]
+    editor = vim
+    autocrlf = input
+    pager = less -FRX
+
+[init]
+    defaultBranch = main
+
+[pull]
+    rebase = true
+
+[push]
+    autoSetupRemote = true
+
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    ci = commit
+    lg = log --oneline --graph --decorate --all
+    unstage = reset HEAD --
+
+[credential]
+    helper = /opt/1Password/op-ssh-sign
+
+[gpg]
+    format = ssh
+
+[gpg "ssh"]
+    program = /opt/1Password/op-ssh-sign

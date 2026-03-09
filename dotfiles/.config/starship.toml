@@ -1,0 +1,19 @@
+# Starship prompt configuration
+# https://starship.rs/config/
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+
+[directory]
+truncation_length = 5
+
+[git_branch]
+symbol = " "
+
+[git_status]
+disabled = false
+
+[cmd_duration]
+min_time = 2000
+show_milliseconds = false
