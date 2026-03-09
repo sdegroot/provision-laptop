@@ -58,9 +58,9 @@ fi
 echo "Creating VM disk: ${VM_DISK} (${VM_DISK_SIZE})"
 qemu-img create -f qcow2 "$VM_DISK" "$VM_DISK_SIZE"
 
-# Copy EFI vars (writable copy)
+# Create blank EFI vars file (64MB, matching firmware size)
 VM_EFIVARS="${SCRIPT_DIR}/${VM_NAME}-efivars.fd"
-cp "$EFI_CODE" "$VM_EFIVARS"
+dd if=/dev/zero of="$VM_EFIVARS" bs=1m count=64 2>/dev/null
 
 echo ""
 echo "VM created successfully!"

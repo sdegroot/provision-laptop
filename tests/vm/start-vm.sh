@@ -38,7 +38,7 @@ fi
 ISO_ARGS=()
 for iso in "${SCRIPT_DIR}"/Fedora-Silverblue-ostree-aarch64-*.iso; do
     if [[ -f "$iso" ]]; then
-        ISO_ARGS=(-drive "file=${iso},format=raw,media=cdrom")
+        ISO_ARGS=(-drive "file=${iso},format=raw,if=none,id=cd0,media=cdrom,readonly=on" -device usb-storage,drive=cd0)
         echo "Booting with ISO: ${iso}"
         break
     fi
@@ -60,28 +60,43 @@ echo "  CPUs:     ${VM_CPUS}"
 echo "  SSH port: localhost:${VM_SSH_PORT} -> VM:22"
 echo ""
 
-qemu-system-aarch64 \
-    -name "$VM_NAME" \
-    -machine virt,accel=hvf,highmem=on \
-    -cpu host \
-    -m "$VM_MEMORY" \
-    -smp "$VM_CPUS" \
-    -drive "if=pflash,format=raw,file=${EFI_CODE},readonly=on" \
-    -drive "if=pflash,format=raw,file=${VM_EFIVARS}" \
-    -drive "file=${VM_DISK},format=qcow2,if=virtio" \
-    "${ISO_ARGS[@]}" \
-    -device virtio-net-pci,netdev=net0 \
-    -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
-    -device virtio-gpu-pci \
-    -device qemu-xhci \
-    -device usb-kbd \
-    -device usb-tablet \
-    -display default,show-cursor=on \
-    -pidfile "$PID_FILE" \
-    -daemonize \
+# Build QEMU command
+QEMU_ARGS=(
+    -name "$VM_NAME"
+    -machine virt,accel=hvf,highmem=on
+    -cpu host
+    -m "$VM_MEMORY"
+    -smp "$VM_CPUS"
+    -drive "if=pflash,format=raw,file=${EFI_CODE},readonly=on"
+    -drive "if=pflash,format=raw,file=${VM_EFIVARS}"
+    -drive "file=${VM_DISK},format=qcow2,if=none,id=hd0"
+    -device virtio-blk-pci,drive=hd0
+    -device virtio-net-pci,netdev=net0
+    -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22"
+    -device qemu-xhci
+    -device usb-kbd
+    -device usb-tablet
+    ${ISO_ARGS[@]+"${ISO_ARGS[@]}"}
+    -pidfile "$PID_FILE"
+)
+
+# Use cocoa display on macOS for GUI (needed for Anaconda installer)
+# Pass --nographic to skip the GUI and run headless
+if [[ "${VM_NOGRAPHIC:-}" == "1" ]]; then
+    QEMU_ARGS+=(-nographic)
+    QEMU_ARGS+=(-daemonize)
+else
+    QEMU_ARGS+=(-device ramfb)
+    QEMU_ARGS+=(-display cocoa)
+fi
+
+qemu-system-aarch64 "${QEMU_ARGS[@]}" \
     || { echo "Failed to start VM"; exit 1; }
 
-echo "VM started! PID: $(cat "$PID_FILE")"
+if [[ "${VM_NOGRAPHIC:-}" == "1" ]]; then
+    echo "VM started in background! PID: $(cat "$PID_FILE")"
+else
+    echo "VM window closed."
+fi
 echo ""
 echo "Connect via SSH: tests/vm/ssh-vm.sh"
-echo "Or use QEMU monitor."

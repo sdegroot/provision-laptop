@@ -3,7 +3,7 @@
 set -euo pipefail
 
 VM_SSH_PORT="${VM_SSH_PORT:-2222}"
-VM_USER="${VM_USER:-admin}"
+VM_USER="${VM_USER:-sdegroot}"
 
 exec ssh \
     -o StrictHostKeyChecking=no \
