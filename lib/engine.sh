@@ -118,9 +118,9 @@ run_all_modules() {
 
     while IFS= read -r module_name; do
         if run_module "$module_name" "$mode"; then
-            (( pass_count++ ))
+            (( pass_count++ )) || true
         else
-            (( fail_count++ ))
+            (( fail_count++ )) || true
         fi
     done < <(load_module_order)
 
