@@ -113,6 +113,20 @@ Following Fedora Silverblue best practices:
 - **Runtimes** — mise (per-project versions)
 - **Sandboxes** — Podman (strong isolation)
 
+## AI Sandbox
+
+Run AI coding agents autonomously in isolated Podman containers:
+
+```bash
+bin/ai-sandbox --agent claude \
+    --project ~/Projects/my-app \
+    --prompt "Add input validation to the registration form"
+```
+
+The runner creates a git worktree on a dedicated branch, mounts it into a locked-down container (no host secrets, no push access, resource limits), and lets the agent work. You review the branch afterwards and decide to merge or discard. Supports Claude Code, Codex, and Gemini CLI.
+
+See [AI Sandbox](docs/ai-sandbox.md) for setup, security model, and examples.
+
 ## Testing
 
 ```bash
@@ -138,6 +152,7 @@ See [tests/vm/README.md](tests/vm/README.md) for setting up a test VM on macOS.
 - [YubiKey Setup](docs/yubikey-setup.md) — LUKS unlock and SSH with YubiKey
 - [1Password Setup](docs/1password-setup.md) — SSH agent and CLI setup
 - [USB Installer](docs/usb-installer.md) — Creating bootable USB drives
+- [AI Sandbox](docs/ai-sandbox.md) — Running AI coding agents in isolated containers
 - [Testing](docs/testing.md) — Test levels, writing tests, coverage
 
 ## License
