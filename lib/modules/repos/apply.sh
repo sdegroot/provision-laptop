@@ -73,12 +73,14 @@ while IFS= read -r line; do
     esac
 done < <(parse_state_file "$STATE_FILE")
 
-# VA-API freeworld override (swap mesa drivers for freeworld versions)
-if ! rpm -q mesa-va-drivers-freeworld &>/dev/null; then
-    log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
-    rpm-ostree override remove mesa-va-drivers --install mesa-va-drivers-freeworld 2>/dev/null || true
-    rpm-ostree override remove mesa-vdpau-drivers --install mesa-vdpau-drivers-freeworld 2>/dev/null || true
-    changes_made=1
+# VA-API freeworld override (x86_64 only — needs hardware GPU)
+if [[ "$(current_arch)" == "x86_64" ]]; then
+    if ! rpm -q mesa-va-drivers-freeworld &>/dev/null; then
+        log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
+        rpm-ostree override remove mesa-va-drivers --install mesa-va-drivers-freeworld 2>/dev/null || true
+        rpm-ostree override remove mesa-vdpau-drivers --install mesa-vdpau-drivers-freeworld 2>/dev/null || true
+        changes_made=1
+    fi
 fi
 
 if [[ $changes_made -eq 0 ]]; then

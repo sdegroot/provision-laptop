@@ -47,6 +47,43 @@ output="$(parse_state_file "${TEST_TMPDIR}/comments_only.txt")"
 assert_equals "" "$output"
 teardown_test_tmpdir
 
+# --- parse_state_file with arch tags ---
+
+begin_test "parse_state_file includes lines matching current arch"
+setup_test_tmpdir
+cat > "${TEST_TMPDIR}/arch_state.txt" <<'EOF'
+universal-package
+[x86_64] x86-only-package
+[aarch64] arm-only-package
+EOF
+output="$(PROVISION_ARCH=x86_64 parse_state_file "${TEST_TMPDIR}/arch_state.txt")"
+expected="$(printf 'universal-package\nx86-only-package')"
+assert_equals "$expected" "$output"
+teardown_test_tmpdir
+
+begin_test "parse_state_file excludes lines not matching current arch"
+setup_test_tmpdir
+cat > "${TEST_TMPDIR}/arch_state.txt" <<'EOF'
+universal-package
+[x86_64] x86-only-package
+[aarch64] arm-only-package
+EOF
+output="$(PROVISION_ARCH=aarch64 parse_state_file "${TEST_TMPDIR}/arch_state.txt")"
+expected="$(printf 'universal-package\narm-only-package')"
+assert_equals "$expected" "$output"
+teardown_test_tmpdir
+
+begin_test "parse_state_file handles arch tags with multi-word values"
+setup_test_tmpdir
+cat > "${TEST_TMPDIR}/arch_state.txt" <<'EOF'
+[x86_64] repofile https://example.com/repo.repo
+rpmfusion-free
+EOF
+output="$(PROVISION_ARCH=x86_64 parse_state_file "${TEST_TMPDIR}/arch_state.txt")"
+expected="$(printf 'repofile https://example.com/repo.repo\nrpmfusion-free')"
+assert_equals "$expected" "$output"
+teardown_test_tmpdir
+
 # --- state_file_path ---
 
 begin_test "state_file_path returns correct path"

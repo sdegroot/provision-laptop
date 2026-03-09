@@ -12,9 +12,9 @@ fwupd
 # Shells
 zsh
 
-# Tuxedo hardware (fan control, keyboard backlight, EC interface)
-tuxedo-drivers
-tuxedo-control-center
+# Tuxedo hardware (fan control, keyboard backlight, EC interface — x86_64 only)
+[x86_64] tuxedo-drivers
+[x86_64] tuxedo-control-center
 
 # YubiKey
 libfido2
@@ -24,5 +24,5 @@ pam-u2f
 # Sensors
 lm_sensors
 
-# Ethernet (Motorcomm YT6801 — out-of-tree DKMS)
-yt6801-dkms
+# Ethernet (Motorcomm YT6801 — out-of-tree DKMS, x86_64 only)
+[x86_64] yt6801-dkms

@@ -56,9 +56,11 @@ while IFS= read -r line; do
     esac
 done < <(parse_state_file "$STATE_FILE")
 
-if ! rpm -q mesa-va-drivers-freeworld &>/dev/null 2>&1; then
-    log_plan "Would swap mesa VA-API/VDPAU drivers for freeworld versions"
-    changes_planned=1
+if [[ "$(current_arch)" == "x86_64" ]]; then
+    if ! rpm -q mesa-va-drivers-freeworld &>/dev/null 2>&1; then
+        log_plan "Would swap mesa VA-API/VDPAU drivers for freeworld versions"
+        changes_planned=1
+    fi
 fi
 
 if [[ $changes_planned -eq 0 ]]; then

@@ -80,9 +80,22 @@ state_file_path() {
     printf '%s\n' "${PROVISION_DIR}/state/${filename}"
 }
 
+# current_arch
+#   Returns the machine architecture (e.g. x86_64, aarch64).
+#   Can be overridden via PROVISION_ARCH for testing.
+current_arch() {
+    printf '%s\n' "${PROVISION_ARCH:-$(uname -m)}"
+}
+
 # parse_state_file <path>
 #   Reads a state file, strips comment lines (starting with #) and blank
-#   lines, and prints the remaining lines to stdout.
+#   lines, filters by architecture tags, and prints the remaining lines
+#   to stdout.
+#
+#   Architecture tags: lines prefixed with [arch] are only included when
+#   the current architecture matches. Example:
+#     [x86_64] tuxedo-drivers    — only on x86_64
+#     vim-enhanced               — on all architectures
 parse_state_file() {
     local filepath="${1:?parse_state_file requires a file path argument}"
 
@@ -91,12 +104,25 @@ parse_state_file() {
         return 1
     fi
 
-    # Strip comments and blank lines.
+    local arch
+    arch="$(current_arch)"
+
+    # Strip comments, blank lines, and filter by arch tag.
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip comments and empty / whitespace-only lines.
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ -z "${line// /}" ]] && continue
-        printf '%s\n' "$line"
+
+        # Check for [arch] prefix
+        if [[ "$line" =~ ^\[([a-zA-Z0-9_]+)\][[:space:]]*(.+)$ ]]; then
+            local tag_arch="${BASH_REMATCH[1]}"
+            local rest="${BASH_REMATCH[2]}"
+            if [[ "$tag_arch" == "$arch" ]]; then
+                printf '%s\n' "$rest"
+            fi
+        else
+            printf '%s\n' "$line"
+        fi
     done < "$filepath"
 }
 

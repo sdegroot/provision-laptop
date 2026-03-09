@@ -68,12 +68,14 @@ while IFS= read -r line; do
     esac
 done < <(parse_state_file "$STATE_FILE")
 
-# Check VA-API freeworld override
-if rpm -q mesa-va-drivers-freeworld &>/dev/null; then
-    log_ok "VA-API freeworld drivers installed"
-else
-    log_error "Missing VA-API freeworld drivers (mesa override needed)"
-    drift_found=1
+# Check VA-API freeworld override (x86_64 only — needs hardware GPU)
+if [[ "$(current_arch)" == "x86_64" ]]; then
+    if rpm -q mesa-va-drivers-freeworld &>/dev/null; then
+        log_ok "VA-API freeworld drivers installed"
+    else
+        log_error "Missing VA-API freeworld drivers (mesa override needed)"
+        drift_found=1
+    fi
 fi
 
 if [[ $drift_found -eq 0 ]]; then

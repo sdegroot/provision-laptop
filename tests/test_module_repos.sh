@@ -29,7 +29,8 @@ setup_test_tmpdir
 
 source "${SCRIPT_DIR}/../lib/common.sh"
 STATE_FILE="$(state_file_path "repos.conf")"
-output="$(parse_state_file "$STATE_FILE")"
+# Use x86_64 to test the full config (some entries are arch-tagged)
+output="$(PROVISION_ARCH=x86_64 parse_state_file "$STATE_FILE")"
 
 # Verify all expected types are present
 has_repofile=false
