@@ -62,9 +62,10 @@ for sys_disk in "/dev/sda" "/dev/nvme0n1" "/dev/nvme1n1"; do
     fi
 done
 
-# Find ISO
+# Find x86_64 ISO (the laptop kickstart targets x86_64)
 ISO_PATH=""
-for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*.iso; do
+for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso \
+           "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso.bak; do
     if [[ -f "$iso" ]]; then
         ISO_PATH="$iso"
         break
@@ -72,18 +73,26 @@ for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*.iso; do
 done
 
 if [[ -z "$ISO_PATH" ]]; then
-    # Also check .bak
-    for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*.iso.bak; do
+    echo "ERROR: No x86_64 Fedora Silverblue ISO found."
+    echo ""
+    # Check if an aarch64 ISO exists and warn
+    for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*aarch64*; do
         if [[ -f "$iso" ]]; then
-            ISO_PATH="$iso"
+            echo "Found aarch64 ISO ($(basename "$iso")) but the laptop needs x86_64."
             break
         fi
     done
+    echo "Download the x86_64 ISO from:"
+    echo "  https://fedoraproject.org/silverblue/download"
+    echo "Place it in: tests/vm/"
+    exit 1
 fi
 
-if [[ -z "$ISO_PATH" ]]; then
-    echo "ERROR: No Fedora Silverblue ISO found."
-    echo "Run: tests/vm/download-iso.sh"
+# Verify the ISO is x86_64 (guard against misnamed files)
+ISO_BASENAME="$(basename "$ISO_PATH")"
+if [[ "$ISO_BASENAME" == *"aarch64"* ]]; then
+    echo "ERROR: ${ISO_BASENAME} is an aarch64 ISO."
+    echo "The laptop kickstart targets x86_64. Download the x86_64 ISO."
     exit 1
 fi
 
@@ -194,56 +203,65 @@ ISO_SECTORS=$(( (ISO_BYTES + 511) / 512 ))
 # Leave a 2048-sector gap after ISO
 OEMDRV_START=$(( ISO_SECTORS + 2048 ))
 
+if ! command -v sgdisk &>/dev/null; then
+    echo "ERROR: sgdisk not found."
+    if [[ "$(uname)" == "Darwin" ]]; then
+        echo "Install: brew install gptfdisk"
+    else
+        echo "Install: sudo dnf install gdisk  (or apt install gdisk)"
+    fi
+    exit 1
+fi
+
+# Snapshot partition count before adding the new one
 if [[ "$(uname)" == "Darwin" ]]; then
-    # macOS: use diskutil to add a partition
-    # First, re-read partition table
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
+fi
 
-    echo "Creating OEMDRV partition starting at sector ${OEMDRV_START}..."
-    # Use gdisk/sgdisk if available, otherwise guide manual steps
-    if command -v sgdisk &>/dev/null; then
-        # Create a new GPT partition after the ISO data
-        sudo sgdisk \
-            --new=0:${OEMDRV_START}:0 \
-            --typecode=0:0700 \
-            --change-name=0:OEMDRV \
-            "$DEVICE"
+PARTS_BEFORE="$(sgdisk --print "$DEVICE" 2>/dev/null | grep -c '^ *[0-9]')" || PARTS_BEFORE=0
 
-        # Format the new partition as FAT32
+echo "Creating OEMDRV partition starting at sector ${OEMDRV_START}..."
+sudo sgdisk \
+    --new=0:${OEMDRV_START}:0 \
+    --typecode=0:0700 \
+    --change-name=0:OEMDRV \
+    "$DEVICE"
+
+# Re-read partition table and find the new partition
+if [[ "$(uname)" == "Darwin" ]]; then
+    diskutil unmountDisk "$DEVICE" 2>/dev/null || true
+    sleep 2
+
+    # Determine the new partition number from sgdisk output
+    PARTS_AFTER="$(sgdisk --print "$DEVICE" 2>/dev/null | grep -c '^ *[0-9]')" || PARTS_AFTER=0
+    NEW_PART_NUM=$(( PARTS_AFTER ))
+
+    # On macOS, disk partitions are named /dev/diskNsM
+    DISK_BASE="$(basename "$DEVICE")"
+    OEMDRV_PART="/dev/${DISK_BASE}s${NEW_PART_NUM}"
+
+    # Wait for the partition to appear (macOS can be slow to re-read)
+    for attempt in 1 2 3 4 5; do
+        if [[ -e "$OEMDRV_PART" ]]; then
+            break
+        fi
         diskutil unmountDisk "$DEVICE" 2>/dev/null || true
         sleep 2
+    done
 
-        # Find the new partition (usually last one)
-        OEMDRV_PART="${DEVICE}s$(diskutil list "$DEVICE" | grep -c 'disk.*s[0-9]')" || true
-        # Try common partition names
-        for part in "${DEVICE}s3" "${DEVICE}s4" "${DEVICE}s2"; do
-            if [[ -e "$part" ]]; then
-                OEMDRV_PART="$part"
-                break
-            fi
-        done
-
-        if [[ -b "$OEMDRV_PART" ]]; then
-            sudo newfs_msdos -F 32 -v OEMDRV "$OEMDRV_PART"
-        else
-            echo "WARNING: Could not find new partition to format"
-            echo "You may need to format it manually as FAT32 with label OEMDRV"
-        fi
-    else
-        echo "ERROR: sgdisk not found. Install: brew install gptfdisk"
+    if [[ ! -e "$OEMDRV_PART" ]]; then
+        echo "ERROR: New partition ${OEMDRV_PART} did not appear."
+        echo "Check 'diskutil list ${DEVICE}' and format the last partition manually:"
+        echo "  sudo newfs_msdos -F 32 -v OEMDRV /dev/${DISK_BASE}sN"
         exit 1
     fi
+
+    sudo newfs_msdos -F 32 -v OEMDRV "$OEMDRV_PART"
 else
-    # Linux: use sgdisk + mkfs.vfat
-    sudo sgdisk \
-        --new=0:${OEMDRV_START}:0 \
-        --typecode=0:0700 \
-        --change-name=0:OEMDRV \
-        "$DEVICE"
     sudo partprobe "$DEVICE"
     sleep 2
 
-    # Find the new partition
+    # The new partition is the last one listed
     OEMDRV_PART="$(lsblk -lnp -o NAME "$DEVICE" | tail -1)"
     sudo mkfs.vfat -F 32 -n OEMDRV "$OEMDRV_PART"
 fi

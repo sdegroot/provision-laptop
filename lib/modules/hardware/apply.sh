@@ -133,14 +133,16 @@ apply_hibernate() {
     current_kargs="$(rpm-ostree kargs 2>/dev/null || true)"
 
     if ! echo "$current_kargs" | grep -q "resume="; then
-        local swap_uuid
-        swap_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
-        if [[ -n "$swap_uuid" ]]; then
+        # For Btrfs swapfile hibernate, resume= takes the UUID of the filesystem
+        # containing the swapfile (i.e., root), not a swap partition UUID.
+        local root_uuid
+        root_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
+        if [[ -n "$root_uuid" ]]; then
             local resume_offset
             resume_offset="$(sudo filefrag -v /swap/swapfile 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
             if [[ -n "$resume_offset" ]]; then
                 log_info "Adding hibernate resume kernel params"
-                sudo rpm-ostree kargs --append="resume=UUID=${swap_uuid}" \
+                sudo rpm-ostree kargs --append="resume=UUID=${root_uuid}" \
                     --append="resume_offset=${resume_offset}"
                 changes_made=1
             fi
