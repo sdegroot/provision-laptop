@@ -5,9 +5,9 @@
 # 1. Destroys any existing VM
 # 2. Creates a fresh VM (disk + EFI vars)
 # 3. Flattens the kickstart files into a single file
-# 4. Extracts kernel + initrd from the ISO
-# 5. Starts an HTTP server to serve the kickstart
-# 6. Boots QEMU with kernel/initrd and inst.ks= parameter
+# 4. Creates a small FAT32 disk image labeled OEMDRV with ks.cfg on it
+#    (Anaconda auto-detects OEMDRV volumes and loads ks.cfg)
+# 5. Boots QEMU from the ISO with the OEMDRV disk attached
 #
 # After install completes, the VM reboots into the installed system.
 # SSH should be available on localhost:2222.
@@ -25,20 +25,9 @@ VM_MEMORY="${VM_MEMORY:-4096}"
 VM_CPUS="${VM_CPUS:-4}"
 VM_SSH_PORT="${VM_SSH_PORT:-2222}"
 VM_EFIVARS="${SCRIPT_DIR}/${VM_NAME}-efivars.fd"
-KS_HTTP_PORT="${KS_HTTP_PORT:-8888}"
 
-# Temp directory for extracted files
+# Temp directory for work files
 WORK_DIR="${SCRIPT_DIR}/.ks-work"
-
-cleanup() {
-    # Kill HTTP server if running
-    if [[ -n "${HTTP_PID:-}" ]] && kill -0 "$HTTP_PID" 2>/dev/null; then
-        echo "Stopping HTTP server (PID: ${HTTP_PID})..."
-        kill "$HTTP_PID" 2>/dev/null || true
-        wait "$HTTP_PID" 2>/dev/null || true
-    fi
-}
-trap cleanup EXIT
 
 # -------------------------------------------------------------------------
 # Step 1: Find ISO
@@ -52,7 +41,7 @@ for iso in "${SCRIPT_DIR}"/Fedora-Silverblue-ostree-aarch64-*.iso; do
     fi
 done
 
-# Also check for .bak (renamed to prevent boot-from-ISO)
+# Also check for .bak (renamed to prevent boot-from-ISO on subsequent boots)
 if [[ -z "$ISO_PATH" ]]; then
     for iso in "${SCRIPT_DIR}"/Fedora-Silverblue-ostree-aarch64-*.iso.bak; do
         if [[ -f "$iso" ]]; then
@@ -94,7 +83,7 @@ dd if=/dev/zero of="$VM_EFIVARS" bs=1m count=64 2>/dev/null
 # -------------------------------------------------------------------------
 
 mkdir -p "$WORK_DIR"
-KS_FLAT="${WORK_DIR}/vm-single-disk.ks"
+KS_FLAT="${WORK_DIR}/ks.cfg"
 
 echo "Flattening kickstart files..."
 
@@ -106,7 +95,6 @@ flatten_kickstart() {
     while IFS= read -r line; do
         if [[ "$line" =~ ^%include[[:space:]]+(.+)$ ]]; then
             local include_path="${BASH_REMATCH[1]}"
-            # Resolve relative to the kickstart file's directory
             local resolved="${ks_dir}/${include_path}"
             if [[ -f "$resolved" ]]; then
                 echo "# --- included from: ${include_path} ---"
@@ -127,58 +115,51 @@ flatten_kickstart "${REPO_DIR}/kickstart/vm-single-disk.ks" > "$KS_FLAT"
 echo "Flattened kickstart written to: ${KS_FLAT}"
 
 # -------------------------------------------------------------------------
-# Step 5: Extract kernel + initrd from ISO
+# Step 5: Create OEMDRV disk image
 # -------------------------------------------------------------------------
+# Anaconda automatically loads ks.cfg from any volume labeled OEMDRV.
+# We create a small FAT32 disk image with the flattened kickstart on it.
 
-KERNEL="${WORK_DIR}/vmlinuz"
-INITRD="${WORK_DIR}/initrd.img"
+OEMDRV_IMG="${WORK_DIR}/oemdrv.img"
 
-if [[ ! -f "$KERNEL" || ! -f "$INITRD" ]]; then
-    echo "Extracting kernel and initrd from ISO..."
+echo "Creating OEMDRV disk image..."
 
-    # Mount the ISO and copy kernel/initrd
-    ISO_MOUNT="${WORK_DIR}/iso-mount"
-    mkdir -p "$ISO_MOUNT"
+if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS: create a DMG, convert to raw image
+    OEMDRV_DMG="${WORK_DIR}/oemdrv.dmg"
+    OEMDRV_MOUNT="${WORK_DIR}/oemdrv-mount"
 
-    if [[ "$(uname)" == "Darwin" ]]; then
-        # macOS: use hdiutil
-        hdiutil attach -readonly -nobrowse -mountpoint "$ISO_MOUNT" "$ISO_PATH"
-        cp "${ISO_MOUNT}/images/pxeboot/vmlinuz" "$KERNEL"
-        cp "${ISO_MOUNT}/images/pxeboot/initrd.img" "$INITRD"
-        hdiutil detach "$ISO_MOUNT"
-    else
-        # Linux: use mount
-        sudo mount -o loop,ro "$ISO_PATH" "$ISO_MOUNT"
-        cp "${ISO_MOUNT}/images/pxeboot/vmlinuz" "$KERNEL"
-        cp "${ISO_MOUNT}/images/pxeboot/initrd.img" "$INITRD"
-        sudo umount "$ISO_MOUNT"
-    fi
+    # Remove old files
+    rm -f "$OEMDRV_DMG" "$OEMDRV_IMG"
 
-    echo "Extracted kernel: ${KERNEL}"
-    echo "Extracted initrd: ${INITRD}"
+    # Create a 2MB FAT disk image with volume name OEMDRV
+    hdiutil create -size 2m -fs "MS-DOS FAT12" -volname OEMDRV -layout NONE "$OEMDRV_DMG"
+
+    # Mount, copy kickstart, unmount
+    mkdir -p "$OEMDRV_MOUNT"
+    hdiutil attach -readwrite -nobrowse -mountpoint "$OEMDRV_MOUNT" "$OEMDRV_DMG"
+    cp "$KS_FLAT" "${OEMDRV_MOUNT}/ks.cfg"
+    hdiutil detach "$OEMDRV_MOUNT"
+
+    # Convert to raw image for QEMU
+    hdiutil convert "$OEMDRV_DMG" -format UDTO -o "${WORK_DIR}/oemdrv.cdr"
+    mv "${WORK_DIR}/oemdrv.cdr" "$OEMDRV_IMG"
+    rm -f "$OEMDRV_DMG"
 else
-    echo "Using cached kernel and initrd"
+    # Linux: use mkfs.vfat and mount
+    dd if=/dev/zero of="$OEMDRV_IMG" bs=1m count=2 2>/dev/null
+    mkfs.vfat -n OEMDRV "$OEMDRV_IMG"
+    OEMDRV_MOUNT="${WORK_DIR}/oemdrv-mount"
+    mkdir -p "$OEMDRV_MOUNT"
+    sudo mount -o loop "$OEMDRV_IMG" "$OEMDRV_MOUNT"
+    cp "$KS_FLAT" "${OEMDRV_MOUNT}/ks.cfg"
+    sudo umount "$OEMDRV_MOUNT"
 fi
 
-# -------------------------------------------------------------------------
-# Step 6: Start HTTP server for kickstart
-# -------------------------------------------------------------------------
-
-echo "Starting HTTP server on port ${KS_HTTP_PORT} to serve kickstart..."
-python3 -m http.server "$KS_HTTP_PORT" --directory "$WORK_DIR" &>/dev/null &
-HTTP_PID=$!
-sleep 1
-
-if ! kill -0 "$HTTP_PID" 2>/dev/null; then
-    echo "ERROR: Failed to start HTTP server on port ${KS_HTTP_PORT}"
-    echo "Is another process using that port?"
-    exit 1
-fi
-echo "HTTP server running (PID: ${HTTP_PID})"
-echo "Kickstart URL: http://10.0.2.2:${KS_HTTP_PORT}/vm-single-disk.ks"
+echo "OEMDRV disk image created with ks.cfg"
 
 # -------------------------------------------------------------------------
-# Step 7: Find EFI firmware
+# Step 6: Find EFI firmware
 # -------------------------------------------------------------------------
 
 EFI_CODE=""
@@ -198,7 +179,7 @@ if [[ -z "$EFI_CODE" ]]; then
 fi
 
 # -------------------------------------------------------------------------
-# Step 8: Boot VM with kickstart
+# Step 7: Boot VM with ISO + OEMDRV
 # -------------------------------------------------------------------------
 
 PID_DIR="${SCRIPT_DIR}/pid"
@@ -211,18 +192,16 @@ echo "  Starting automated Fedora Silverblue install"
 echo "  VM: ${VM_NAME}"
 echo "  Memory: ${VM_MEMORY}MB, CPUs: ${VM_CPUS}"
 echo "  SSH will be on localhost:${VM_SSH_PORT}"
-echo "  Kickstart: http://10.0.2.2:${KS_HTTP_PORT}/vm-single-disk.ks"
+echo "  Kickstart: via OEMDRV volume (auto-detected by Anaconda)"
 echo "=========================================="
 echo ""
-echo "The Anaconda installer will run automatically."
-echo "When done, the VM will reboot into the installed system."
+echo "The Anaconda installer will boot from ISO and auto-detect"
+echo "the kickstart from the OEMDRV volume."
 echo ""
-
-# Kernel boot arguments for the installer
-# inst.ks=  — kickstart URL
-# inst.stage2= — where to find the installer image (the ISO)
-# console=ttyAMA0 — serial console for headless operation
-KERNEL_ARGS="inst.ks=http://10.0.2.2:${KS_HTTP_PORT}/vm-single-disk.ks inst.stage2=cdrom quiet"
+echo "IMPORTANT: After install completes and the VM reboots,"
+echo "close the QEMU window, then start with: make vm-start"
+echo "(to boot without the ISO attached)"
+echo ""
 
 QEMU_ARGS=(
     -name "$VM_NAME"
@@ -232,20 +211,22 @@ QEMU_ARGS=(
     -smp "$VM_CPUS"
     -drive "if=pflash,format=raw,file=${EFI_CODE},readonly=on"
     -drive "if=pflash,format=raw,file=${VM_EFIVARS}"
+    # Main disk
     -drive "file=${VM_DISK},format=qcow2,if=none,id=hd0"
     -device virtio-blk-pci,drive=hd0
+    # OEMDRV disk (kickstart source — Anaconda auto-detects)
+    -drive "file=${OEMDRV_IMG},format=raw,if=none,id=oemdrv"
+    -device virtio-blk-pci,drive=oemdrv
+    # Network
     -device virtio-net-pci,netdev=net0
     -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22"
+    # USB devices
     -device qemu-xhci
     -device usb-kbd
     -device usb-tablet
-    # ISO as usb-storage (same as start-vm.sh)
+    # ISO as usb-storage
     -drive "file=${ISO_PATH},format=raw,if=none,id=cd0,media=cdrom,readonly=on"
     -device usb-storage,drive=cd0
-    # Direct kernel boot with kickstart parameter
-    -kernel "$KERNEL"
-    -initrd "$INITRD"
-    -append "$KERNEL_ARGS"
     -pidfile "$PID_FILE"
 )
 
