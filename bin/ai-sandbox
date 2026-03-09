@@ -1,0 +1,377 @@
+#!/usr/bin/env bash
+# ai-sandbox — Run AI coding agents in an isolated Podman container.
+#
+# Usage:
+#   bin/ai-sandbox --agent claude|codex|gemini \
+#                  --project /path/to/project \
+#                  --prompt "Implement feature X" \
+#                  [--branch agent/claude/feature-name] \
+#                  [--timeout 30m] \
+#                  [--memory 8g] \
+#                  [--cpus 4] \
+#                  [--base-branch main] \
+#                  [--no-worktree] \
+#                  [--dry-run]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# shellcheck source=../lib/common.sh
+source "${PROVISION_DIR}/lib/common.sh"
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+AGENT=""
+PROJECT=""
+PROMPT=""
+BRANCH=""
+TIMEOUT="30m"
+MEMORY="8g"
+CPUS="4"
+BASE_BRANCH="main"
+USE_WORKTREE=true
+DRY_RUN=false
+
+IMAGE_NAME="localhost/ai-sandbox:latest"
+ENV_FILE="${HOME}/.config/ai-sandbox/env"
+LOG_DIR="${HOME}/.local/share/ai-sandbox/logs"
+SANDBOX_DIR="${HOME}/Sandbox"
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+    cat <<'EOF'
+Usage: ai-sandbox --agent <agent> --project <path> --prompt <text> [options]
+
+Required:
+  --agent <name>       AI agent to run: claude, codex, or gemini
+  --project <path>     Path to the project repository
+  --prompt <text>      Prompt / task description for the agent
+
+Options:
+  --branch <name>      Git branch name (default: agent/<agent>/<timestamp>)
+  --timeout <duration> Maximum runtime (default: 30m)
+  --memory <limit>     Memory limit (default: 8g)
+  --cpus <count>       CPU limit (default: 4)
+  --base-branch <name> Branch to base the worktree on (default: main)
+  --no-worktree        Mount project directly instead of creating a worktree
+  --dry-run            Print the podman command without executing
+  -h, --help           Show this help message
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --agent)
+                AGENT="${2:?--agent requires a value}"
+                shift 2
+                ;;
+            --project)
+                PROJECT="${2:?--project requires a value}"
+                shift 2
+                ;;
+            --prompt)
+                PROMPT="${2:?--prompt requires a value}"
+                shift 2
+                ;;
+            --branch)
+                BRANCH="${2:?--branch requires a value}"
+                shift 2
+                ;;
+            --timeout)
+                TIMEOUT="${2:?--timeout requires a value}"
+                shift 2
+                ;;
+            --memory)
+                MEMORY="${2:?--memory requires a value}"
+                shift 2
+                ;;
+            --cpus)
+                CPUS="${2:?--cpus requires a value}"
+                shift 2
+                ;;
+            --base-branch)
+                BASE_BRANCH="${2:?--base-branch requires a value}"
+                shift 2
+                ;;
+            --no-worktree)
+                USE_WORKTREE=false
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+validate_args() {
+    local errors=0
+
+    if [[ -z "$AGENT" ]]; then
+        log_error "Missing required option: --agent"
+        (( errors++ )) || true
+    elif [[ "$AGENT" != "claude" && "$AGENT" != "codex" && "$AGENT" != "gemini" ]]; then
+        log_error "Invalid agent: ${AGENT} (must be claude, codex, or gemini)"
+        (( errors++ )) || true
+    fi
+
+    if [[ -z "$PROJECT" ]]; then
+        log_error "Missing required option: --project"
+        (( errors++ )) || true
+    elif [[ ! -d "$PROJECT" ]]; then
+        log_error "Project directory does not exist: ${PROJECT}"
+        (( errors++ )) || true
+    fi
+
+    if [[ -z "$PROMPT" ]]; then
+        log_error "Missing required option: --prompt"
+        (( errors++ )) || true
+    fi
+
+    if [[ $errors -gt 0 ]]; then
+        echo ""
+        usage
+        return 1
+    fi
+
+    # Resolve to absolute path
+    PROJECT="$(cd "$PROJECT" && pwd)"
+}
+
+# ---------------------------------------------------------------------------
+# Environment file validation
+# ---------------------------------------------------------------------------
+validate_env_file() {
+    if [[ ! -f "$ENV_FILE" ]]; then
+        log_error "API key file not found: ${ENV_FILE}"
+        log_error "Create it with your API keys (mode 0600):"
+        log_error "  mkdir -p ~/.config/ai-sandbox"
+        log_error "  touch ~/.config/ai-sandbox/env"
+        log_error "  chmod 0600 ~/.config/ai-sandbox/env"
+        log_error "  echo 'ANTHROPIC_API_KEY=sk-...' >> ~/.config/ai-sandbox/env"
+        return 1
+    fi
+
+    local file_perms
+    file_perms="$(stat -f '%Lp' "$ENV_FILE" 2>/dev/null || stat -c '%a' "$ENV_FILE" 2>/dev/null)"
+    if [[ "$file_perms" != "600" ]]; then
+        log_error "Env file has insecure permissions (${file_perms}). Expected 0600."
+        log_error "Fix with: chmod 0600 ${ENV_FILE}"
+        return 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Container image
+# ---------------------------------------------------------------------------
+ensure_image() {
+    if ! podman image exists "$IMAGE_NAME" 2>/dev/null; then
+        log_info "Building AI sandbox image..."
+        podman build -t "$IMAGE_NAME" "${PROVISION_DIR}/containers/ai-sandbox"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Git worktree
+# ---------------------------------------------------------------------------
+setup_worktree() {
+    local project_name
+    project_name="$(basename "$PROJECT")"
+
+    if [[ -z "$BRANCH" ]]; then
+        BRANCH="agent/${AGENT}/$(date +%Y%m%d-%H%M%S)"
+    fi
+
+    WORKTREE_PATH="${SANDBOX_DIR}/${project_name}-$(echo "$BRANCH" | tr '/' '-')"
+
+    if [[ -d "$WORKTREE_PATH" ]]; then
+        log_error "Worktree path already exists: ${WORKTREE_PATH}"
+        log_error "Remove it first: git -C ${PROJECT} worktree remove ${WORKTREE_PATH}"
+        return 1
+    fi
+
+    log_info "Creating worktree at ${WORKTREE_PATH} (branch: ${BRANCH})"
+    git -C "$PROJECT" worktree add -b "$BRANCH" "$WORKTREE_PATH" "$BASE_BRANCH"
+}
+
+# ---------------------------------------------------------------------------
+# Agent command
+# ---------------------------------------------------------------------------
+agent_command() {
+    case "$AGENT" in
+        claude)
+            echo "claude" "--dangerously-skip-permissions" "-p" "$PROMPT"
+            ;;
+        codex)
+            echo "codex" "--approval-mode" "full-auto" "-q" "$PROMPT"
+            ;;
+        gemini)
+            echo "gemini" "$PROMPT"
+            ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
+# Build the podman run command
+# ---------------------------------------------------------------------------
+build_podman_cmd() {
+    local workspace_path="$1"
+    local container_name="ai-${AGENT}-$(basename "$PROJECT")"
+
+    local cmd=(
+        timeout "$TIMEOUT"
+        podman run --rm
+        --name "$container_name"
+        --userns=keep-id
+        --security-opt=no-new-privileges
+        --cap-drop=ALL
+        "--memory=${MEMORY}" "--cpus=${CPUS}" --pids-limit=256
+        --read-only
+        --tmpfs /tmp:rw,size=1g,noexec
+        --tmpfs /home/sandbox:rw,size=512m
+        --env-file "$ENV_FILE"
+        --env "GIT_AUTHOR_NAME=AI Sandbox (${AGENT})"
+        --env "GIT_COMMITTER_NAME=AI Sandbox (${AGENT})"
+        --env "GIT_AUTHOR_EMAIL=ai-sandbox@localhost"
+        --env "GIT_COMMITTER_EMAIL=ai-sandbox@localhost"
+        -v "${workspace_path}:/workspace:Z"
+        "$IMAGE_NAME"
+    )
+
+    # Append agent-specific command
+    local agent_cmd
+    agent_cmd=($(agent_command))
+    cmd+=("${agent_cmd[@]}")
+
+    echo "${cmd[@]}"
+}
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+print_summary() {
+    local workspace_path="$1"
+    local exit_code="$2"
+    local duration="$3"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  AI Sandbox Summary"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Agent:     ${AGENT}"
+    echo "  Exit code: ${exit_code}"
+    echo "  Duration:  ${duration}s"
+    echo "  Workspace: ${workspace_path}"
+
+    if [[ -d "${workspace_path}/.git" ]] || git -C "$workspace_path" rev-parse --git-dir >/dev/null 2>&1; then
+        echo ""
+        echo "  Recent commits:"
+        git -C "$workspace_path" log --oneline -10 2>/dev/null | sed 's/^/    /' || true
+        echo ""
+        echo "  Changed files (vs ${BASE_BRANCH}):"
+        git -C "$workspace_path" diff --stat "${BASE_BRANCH}" 2>/dev/null | sed 's/^/    /' || true
+    fi
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    if $USE_WORKTREE; then
+        echo ""
+        echo "  Review with:"
+        echo "    git diff ${BASE_BRANCH}...${BRANCH}"
+        echo "  Remove worktree:"
+        echo "    git -C ${PROJECT} worktree remove ${workspace_path}"
+        echo ""
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+save_log() {
+    local log_content="$1"
+    local timestamp
+    timestamp="$(date +%Y%m%d-%H%M%S)"
+    local log_file="${LOG_DIR}/${timestamp}-${AGENT}.log"
+
+    mkdir -p "$LOG_DIR"
+    echo "$log_content" > "$log_file"
+    log_info "Log saved to ${log_file}"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+    parse_args "$@"
+    validate_args
+    validate_env_file
+
+    local workspace_path="$PROJECT"
+
+    if $USE_WORKTREE; then
+        setup_worktree
+        workspace_path="$WORKTREE_PATH"
+    fi
+
+    local podman_cmd
+    podman_cmd="$(build_podman_cmd "$workspace_path")"
+
+    if $DRY_RUN; then
+        log_info "[DRY RUN] Would execute:"
+        echo "$podman_cmd"
+        return 0
+    fi
+
+    ensure_image
+
+    # Copy gitconfig into worktree for container to pick up
+    cp "${PROVISION_DIR}/containers/ai-sandbox/config/gitconfig" \
+       "${workspace_path}/.gitconfig-sandbox" 2>/dev/null || true
+
+    log_info "Starting AI sandbox (agent=${AGENT}, timeout=${TIMEOUT})..."
+    log_info "Workspace: ${workspace_path}"
+    echo ""
+
+    local start_time exit_code
+    start_time="$(date +%s)"
+    exit_code=0
+
+    # Run and capture output for logging
+    local log_output
+    log_output="$(eval "$podman_cmd" 2>&1 | tee /dev/stderr)" || exit_code=$?
+
+    local end_time duration
+    end_time="$(date +%s)"
+    duration=$(( end_time - start_time ))
+
+    # Clean up temporary gitconfig
+    rm -f "${workspace_path}/.gitconfig-sandbox" 2>/dev/null || true
+
+    print_summary "$workspace_path" "$exit_code" "$duration"
+    save_log "$log_output"
+
+    return "$exit_code"
+}
+
+main "$@"

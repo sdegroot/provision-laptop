@@ -1,0 +1,9 @@
+# Minimal git config for AI sandbox containers.
+# No credential helper, no GPG signing, no SSH.
+# Identity is set via GIT_AUTHOR_NAME / GIT_COMMITTER_NAME env vars at runtime.
+[init]
+    defaultBranch = main
+[core]
+    autocrlf = input
+[pull]
+    rebase = false

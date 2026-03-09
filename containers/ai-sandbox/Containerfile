@@ -1,27 +1,31 @@
 # AI Sandbox Container
-# Isolated environment for running AI tools with limited filesystem access.
+# Isolated environment for running AI coding agents (Claude Code, Codex, Gemini CLI)
+# with full code access but no host secrets.
 FROM registry.fedoraproject.org/fedora:41
 
 RUN dnf install -y \
-    python3 \
-    python3-pip \
     git \
     curl \
+    nodejs \
+    npm \
+    python3 \
+    python3-pip \
+    golang \
+    make \
+    jq \
+    ripgrep \
+    fd-find \
     && dnf clean all
 
-# Create a non-root user
+# AI CLI tools installed globally via npm
+RUN npm install -g \
+    @anthropic-ai/claude-code \
+    @openai/codex \
+    @google/gemini-cli
+
+# Non-root user (UID mapped via --userns=keep-id at runtime)
 RUN useradd -m -s /bin/bash sandbox
 
-# Set working directory
 WORKDIR /workspace
-
 USER sandbox
-
-# Install common AI/ML Python packages
-RUN pip3 install --user \
-    openai \
-    anthropic \
-    langchain \
-    requests
-
 CMD ["/bin/bash"]

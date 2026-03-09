@@ -12,3 +12,7 @@
 # Development
 ~/Projects:${USER}:0755
 ~/Sandbox:${USER}:0755
+
+# AI Sandbox
+~/.config/ai-sandbox:${USER}:0700
+~/.local/share/ai-sandbox/logs:${USER}:0755

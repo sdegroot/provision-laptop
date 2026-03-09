@@ -7,6 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **AI sandbox** — `bin/ai-sandbox` runner for autonomous AI coding agents (Claude Code,
+  Codex, Gemini CLI) in isolated Podman containers with git worktree isolation, strict
+  security controls (cap-drop, read-only rootfs, resource limits, no host secrets),
+  and session logging
+- AI sandbox container image with Node.js, Python, Go, and AI CLI tools
+- AI sandbox documentation (`docs/ai-sandbox.md`) with security model and usage examples
+- AI sandbox test suite (23 tests for arg parsing, validation, command construction)
+- Directories for AI sandbox config (`~/.config/ai-sandbox`) and logs
+  (`~/.local/share/ai-sandbox/logs`)
+
+### Removed
+- `containers/ai-sandbox/run.sh` — replaced by `bin/ai-sandbox`
+
+### Changed
+- Container description for ai-sandbox updated to reflect new purpose
+
+### Added
 - **repos module** — manage third-party RPM repos (Tuxedo, RPM Fusion, COPR) with
   VA-API freeworld mesa driver override
 - **hardware module** — deploy kernel params, modprobe/sysctl/dracut configs,
