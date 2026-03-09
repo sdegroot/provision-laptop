@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tuxedo drivers, YubiKey packages, lm_sensors, yt6801-dkms to host-packages
 - Signal desktop to Flatpak list (x86_64 target)
 - Tests for repos and hardware modules (20 new tests)
+- Architecture-aware state file parsing with `[arch]` tag syntax
+- Documentation: hardware setup, state file reference, updated README and testing docs
 
 ### Changed
 - Module order updated: repos before host-packages, hardware after security
