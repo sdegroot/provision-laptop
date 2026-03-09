@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- dev-web toolbox: added `sudo` to `npm install -g` for global package installs
+- dev-python toolbox: install pipx via dnf instead of pip (fixes PATH issue)
+- dev-infra toolbox: add HashiCorp repo for terraform, removed from dnf packages list
+- dev-infra toolbox: detect architecture for correct AWS CLI installer URL
+
 ### Added
 - Project skeleton with README, .gitignore, Makefile
 - Reconciliation engine framework (lib/common.sh, lib/engine.sh)

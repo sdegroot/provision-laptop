@@ -4,10 +4,10 @@ set -euo pipefail
 
 echo "=== dev-python profile setup ==="
 
-# Install pipx for CLI tools
+# Install pipx via dnf (avoids PATH issues with pip install --user)
 if ! command -v pipx &>/dev/null; then
-    pip3 install --user pipx
-    pipx ensurepath
+    echo "Installing pipx via dnf..."
+    sudo dnf install -y pipx
 fi
 
 # Install common Python CLI tools via pipx
@@ -19,7 +19,7 @@ python_tools=(
 )
 
 for tool in "${python_tools[@]}"; do
-    if ! command -v "$tool" &>/dev/null; then
+    if ! pipx list 2>/dev/null | grep -q "package ${tool}"; then
         echo "Installing: ${tool}"
         pipx install "$tool" || true
     fi

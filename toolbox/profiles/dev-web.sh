@@ -15,7 +15,7 @@ npm_packages=(
 for pkg in "${npm_packages[@]}"; do
     if ! npm list -g "$pkg" &>/dev/null; then
         echo "Installing npm package: ${pkg}"
-        npm install -g "$pkg"
+        sudo npm install -g "$pkg"
     fi
 done
 

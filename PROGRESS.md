@@ -68,10 +68,10 @@ Tracking implementation status per phase from `plan.md`.
 - [x] `tests/test_module_toolboxes.sh`
 - [x] Verified: all 4 toolboxes created with packages installed
 
-### Known issues
-- dev-web: npm global install needs `sudo` in toolbox
-- dev-python: pipx not on PATH after pip install --user
-- dev-infra: `terraform` not in Fedora repos (needs HashiCorp repo)
+### Known issues — RESOLVED
+- ~~dev-web: npm global install needs `sudo` in toolbox~~ — fixed: added `sudo` to `npm install -g`
+- ~~dev-python: pipx not on PATH after pip install --user~~ — fixed: install pipx via `dnf` instead of pip
+- ~~dev-infra: `terraform` not in Fedora repos~~ — fixed: added HashiCorp repo in setup script, removed from dnf packages
 
 ## Phase 8: Mise Runtime Management — DONE, VERIFIED IN VM
 - [x] `mise/mise.toml`

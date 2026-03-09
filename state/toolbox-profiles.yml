@@ -41,7 +41,6 @@ profiles:
     image: registry.fedoraproject.org/fedora-toolbox:41
     packages:
       - ansible
-      - terraform
       - kubectl
       - helm
     setup_script: dev-infra.sh
