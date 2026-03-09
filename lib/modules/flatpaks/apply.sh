@@ -43,7 +43,7 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
             filesystem)
                 # Check if override is already set
                 current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
-                if ! echo "$current" | grep -q "$perm_value"; then
+                if ! echo "$current" | grep -Fq "$perm_value"; then
                     log_info "Setting Flatpak override: ${app_id} --filesystem=${perm_value}"
                     flatpak override --user --filesystem="$perm_value" "$app_id"
                     changes_made=1
@@ -51,7 +51,7 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                 ;;
             env)
                 current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
-                if ! echo "$current" | grep -q "$perm_value"; then
+                if ! echo "$current" | grep -Fq "$perm_value"; then
                     log_info "Setting Flatpak override: ${app_id} --env=${perm_value}"
                     flatpak override --user --env="$perm_value" "$app_id"
                     changes_made=1

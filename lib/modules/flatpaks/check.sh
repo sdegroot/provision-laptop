@@ -32,7 +32,7 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
         current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
         case "$perm_type" in
             filesystem|env)
-                if echo "$current" | grep -q "$perm_value"; then
+                if echo "$current" | grep -Fq "$perm_value"; then
                     log_ok "Override: ${app_id} ${perm_type}=${perm_value}"
                 else
                     log_error "Missing override: ${app_id} ${perm_type}=${perm_value}"
