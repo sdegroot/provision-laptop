@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **repos module** — manage third-party RPM repos (Tuxedo, RPM Fusion, COPR) with
+  VA-API freeworld mesa driver override
+- **hardware module** — deploy kernel params, modprobe/sysctl/dracut configs,
+  systemd units, swap/hibernate setup, and Btrfs scrub timer
+- Hardware config files: AMD FreeSync, audio power save, TCP BBR, inotify limits,
+  FIDO2 dracut, suspend-then-hibernate, Btrfs scrub timer
+- State files: `kernel-params.txt`, `repos.conf`
+- Tuxedo drivers, YubiKey packages, lm_sensors, yt6801-dkms to host-packages
+- Signal desktop to Flatpak list (x86_64 target)
+- Tests for repos and hardware modules (20 new tests)
+
+### Changed
+- Module order updated: repos before host-packages, hardware after security
+
 - Automated kickstart install script (`tests/vm/kickstart-install.sh`) using OEMDRV
   volume for kickstart auto-detection by Anaconda
 - `make vm-kickstart` target for one-command automated VM install

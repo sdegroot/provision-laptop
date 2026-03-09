@@ -1,0 +1,9 @@
+[Unit]
+Description=Btrfs scrub on %f
+ConditionPathIsMountPoint=%f
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/sbin/btrfs scrub start -B %f

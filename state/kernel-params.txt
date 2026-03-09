@@ -1,0 +1,15 @@
+# Kernel parameters for Tongfang GX4 (AMD Ryzen + RDNA iGPU)
+# Applied via rpm-ostree kargs
+
+# AMD P-State driver for better power management
+amd_pstate=active
+
+# Disable watchdog timers (save power, reduce wake-ups)
+nowatchdog
+nmi_watchdog=0
+
+# Power-efficient workqueues
+workqueue.power_efficient=1
+
+# Enable PCIe ASPM (Active State Power Management)
+pcie_aspm=default
