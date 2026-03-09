@@ -7,10 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- Automated kickstart install script (`tests/vm/kickstart-install.sh`): flattens modular
-  kickstart files, extracts kernel/initrd from ISO, serves kickstart via HTTP, boots QEMU
-  with `inst.ks=` parameter for fully unattended installation
+- Automated kickstart install script (`tests/vm/kickstart-install.sh`) using OEMDRV
+  volume for kickstart auto-detection by Anaconda
 - `make vm-kickstart` target for one-command automated VM install
+- Laptop kickstart (`laptop-dual-disk.ks`): LUKS2, YubiKey support (FIDO2), 1Password
+  packages, bundled repo from OEMDRV, no SSH
+- USB installer (`usb/make-usb.sh`): creates bootable USB with ISO + OEMDRV partition
+  containing flattened kickstart and bundled repo
+- FIDO2 dracut configuration for YubiKey LUKS unlock at boot
 
 ### Fixed
 - dev-web toolbox: added `sudo` to `npm install -g` for global package installs
@@ -20,8 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Kickstart user changed from `admin` to `sdegroot`
-- VM kickstart now sets up SSH password auth and passwordless sudo automatically
-- VM partitioning uses LUKS2 + Btrfs with test passphrase (`temppass`)
+- VM kickstart: SSH + password auth enabled (for testing from host)
+- Laptop kickstart: SSH disabled, firewall without SSH, YubiKey/FIDO2 packages layered
+- Split base.ks: SSH/firewall settings moved to environment-specific kickstart files
+- USB installer rewritten: creates OEMDRV partition with kickstart + bundled repo
+- first-boot.sh simplified: no longer clones from GitHub, uses bundled repo
 
 ### Added
 - Project skeleton with README, .gitignore, Makefile

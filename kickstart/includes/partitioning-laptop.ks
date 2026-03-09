@@ -1,9 +1,15 @@
-# partitioning-laptop.ks — Dual-disk LUKS + Btrfs for laptop.
+# partitioning-laptop.ks — Dual-disk LUKS2 + Btrfs for laptop.
 #
 # Disk 1 (NVMe system): /dev/nvme0n1
 # Disk 2 (NVMe data):   /dev/nvme1n1
 #
 # Adjust device names as needed for your hardware.
+#
+# LUKS passphrase is set to a temporary value during install.
+# After first boot, enroll YubiKey via:
+#   sudo systemd-cryptenroll --fido2-device=auto /dev/nvme0n1p3
+#   sudo systemd-cryptenroll --fido2-device=auto /dev/nvme1n1p1
+# Then optionally remove the temporary passphrase.
 
 # Clear all partitions on both disks
 zerombr
@@ -11,28 +17,28 @@ clearpart --all --initlabel --disklabel=gpt --drives=nvme0n1,nvme1n1
 
 # --- Disk 1: System ---
 
-# EFI System Partition
-part /boot/efi --fstype=efi --size=512 --ondisk=nvme0n1
+# EFI System Partition (600MB — room for multiple kernels)
+part /boot/efi --fstype=efi --size=600 --ondisk=nvme0n1
 
-# Boot partition
+# Boot partition (outside LUKS — kernel/initrd must be readable)
 part /boot --fstype=ext4 --size=1024 --ondisk=nvme0n1
 
-# System LUKS partition
-part pv.system --size=1 --grow --encrypted --luks-version=luks2 --passphrase=changeme --ondisk=nvme0n1
+# System LUKS2 partition (temporary passphrase, YubiKey enrolled after boot)
+part btrfs.system --size=1 --grow --encrypted --luks-version=luks2 --passphrase=changeme --ondisk=nvme0n1
 
-# System Btrfs
-btrfs none --label=system pv.system
+# System Btrfs subvolumes
+btrfs none --label=system btrfs.system
 btrfs / --subvol --name=root LABEL=system
 btrfs /var --subvol --name=var LABEL=system
 btrfs /var/lib/containers --subvol --name=containers LABEL=system
 
 # --- Disk 2: Data ---
 
-# Data LUKS partition
-part pv.data --size=1 --grow --encrypted --luks-version=luks2 --passphrase=changeme --ondisk=nvme1n1
+# Data LUKS2 partition (same temporary passphrase)
+part btrfs.data --size=1 --grow --encrypted --luks-version=luks2 --passphrase=changeme --ondisk=nvme1n1
 
-# Data Btrfs
-btrfs none --label=data pv.data
+# Data Btrfs subvolumes
+btrfs none --label=data btrfs.data
 btrfs /home --subvol --name=home LABEL=data
 btrfs /work --subvol --name=work LABEL=data
 btrfs /sandbox --subvol --name=sandbox LABEL=data

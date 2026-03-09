@@ -86,9 +86,9 @@ Tracking implementation status per phase from `plan.md`.
 - [x] `lib/modules/containers/{check,apply,plan}.sh`
 - [x] Verified: ai-sandbox image built
 
-## Phase 10: USB Installer — Files Written, Not Yet Tested
-- [x] `usb/make-usb.sh`
-- [x] `usb/patch-grub.sh`
+## Phase 10: USB Installer — Updated, Not Yet Tested on Hardware
+- [x] `usb/make-usb.sh` — rewritten: writes ISO + creates OEMDRV partition with kickstart + bundled repo
+- [x] `usb/patch-grub.sh` — may no longer be needed (OEMDRV auto-detected)
 - [x] `docs/usb-installer.md`
 
 ## Phase 11: Smoke Tests — Framework Written, Not Yet Run

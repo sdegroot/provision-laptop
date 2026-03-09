@@ -18,12 +18,8 @@ rootpw --lock
 # User account
 user --name=sdegroot --groups=wheel --plaintext --password=changeme
 
-# SELinux and firewall
+# SELinux enforcing (always)
 selinux --enforcing
-firewall --enabled --ssh
-
-# Services
-services --enabled=sshd,NetworkManager
 
 # Disable initial setup (we handle config via provision-laptop)
 firstboot --disable

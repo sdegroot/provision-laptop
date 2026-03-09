@@ -1,13 +1,15 @@
 # vm-single-disk.ks — Fedora Silverblue kickstart for VM testing.
 #
-# This file uses %include with relative paths that only work when served
-# from the ISO or when flattened by tests/vm/kickstart-install.sh.
-# For automated VM installs, the flatten script inlines all includes.
+# Flattened by tests/vm/kickstart-install.sh before use.
 
 # Include common configuration
 %include base.ks
 
-# Include VM partitioning
+# VM-specific: enable SSH and allow it through firewall
+firewall --enabled --ssh
+services --enabled=sshd,NetworkManager
+
+# Include VM partitioning (no LUKS — for automated testing)
 %include includes/partitioning-vm.ks
 
 # Select Silverblue environment (aarch64 for Apple Silicon VM)
@@ -20,7 +22,7 @@ ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/41/aarch64/si
 echo "sdegroot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sdegroot
 chmod 0440 /etc/sudoers.d/sdegroot
 
-# Enable password authentication for SSH (needed for initial VM access)
+# Enable password authentication for SSH (needed for VM access from host)
 cat > /etc/ssh/sshd_config.d/99-allow-password.conf <<SSHEOF
 PasswordAuthentication yes
 SSHEOF
