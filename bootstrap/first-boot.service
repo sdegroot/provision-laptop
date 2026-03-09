@@ -1,0 +1,19 @@
+[Unit]
+Description=Provision Laptop — First Boot Setup
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/provision-first-boot.done
+
+[Service]
+Type=oneshot
+ExecStart=/home/admin/provision-laptop/bootstrap/first-boot.sh
+ExecStartPost=/usr/bin/touch /var/lib/provision-first-boot.done
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+Environment=HOME=/home/admin
+Environment=USER=admin
+User=admin
+
+[Install]
+WantedBy=multi-user.target

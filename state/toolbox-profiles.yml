@@ -1,0 +1,47 @@
+# Toolbox container profiles
+# Each profile defines a toolbox with specific packages and setup.
+
+profiles:
+  dev-base:
+    image: registry.fedoraproject.org/fedora-toolbox:41
+    packages:
+      - gcc
+      - gcc-c++
+      - make
+      - cmake
+      - git
+      - curl
+      - wget
+      - jq
+      - ripgrep
+      - fd-find
+      - bat
+      - htop
+      - vim-enhanced
+      - zsh
+    setup_script: dev-base.sh
+
+  dev-web:
+    image: registry.fedoraproject.org/fedora-toolbox:41
+    packages:
+      - nodejs
+      - npm
+    setup_script: dev-web.sh
+
+  dev-python:
+    image: registry.fedoraproject.org/fedora-toolbox:41
+    packages:
+      - python3
+      - python3-pip
+      - python3-virtualenv
+      - python3-devel
+    setup_script: dev-python.sh
+
+  dev-infra:
+    image: registry.fedoraproject.org/fedora-toolbox:41
+    packages:
+      - ansible
+      - terraform
+      - kubectl
+      - helm
+    setup_script: dev-infra.sh

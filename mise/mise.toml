@@ -1,0 +1,15 @@
+# Global mise configuration
+# This defines default tool versions available system-wide.
+# Projects can override with their own mise.toml.
+
+[tools]
+node = "lts"
+python = "3.12"
+go = "latest"
+java = "21"
+
+[settings]
+# Automatically install missing tools
+auto_install = true
+# Trust all mise.toml files in home directory
+trusted_config_paths = ["~/Projects"]
