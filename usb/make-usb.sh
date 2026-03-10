@@ -192,6 +192,7 @@ $CONTAINER_CMD run --rm \
         dnf install -y lorax 2>&1 | tail -1 &&
         mkksiso --ks /work/ks.cfg \
             --cmdline 'rd.live.check=0' \
+            --skip-mkefiboot \
             '/iso/$(basename "$ISO_PATH")' \
             /work/modified.iso
     "
