@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   zsh-history-substring-search, and fzf-tab
 - `fzf` package for fuzzy finding (used by fzf-tab and shell keybindings)
 - Security module sets zsh as default login shell via `usermod`
+- **Ghostty terminal** — installed via `scottames/ghostty` COPR with config dotfile
+  (JetBrains Mono, catppuccin-mocha theme, zsh integration, GTK titlebar-less)
 
 ### Changed
 - **Fedora 41 -> 43** — updated all ostree refs, container base images,

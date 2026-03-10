@@ -1,0 +1,34 @@
+# Ghostty terminal configuration
+# https://ghostty.org/docs/config/reference
+
+# Font
+font-family = JetBrains Mono
+font-size = 13
+
+# Window
+window-padding-x = 8
+window-padding-y = 4
+window-decoration = auto
+
+# Theme — uses Ghostty's built-in theme system
+theme = catppuccin-mocha
+
+# Shell integration
+shell-integration = zsh
+
+# Cursor
+cursor-style = bar
+cursor-style-blink = false
+
+# Scrollback
+scrollback-limit = 50000
+
+# Clipboard
+copy-on-select = clipboard
+clipboard-paste-protection = true
+
+# Mouse
+mouse-hide-while-typing = true
+
+# GTK (Fedora/GNOME-specific)
+gtk-titlebar = false

@@ -31,6 +31,9 @@ lm_sensors
 # Ethernet (Motorcomm YT6801 — out-of-tree DKMS, x86_64 only)
 [x86_64] yt6801-dkms
 
+# Terminal
+ghostty
+
 # Podman
 podman-compose
 
