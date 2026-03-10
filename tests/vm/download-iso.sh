@@ -36,9 +36,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Default to host architecture
+# Default to host architecture (macOS reports arm64, Fedora uses aarch64)
 if [[ -z "$ARCH" ]]; then
     ARCH="$(uname -m)"
+    [[ "$ARCH" == "arm64" ]] && ARCH="aarch64"
 fi
 
 # Validate architecture
