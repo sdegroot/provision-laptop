@@ -7,6 +7,8 @@ YubiKey provides hardware-backed security for:
 - LUKS disk unlock (via FIDO2)
 - Two-factor authentication (TOTP/FIDO2)
 
+**For context on how YubiKey fits with 1Password and fingerprint, see [Authentication & Security Architecture](authentication-security.md).**
+
 ## SSH with YubiKey
 
 ### Via 1Password (recommended)

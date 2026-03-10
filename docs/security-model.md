@@ -1,5 +1,7 @@
 # Security Model
 
+**For detailed explanation of how YubiKey, 1Password, and fingerprint work together, see [Authentication & Security Architecture](authentication-security.md).**
+
 ## Principles
 
 - **Secure by default** — encryption, firewall, and SELinux enabled out of the box

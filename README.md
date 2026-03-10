@@ -149,6 +149,7 @@ See [tests/vm/README.md](tests/vm/README.md) for setting up a test VM on macOS.
 - [Hardware Setup](docs/hardware-setup.md) — Tongfang GX4 hardware optimizations
 - [State File Reference](docs/state-files.md) — State file formats and architecture tags
 - [Security Model](docs/security-model.md) — Encryption, SSH, firewall, SELinux
+- [Authentication & Security Architecture](docs/authentication-security.md) — YubiKey + 1Password + Fingerprint layered model
 - [YubiKey Setup](docs/yubikey-setup.md) — LUKS unlock and SSH with YubiKey
 - [Fingerprint Setup](docs/fingerprint-setup.md) — Fingerprint enrollment and PAM integration
 - [1Password Setup](docs/1password-setup.md) — SSH agent and CLI setup

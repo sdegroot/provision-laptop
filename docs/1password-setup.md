@@ -1,5 +1,7 @@
 # 1Password Setup
 
+**For context on how 1Password fits with YubiKey and fingerprint, see [Authentication & Security Architecture](authentication-security.md).**
+
 ## Installation
 
 1Password is installed as a Flatpak via the provisioning system:

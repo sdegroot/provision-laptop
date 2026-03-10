@@ -2,6 +2,8 @@
 
 The Tongfang GX4 includes an integrated fingerprint reader. This guide covers enrollment and PAM integration for authentication.
 
+**For context on how fingerprint fits with YubiKey and 1Password, see [Authentication & Security Architecture](authentication-security.md).**
+
 ## Prerequisites
 
 - `fprintd` and `libfprint` packages installed (auto-installed via provisioning)
