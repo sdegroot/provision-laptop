@@ -47,7 +47,7 @@ if [[ "$ARCH" != "x86_64" && "$ARCH" != "aarch64" ]]; then
     exit 1
 fi
 
-FEDORA_BUILD="${FEDORA_BUILD:-1.1}"
+FEDORA_BUILD="${FEDORA_BUILD:-1.6}"
 ISO_NAME="Fedora-Silverblue-ostree-${ARCH}-${FEDORA_VERSION}-${FEDORA_BUILD}.iso"
 ISO_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Silverblue/${ARCH}/iso/${ISO_NAME}"
 ISO_PATH="${ISO_DIR}/${ISO_NAME}"
