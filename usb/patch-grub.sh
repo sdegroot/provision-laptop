@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # patch-grub.sh — Patch GRUB configuration on USB to auto-load kickstart.
 #
-# Mounts the EFI partition of the USB installer and adds
-# inst.ks=hd:LABEL=OEMDRV:/ks.cfg to every GRUB menu entry's
-# kernel command line.
+# Finds all grub.cfg files on the EFI partition and:
+# 1. Adds inst.ks and rd.live.check=0 directly to any linux/linuxefi lines
+# 2. Prepends set extra_cmdline= so Fedora's configfile-loaded GRUB picks it up
 #
 # Usage: usb/patch-grub.sh --device /dev/sdX
 
@@ -45,6 +45,9 @@ if [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
+KS_PARAM="inst.ks=hd:LABEL=OEMDRV:/ks.cfg"
+EXTRA_PARAMS="${KS_PARAM} rd.live.check=0"
+
 # Determine the EFI partition device path
 DISK_BASE="$(basename "$DEVICE")"
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -66,7 +69,7 @@ fi
 
 # Mount the EFI partition
 MOUNT_DIR="$(mktemp -d)"
-trap 'sudo umount "$MOUNT_DIR" 2>/dev/null; rmdir "$MOUNT_DIR" 2>/dev/null' EXIT
+trap 'sudo umount "$MOUNT_DIR" 2>/dev/null || true; rmdir "$MOUNT_DIR" 2>/dev/null || true' EXIT
 
 echo "Mounting EFI partition ${EFI_PART}..."
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -76,43 +79,51 @@ else
     sudo mount "$EFI_PART" "$MOUNT_DIR"
 fi
 
-# Find GRUB config
-KS_PARAM="inst.ks=hd:LABEL=OEMDRV:/ks.cfg"
+# Find all grub.cfg files on the EFI partition
 patched=0
 
-for grub_cfg in \
-    "${MOUNT_DIR}/EFI/BOOT/grub.cfg" \
-    "${MOUNT_DIR}/EFI/fedora/grub.cfg" \
-    "${MOUNT_DIR}/boot/grub2/grub.cfg"; do
-
-    if [[ ! -f "$grub_cfg" ]]; then
-        continue
-    fi
-
-    if grep -q "$KS_PARAM" "$grub_cfg"; then
-        echo "Already patched: ${grub_cfg}"
+while IFS= read -r -d '' grub_cfg; do
+    if grep -q "$KS_PARAM" "$grub_cfg" 2>/dev/null; then
+        echo "Already patched: ${grub_cfg#${MOUNT_DIR}}"
         patched=1
         continue
     fi
 
-    echo "Patching: ${grub_cfg}"
+    echo "Patching: ${grub_cfg#${MOUNT_DIR}}"
 
-    # Add inst.ks= and rd.live.check=0 to every linux/linuxefi line
-    # rd.live.check=0 skips ISO checksum verification which fails after
-    # we modify the USB partition table (adding OEMDRV)
-    sudo sed -i.bak \
-        "/^[[:space:]]*\(linux\|linuxefi\)[[:space:]]/ {
-            /${KS_PARAM//\//\\/}/! s|\$| ${KS_PARAM} rd.live.check=0|
-        }" "$grub_cfg"
+    # Strategy 1: If there are linux/linuxefi lines, patch them directly
+    if grep -qE '^\s*(linux|linuxefi)\s' "$grub_cfg" 2>/dev/null; then
+        sudo sed -i.bak \
+            -e "/^[[:space:]]*linux[[:space:]]/ s|\$| ${EXTRA_PARAMS}|" \
+            -e "/^[[:space:]]*linuxefi[[:space:]]/ s|\$| ${EXTRA_PARAMS}|" \
+            "$grub_cfg"
+        sudo rm -f "${grub_cfg}.bak"
+        echo "  Patched linux/linuxefi lines"
+    fi
 
-    sudo rm -f "${grub_cfg}.bak"
+    # Strategy 2: Prepend extra_cmdline variable for Fedora's chainloaded config
+    # Fedora's real grub.cfg (on the ISO9660 filesystem) appends $extra_cmdline
+    # to every linux line. By setting it here before the configfile call, our
+    # parameters get picked up even though the ISO is read-only.
+    if grep -qE 'configfile|source' "$grub_cfg" 2>/dev/null; then
+        sudo sed -i.bak \
+            "1i\\
+set extra_cmdline=\"${EXTRA_PARAMS}\"" \
+            "$grub_cfg"
+        sudo rm -f "${grub_cfg}.bak"
+        echo "  Set extra_cmdline for chainloaded config"
+    fi
+
     patched=1
-    echo "  Added ${KS_PARAM} and rd.live.check=0 to kernel boot lines"
-done
+done < <(sudo find "$MOUNT_DIR" -name 'grub.cfg' -print0 2>/dev/null)
 
 if [[ $patched -eq 0 ]]; then
-    echo "WARNING: No GRUB config found to patch."
-    echo "Looked in EFI/BOOT/grub.cfg, EFI/fedora/grub.cfg, boot/grub2/grub.cfg"
+    echo "WARNING: No grub.cfg found on EFI partition."
+    echo "Contents:"
+    sudo find "$MOUNT_DIR" -type f | head -20
+    echo ""
+    echo "You may need to manually add to the GRUB boot line:"
+    echo "  ${EXTRA_PARAMS}"
     exit 1
 fi
 
