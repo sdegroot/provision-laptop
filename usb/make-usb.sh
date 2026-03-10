@@ -195,7 +195,11 @@ $CONTAINER_CMD run --rm --platform linux/amd64 \
             --cmdline 'rd.live.check=0' \
             --skip-mkefiboot \
             '/iso/$(basename "$ISO_PATH")' \
-            /work/modified.iso
+            /work/modified.iso &&
+        # Extract the volume ID so we can patch the EFI grub.cfg with the
+        # same hd:LABEL=... path that mkksiso uses for the BIOS grub.cfg
+        xorriso -indev /work/modified.iso -pvd_info 2>&1 \
+            | grep 'Volume Id' | sed 's/.*: //' > /work/volid.txt
     "
 
 if [[ ! -f "$MODIFIED_ISO" ]]; then
@@ -320,8 +324,17 @@ else
     sudo mount "$EFI_PART" "$EFI_MOUNT"
 fi
 
+# Read the ISO volume ID (extracted by mkksiso container) to build the same
+# hd:LABEL=<volid>:/ks.cfg path that mkksiso uses for the BIOS grub.cfg
+ISO_VOLID="$(cat "${WORK_DIR}/volid.txt" 2>/dev/null | tr -d '[:space:]')"
+if [[ -z "$ISO_VOLID" ]]; then
+    echo "ERROR: Could not determine ISO volume ID for kickstart path."
+    exit 1
+fi
+echo "  ISO volume ID: ${ISO_VOLID}"
+
 # Patch all GRUB configs in the EFI partition to add kickstart + live check args
-KS_ARGS="inst.ks=file:///run/install/ks.cfg rd.live.check=0"
+KS_ARGS="inst.ks=hd:LABEL=${ISO_VOLID}:/ks.cfg rd.live.check=0"
 PATCHED=0
 
 for grub_cfg in "$EFI_MOUNT"/EFI/BOOT/grub.cfg "$EFI_MOUNT"/EFI/BOOT/BOOT.conf; do
