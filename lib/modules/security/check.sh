@@ -41,6 +41,18 @@ if [[ -d "$SSH_DIR" ]]; then
     fi
 fi
 
+# Check default shell
+if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
+    current_shell="$(getent passwd "$(whoami)" | cut -d: -f7)"
+    zsh_path="$(command -v zsh)"
+    if [[ "$current_shell" == "$zsh_path" ]]; then
+        log_ok "Default shell is zsh"
+    else
+        log_error "Default shell is ${current_shell} (expected ${zsh_path})"
+        drift_found=1
+    fi
+fi
+
 # Check 1Password SSH agent socket (only on real system, not in test)
 if [[ -z "$PROVISION_ROOT" ]]; then
     OP_AGENT_SOCK="${HOME}/.1password/agent.sock"

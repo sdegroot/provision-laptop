@@ -19,6 +19,16 @@ if [[ -d "$SSH_DIR" ]]; then
     fi
 fi
 
+# Check default shell
+if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
+    current_shell="$(getent passwd "$(whoami)" | cut -d: -f7)"
+    zsh_path="$(command -v zsh)"
+    if [[ "$current_shell" != "$zsh_path" ]]; then
+        log_plan "Would set default shell to zsh (currently ${current_shell})"
+        changes_planned=1
+    fi
+fi
+
 # Check firewall
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

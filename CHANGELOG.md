@@ -18,6 +18,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Testcontainers + Podman** — Docker-compatible API via `podman.socket`, `DOCKER_HOST`
   env var in `.bashrc`, and `.testcontainers.properties` with Ryuk disabled
 - `podman-compose` package (`state/host-packages.txt`)
+- **Zsh with zinit** — `.zshrc` with zinit plugin manager and five plugins:
+  zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions,
+  zsh-history-substring-search, and fzf-tab
+- `fzf` package for fuzzy finding (used by fzf-tab and shell keybindings)
+- Security module sets zsh as default login shell via `usermod`
 
 ### Added
 - **AI sandbox** — `bin/ai-sandbox` runner for autonomous AI coding agents (Claude Code,

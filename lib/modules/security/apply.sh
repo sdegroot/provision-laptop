@@ -24,6 +24,17 @@ if [[ -d "$SSH_DIR" ]]; then
     fi
 fi
 
+# Set zsh as default shell if available
+if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
+    current_shell="$(getent passwd "$(whoami)" | cut -d: -f7)"
+    zsh_path="$(command -v zsh)"
+    if [[ "$current_shell" != "$zsh_path" ]]; then
+        log_info "Setting default shell to zsh..."
+        sudo usermod -s "$zsh_path" "$(whoami)"
+        changes_made=1
+    fi
+fi
+
 # Ensure firewall is enabled (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

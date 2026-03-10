@@ -14,6 +14,7 @@ zsh
 
 # CLI tools
 gh
+fzf
 
 # Tuxedo hardware (fan control, keyboard backlight, EC interface — x86_64 only)
 [x86_64] tuxedo-drivers
