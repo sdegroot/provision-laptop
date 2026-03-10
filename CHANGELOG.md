@@ -27,10 +27,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (JetBrains Mono, catppuccin-mocha theme, zsh integration, GTK titlebar-less)
 
 ### Fixed
-- **USB kickstart unattended install** — added `text` mode to `base.ks` and
-  `ignoredisk --only-use=nvme0n1,nvme1n1` to `partitioning-laptop.ks`. Without
-  these, Anaconda used the graphical hub (requiring manual clicks) and prompted
-  for disk selection because it saw the USB drive alongside the NVMe drives.
+- **USB kickstart not loading on UEFI hardware** — `--skip-mkefiboot` in the
+  mkksiso invocation caused the EFI boot image (`efiboot.img`) to remain
+  unpatched, so UEFI systems booted with the original GRUB config (no `inst.ks`
+  parameter). The kickstart was never loaded, explaining why the full graphical
+  installer appeared. Fixed by removing `--skip-mkefiboot` and adding
+  `--privileged` to the container so `mkefiboot` can access loop devices.
+  Also added `text` mode and `ignoredisk` directives for fully unattended install.
 - **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
   (official Fedora tool). The kickstart is now embedded directly into the ISO before
   writing to USB. Root cause: dracut cannot reliably mount partitions added via
