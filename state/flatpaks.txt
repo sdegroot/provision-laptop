@@ -3,6 +3,7 @@
 
 # Browsers
 org.mozilla.firefox
+com.brave.Browser
 
 # Development
 com.jetbrains.IntelliJ-IDEA-Ultimate
