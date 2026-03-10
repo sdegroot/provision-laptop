@@ -9,9 +9,9 @@
 # The chainloaded grub.cfg (on the read-only ISO9660 filesystem) may have a
 # stale inst.stage2 label. extra_cmdline appends AFTER it so our value wins.
 #
-# Kickstart is NOT passed via inst.ks here — Anaconda auto-detects a partition
-# labeled OEMDRV and loads ks.cfg from it once the installer is fully running.
-# Dracut's early inst.ks processing cannot reliably mount the OEMDRV partition.
+# inst.ks=hd:LABEL=OEMDRV:/ks.cfg is included alongside Anaconda's OEMDRV
+# auto-detection as belt-and-suspenders. ks.cfg is also copied to the EFI
+# partition as an additional fallback.
 #
 # Usage: usb/patch-grub.sh --device /dev/sdX [--iso-label LABEL]
 
@@ -65,14 +65,17 @@ if [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
-# Always disable the ISO checksum check (it fails on USB) and override
-# inst.stage2 so the correct ISO label is used even when the chainloaded
-# grub.cfg (on the read-only ISO) still references an old Fedora version label.
+# Build kernel params to inject:
+# - rd.live.check=0: skip ISO checksum (always fails on USB)
+# - inst.stage2: override the stale label from the read-only ISO grub.cfg
+# - inst.ks: explicitly load kickstart from OEMDRV (belt-and-suspenders with
+#   Anaconda's own OEMDRV auto-detection, which may not work on all hardware)
 ALREADY_PATCHED_MARKER="rd.live.check=0"
+KS_PARAM="inst.ks=hd:LABEL=OEMDRV:/ks.cfg"
 if [[ -n "$ISO_LABEL" ]]; then
-    EXTRA_PARAMS="rd.live.check=0 inst.stage2=hd:LABEL=${ISO_LABEL}"
+    EXTRA_PARAMS="rd.live.check=0 inst.stage2=hd:LABEL=${ISO_LABEL} ${KS_PARAM}"
 else
-    EXTRA_PARAMS="rd.live.check=0"
+    EXTRA_PARAMS="rd.live.check=0 ${KS_PARAM}"
 fi
 
 # Determine the EFI partition device path
