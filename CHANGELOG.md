@@ -28,11 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - **USB kickstart not loading on UEFI hardware** — `--skip-mkefiboot` in the
-  mkksiso invocation caused the EFI boot image (`efiboot.img`) to remain
-  unpatched, so UEFI systems booted with the original GRUB config (no `inst.ks`
-  parameter). The kickstart was never loaded, explaining why the full graphical
-  installer appeared. Fixed by removing `--skip-mkefiboot` and adding
-  `--privileged` to the container so `mkefiboot` can access loop devices.
+  mkksiso invocation caused the EFI boot image to remain unpatched, so UEFI
+  systems booted with the original GRUB config (no `inst.ks` parameter). The
+  kickstart was never loaded, explaining why the full graphical installer
+  appeared. Fixed by patching the EFI partition's grub.cfg directly on the USB
+  drive after dd (mkefiboot requires loop devices unavailable in Podman on macOS).
   Also added `text` mode and `ignoredisk` directives for fully unattended install.
 - **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
   (official Fedora tool). The kickstart is now embedded directly into the ISO before

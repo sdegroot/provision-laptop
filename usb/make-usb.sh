@@ -3,7 +3,8 @@
 #
 # Creates a USB drive with:
 #   1. Fedora Silverblue ISO with embedded kickstart (via mkksiso)
-#   2. An additional OEMDRV partition containing:
+#   2. Patched EFI boot config (adds inst.ks for UEFI kickstart loading)
+#   3. An additional OEMDRV partition containing:
 #      - Bundled provision-laptop repo — copied to /home during install
 #
 # The kickstart is embedded directly into the ISO using mkksiso (the official
@@ -185,13 +186,14 @@ echo "  (this downloads lorax in a container — may take a minute on first run)
 ISO_DIR="$(cd "$(dirname "$ISO_PATH")" && pwd)"
 MODIFIED_ISO="${WORK_DIR}/modified.iso"
 
-$CONTAINER_CMD run --rm --privileged --platform linux/amd64 \
+$CONTAINER_CMD run --rm --platform linux/amd64 \
     -v "${WORK_DIR}:/work:z" \
     -v "${ISO_DIR}:/iso:ro" \
     fedora:43 bash -c "
         dnf install -y lorax 2>&1 | tail -1 &&
         mkksiso --ks /work/ks.cfg \
             --cmdline 'rd.live.check=0' \
+            --skip-mkefiboot \
             '/iso/$(basename "$ISO_PATH")' \
             /work/modified.iso
     "
@@ -234,7 +236,7 @@ fi
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 1/3: Writing ISO to USB (this may take a while)..."
+echo "Step 1/4: Writing ISO to USB (this may take a while)..."
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
@@ -248,11 +250,108 @@ fi
 echo "ISO written."
 
 # -------------------------------------------------------------------------
-# Step 2: Create OEMDRV partition in remaining space
+# Step 2: Patch EFI boot config for UEFI systems
+# -------------------------------------------------------------------------
+#
+# mkksiso with --skip-mkefiboot patches the BIOS/isolinux GRUB config but
+# leaves the EFI boot image (efiboot.img) untouched. On UEFI systems the
+# firmware boots from the EFI System Partition, which has its own grub.cfg.
+# We mount the ESP and patch it directly to add inst.ks + rd.live.check=0.
+
+echo ""
+echo "Step 2/4: Patching EFI boot config for UEFI kickstart loading..."
+
+DISK_BASE="$(basename "$DEVICE")"
+
+# Find the EFI System Partition on the USB (typically partition 2 on Fedora ISOs)
+if [[ "$(uname)" == "Darwin" ]]; then
+    diskutil unmountDisk "$DEVICE" 2>/dev/null || true
+    sleep 2
+
+    # Find the EFI partition — look for the partition with type EFI
+    EFI_PART_NUM="$(sudo sgdisk --print "$DEVICE" 2>/dev/null \
+        | grep -i 'EF00' | awk '{print $1}' | head -1)"
+
+    if [[ -z "$EFI_PART_NUM" ]]; then
+        echo "ERROR: Could not find EFI System Partition on ${DEVICE}."
+        echo "Check 'diskutil list ${DEVICE}' for the partition layout."
+        exit 1
+    fi
+
+    EFI_PART="/dev/${DISK_BASE}s${EFI_PART_NUM}"
+
+    # Wait for partition to appear
+    for attempt in 1 2 3 4 5; do
+        if [[ -e "$EFI_PART" ]]; then
+            break
+        fi
+        sleep 2
+    done
+
+    if [[ ! -e "$EFI_PART" ]]; then
+        echo "ERROR: EFI partition ${EFI_PART} did not appear."
+        exit 1
+    fi
+else
+    sudo partprobe "$DEVICE"
+    sleep 2
+
+    EFI_PART_NUM="$(sudo sgdisk --print "$DEVICE" 2>/dev/null \
+        | grep -i 'EF00' | awk '{print $1}' | head -1)"
+
+    if [[ -z "$EFI_PART_NUM" ]]; then
+        echo "ERROR: Could not find EFI System Partition on ${DEVICE}."
+        exit 1
+    fi
+
+    if [[ "$DEVICE" =~ [0-9]$ ]]; then
+        EFI_PART="${DEVICE}p${EFI_PART_NUM}"
+    else
+        EFI_PART="${DEVICE}${EFI_PART_NUM}"
+    fi
+fi
+
+EFI_MOUNT="${WORK_DIR}/efi-mount"
+mkdir -p "$EFI_MOUNT"
+
+if [[ "$(uname)" == "Darwin" ]]; then
+    sudo mount -t msdos "$EFI_PART" "$EFI_MOUNT"
+else
+    sudo mount "$EFI_PART" "$EFI_MOUNT"
+fi
+
+# Patch all GRUB configs in the EFI partition to add kickstart + live check args
+KS_ARGS="inst.ks=file:///run/install/ks.cfg rd.live.check=0"
+PATCHED=0
+
+for grub_cfg in "$EFI_MOUNT"/EFI/BOOT/grub.cfg "$EFI_MOUNT"/EFI/BOOT/BOOT.conf; do
+    if [[ -f "$grub_cfg" ]]; then
+        echo "  Patching $(basename "$grub_cfg")..."
+        # Append kickstart args to linuxefi/linux kernel command lines
+        sudo sed \
+            -e "/^[[:space:]]*linuxefi[[:space:]]/ s|\$| ${KS_ARGS}|" \
+            -e "/^[[:space:]]*linux[[:space:]]/ s|\$| ${KS_ARGS}|" \
+            "$grub_cfg" > "${WORK_DIR}/patched-grub.cfg"
+        sudo cp "${WORK_DIR}/patched-grub.cfg" "$grub_cfg"
+        PATCHED=$((PATCHED + 1))
+    fi
+done
+
+sudo umount "$EFI_MOUNT"
+
+if [[ "$PATCHED" -eq 0 ]]; then
+    echo "WARNING: No GRUB config files found in EFI partition."
+    echo "The kickstart may not load on UEFI systems."
+else
+    echo "  Patched ${PATCHED} GRUB config(s) with inst.ks parameter."
+fi
+
+# -------------------------------------------------------------------------
+# Step 3: Create OEMDRV partition in remaining space
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 2/3: Creating OEMDRV partition..."
+echo "Step 3/4: Creating OEMDRV partition..."
 
 # Get ISO size in bytes and calculate start sector for new partition
 ISO_BYTES=$(stat -f%z "$MODIFIED_ISO" 2>/dev/null || stat -c%s "$MODIFIED_ISO")
@@ -288,9 +387,7 @@ sudo sgdisk \
     --change-name=0:OEMDRV \
     "$DEVICE"
 
-# Find the new OEMDRV partition by its GPT label
-DISK_BASE="$(basename "$DEVICE")"
-
+# Find the new OEMDRV partition by its GPT label (DISK_BASE set in step 2)
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
     sleep 2
@@ -358,7 +455,7 @@ fi
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 3/3: Copying repo bundle to OEMDRV..."
+echo "Step 4/4: Copying repo bundle to OEMDRV..."
 
 OEMDRV_MOUNT="${WORK_DIR}/oemdrv-mount"
 mkdir -p "$OEMDRV_MOUNT"
