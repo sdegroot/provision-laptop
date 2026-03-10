@@ -45,5 +45,8 @@ google-noto-fonts
 # Podman
 podman-compose
 
+# Power management
+power-profiles-daemon
+
 # Netbird VPN
 netbird
