@@ -63,9 +63,10 @@ for sys_disk in "/dev/sda" "/dev/nvme0n1" "/dev/nvme1n1"; do
 done
 
 # Find x86_64 ISO (the laptop kickstart targets x86_64)
+# Pick the newest ISO by sorting in reverse (highest version first)
 ISO_PATH=""
-for iso in "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso \
-           "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso.bak; do
+for iso in $(ls -t "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso 2>/dev/null) \
+           $(ls -t "${REPO_DIR}"/tests/vm/Fedora-Silverblue-*x86_64*.iso.bak 2>/dev/null); do
     if [[ -f "$iso" ]]; then
         ISO_PATH="$iso"
         break
@@ -188,14 +189,6 @@ else
 fi
 
 echo "ISO written."
-
-# -------------------------------------------------------------------------
-# Step 1.5: Patch GRUB to auto-load kickstart
-# -------------------------------------------------------------------------
-
-echo ""
-echo "Patching GRUB to auto-load kickstart from OEMDRV..."
-"${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
 
 # -------------------------------------------------------------------------
 # Step 2: Create OEMDRV partition in remaining space
@@ -326,9 +319,23 @@ sudo cp -r "$BUNDLE_DIR" "${OEMDRV_MOUNT}/provision-laptop"
 
 if [[ "$(uname)" == "Darwin" ]]; then
     sudo umount "$OEMDRV_MOUNT"
-    diskutil eject "$DEVICE" 2>/dev/null || true
 else
     sudo umount "$OEMDRV_MOUNT"
+fi
+
+# -------------------------------------------------------------------------
+# Step 4: Patch GRUB to auto-load kickstart
+# -------------------------------------------------------------------------
+# Done AFTER all partition table changes (sgdisk) to avoid macOS
+# re-reading the partition table and reverting the EFI partition changes.
+
+echo ""
+echo "Step 4/4: Patching GRUB to auto-load kickstart..."
+"${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
+
+if [[ "$(uname)" == "Darwin" ]]; then
+    diskutil eject "$DEVICE" 2>/dev/null || true
+else
     sudo eject "$DEVICE" 2>/dev/null || true
 fi
 
