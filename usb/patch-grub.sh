@@ -97,15 +97,17 @@ for grub_cfg in \
 
     echo "Patching: ${grub_cfg}"
 
-    # Add inst.ks= to every linux/linuxefi line that doesn't already have it
+    # Add inst.ks= and rd.live.check=0 to every linux/linuxefi line
+    # rd.live.check=0 skips ISO checksum verification which fails after
+    # we modify the USB partition table (adding OEMDRV)
     sudo sed -i.bak \
         "/^[[:space:]]*\(linux\|linuxefi\)[[:space:]]/ {
-            /${KS_PARAM//\//\\/}/! s|\$| ${KS_PARAM}|
+            /${KS_PARAM//\//\\/}/! s|\$| ${KS_PARAM} rd.live.check=0|
         }" "$grub_cfg"
 
     sudo rm -f "${grub_cfg}.bak"
     patched=1
-    echo "  Added ${KS_PARAM} to kernel boot lines"
+    echo "  Added ${KS_PARAM} and rd.live.check=0 to kernel boot lines"
 done
 
 if [[ $patched -eq 0 ]]; then
