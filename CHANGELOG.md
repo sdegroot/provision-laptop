@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Netbird VPN** — multi-account VPN management via `bin/netbird` with 1Password-backed
+  setup keys for headless authentication. Supports `up`, `down`, `switch`, `status`, and
+  `list` commands for easy switching between accounts
+- Netbird RPM repo (`state/repos.conf`) and package (`state/host-packages.txt`)
+- Account configuration via `state/netbird-accounts.conf` (maps account names to `op://` references)
+- Netbird documentation (`docs/netbird-setup.md`) with setup guide and troubleshooting
+- Netbird test suite (26 tests for account parsing, validation, dry-run commands)
+- Directory for Netbird config (`~/.config/netbird`)
+
+### Added
 - **AI sandbox** — `bin/ai-sandbox` runner for autonomous AI coding agents (Claude Code,
   Codex, Gemini CLI) in isolated Podman containers with git worktree isolation, strict
   security controls (cap-drop, read-only rootfs, resource limits, no host secrets),

@@ -16,3 +16,6 @@
 # AI Sandbox
 ~/.config/ai-sandbox:${USER}:0700
 ~/.local/share/ai-sandbox/logs:${USER}:0755
+
+# Netbird VPN
+~/.config/netbird:${USER}:0700

@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# netbird — Manage Netbird VPN connections with 1Password-backed setup keys.
+#
+# Usage:
+#   bin/netbird up <account>       Connect to an account
+#   bin/netbird switch <account>   Disconnect current, connect new account
+#   bin/netbird down               Disconnect
+#   bin/netbird status             Show current account and netbird status
+#   bin/netbird list               List configured accounts
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# shellcheck source=../lib/common.sh
+source "${PROVISION_DIR}/lib/common.sh"
+
+ACCOUNTS_FILE="${NETBIRD_ACCOUNTS_FILE:-${PROVISION_DIR}/state/netbird-accounts.conf}"
+CURRENT_ACCOUNT_FILE="${NETBIRD_CURRENT_FILE:-${HOME}/.config/netbird/current-account}"
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+    cat <<'EOF'
+Usage: bin/netbird <command> [account]
+
+Commands:
+  up <account>       Connect to an account (fetches setup key from 1Password)
+  switch <account>   Disconnect current account, connect to new one
+  down               Disconnect from current account
+  status             Show current account and netbird status
+  list               List configured accounts
+
+Accounts are defined in state/netbird-accounts.conf.
+Setup keys are stored in 1Password and fetched via the `op` CLI.
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Account parsing
+# ---------------------------------------------------------------------------
+
+# parse_accounts
+#   Reads netbird-accounts.conf and prints name:op-ref lines (no comments/blanks).
+parse_accounts() {
+    local file="${1:-$ACCOUNTS_FILE}"
+    if [[ ! -f "$file" ]]; then
+        log_error "Accounts file not found: ${file}"
+        return 1
+    fi
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+        printf '%s\n' "$line"
+    done < "$file"
+}
+
+# get_account_ref <name> [accounts_file]
+#   Returns the op:// reference for the given account name, or fails.
+get_account_ref() {
+    local name="$1"
+    local file="${2:-$ACCOUNTS_FILE}"
+    local ref=""
+
+    local line acct_name acct_ref
+    while IFS= read -r line; do
+        acct_name="${line%%:*}"
+        acct_ref="${line#*:}"
+        if [[ "$acct_name" == "$name" ]]; then
+            ref="$acct_ref"
+            break
+        fi
+    done < <(parse_accounts "$file")
+
+    if [[ -z "$ref" ]]; then
+        log_error "Unknown account: ${name}"
+        log_error "Available accounts:"
+        list_accounts "$file" >&2
+        return 1
+    fi
+    printf '%s\n' "$ref"
+}
+
+# account_exists <name> [accounts_file]
+#   Returns 0 if the account exists, 1 otherwise.
+account_exists() {
+    local name="$1"
+    local file="${2:-$ACCOUNTS_FILE}"
+    get_account_ref "$name" "$file" >/dev/null 2>&1
+}
+
+# list_accounts [accounts_file]
+#   Prints all account names, one per line.
+list_accounts() {
+    local file="${1:-$ACCOUNTS_FILE}"
+    local found=false
+
+    local line acct_name
+    while IFS= read -r line; do
+        acct_name="${line%%:*}"
+        printf '  %s\n' "$acct_name"
+        found=true
+    done < <(parse_accounts "$file")
+
+    if ! $found; then
+        log_warn "No accounts configured in ${file}"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# 1Password helpers
+# ---------------------------------------------------------------------------
+require_op() {
+    if ! has_command op; then
+        log_error "1Password CLI (op) not found. Install it first."
+        return 1
+    fi
+
+    if ! op whoami >/dev/null 2>&1; then
+        log_error "Not signed in to 1Password CLI. Run: eval \$(op signin)"
+        return 1
+    fi
+}
+
+fetch_setup_key() {
+    local op_ref="$1"
+    local key
+
+    key="$(op read "$op_ref" 2>&1)" || {
+        log_error "Failed to read setup key from 1Password: ${op_ref}"
+        return 1
+    }
+
+    if [[ -z "$key" ]]; then
+        log_error "Setup key is empty for reference: ${op_ref}"
+        return 1
+    fi
+
+    printf '%s\n' "$key"
+}
+
+# ---------------------------------------------------------------------------
+# Netbird operations
+# ---------------------------------------------------------------------------
+do_up() {
+    local account="${1:?up requires an account name}"
+    local op_ref
+
+    op_ref="$(get_account_ref "$account")"
+    require_op
+
+    log_info "Fetching setup key for '${account}' from 1Password..."
+    local setup_key
+    setup_key="$(fetch_setup_key "$op_ref")"
+
+    log_info "Connecting to Netbird account '${account}'..."
+    sudo netbird up --setup-key "$setup_key"
+
+    mkdir -p "$(dirname "$CURRENT_ACCOUNT_FILE")"
+    printf '%s\n' "$account" > "$CURRENT_ACCOUNT_FILE"
+
+    log_ok "Connected to '${account}'"
+    echo ""
+    sudo netbird status
+}
+
+do_switch() {
+    local account="${1:?switch requires an account name}"
+
+    # Validate the target account exists before disconnecting
+    get_account_ref "$account" >/dev/null
+
+    log_info "Disconnecting current account..."
+    sudo netbird down 2>/dev/null || true
+
+    do_up "$account"
+}
+
+do_down() {
+    log_info "Disconnecting from Netbird..."
+    sudo netbird down
+
+    if [[ -f "$CURRENT_ACCOUNT_FILE" ]]; then
+        rm -f "$CURRENT_ACCOUNT_FILE"
+    fi
+
+    log_ok "Disconnected"
+}
+
+do_status() {
+    if [[ -f "$CURRENT_ACCOUNT_FILE" ]]; then
+        local current
+        current="$(cat "$CURRENT_ACCOUNT_FILE")"
+        log_info "Current account: ${current}"
+    else
+        log_info "No account currently active"
+    fi
+
+    echo ""
+    sudo netbird status 2>/dev/null || log_warn "Netbird is not running"
+}
+
+do_list() {
+    if [[ ! -f "$ACCOUNTS_FILE" ]]; then
+        log_error "Accounts file not found: ${ACCOUNTS_FILE}"
+        return 1
+    fi
+    log_info "Configured accounts:"
+    list_accounts
+}
+
+# ---------------------------------------------------------------------------
+# Dry-run support (for testing)
+# ---------------------------------------------------------------------------
+# When NETBIRD_DRY_RUN=1, print commands instead of executing them.
+if [[ "${NETBIRD_DRY_RUN:-}" == "1" ]]; then
+    sudo() {
+        echo "[dry-run] sudo $*"
+    }
+    op() {
+        case "$1" in
+            whoami) return 0 ;;
+            read)   echo "fake-setup-key-for-testing" ;;
+        esac
+    }
+fi
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+    local command="${1:-}"
+
+    if [[ -z "$command" ]]; then
+        usage
+        exit 1
+    fi
+
+    shift
+
+    case "$command" in
+        up)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: bin/netbird up <account>"
+                exit 1
+            fi
+            do_up "$1"
+            ;;
+        switch)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: bin/netbird switch <account>"
+                exit 1
+            fi
+            do_switch "$1"
+            ;;
+        down)
+            do_down
+            ;;
+        status)
+            do_status
+            ;;
+        list)
+            do_list
+            ;;
+        -h|--help|help)
+            usage
+            ;;
+        *)
+            log_error "Unknown command: ${command}"
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
