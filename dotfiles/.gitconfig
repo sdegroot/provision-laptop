@@ -1,7 +1,6 @@
 [user]
-    # Set your name and email
-    # name = Your Name
-    # email = your@email.com
+    name = Sander de Groot
+    email = sander@degroot.dev
 
 [core]
     editor = vim
