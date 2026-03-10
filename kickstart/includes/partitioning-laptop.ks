@@ -44,5 +44,5 @@ part btrfs.data --size=1 --grow --encrypted --luks-version=luks2 --passphrase=ch
 # Data Btrfs subvolumes
 btrfs none --label=data btrfs.data
 btrfs /home --subvol --name=home LABEL=data
-btrfs /work --subvol --name=work LABEL=data
-btrfs /sandbox --subvol --name=sandbox LABEL=data
+btrfs /var/work --subvol --name=work LABEL=data
+btrfs /var/sandbox --subvol --name=sandbox LABEL=data

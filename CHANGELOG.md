@@ -34,6 +34,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   appeared. Fixed by patching the EFI partition's grub.cfg directly on the USB
   drive after dd (mkefiboot requires loop devices unavailable in Podman on macOS).
   Also added `text` mode and `ignoredisk` directives for fully unattended install.
+- **Partitioning on ostree** — moved `/work` and `/sandbox` subvolume mount points
+  to `/var/work` and `/var/sandbox`. The ostree root filesystem is immutable, so
+  arbitrary top-level directories cannot be created during installation.
 - **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
   (official Fedora tool). The kickstart is now embedded directly into the ISO before
   writing to USB. Root cause: dracut cannot reliably mount partitions added via
