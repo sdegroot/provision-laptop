@@ -26,6 +26,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Ghostty terminal** — installed via `scottames/ghostty` COPR with config dotfile
   (JetBrains Mono, catppuccin-mocha theme, zsh integration, GTK titlebar-less)
 
+### Fixed
+- **USB installer** — `patch-grub.sh` now actually patches GRUB config to add
+  `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` to kernel boot lines (was a stub with manual
+  instructions). Called automatically from `make-usb.sh` after writing the ISO.
+
 ### Changed
 - **Fedora 41 -> 43** — updated all ostree refs, container base images,
   toolbox profiles, ISO download script, and documentation

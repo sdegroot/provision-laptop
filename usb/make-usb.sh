@@ -190,6 +190,14 @@ fi
 echo "ISO written."
 
 # -------------------------------------------------------------------------
+# Step 1.5: Patch GRUB to auto-load kickstart
+# -------------------------------------------------------------------------
+
+echo ""
+echo "Patching GRUB to auto-load kickstart from OEMDRV..."
+"${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
+
+# -------------------------------------------------------------------------
 # Step 2: Create OEMDRV partition in remaining space
 # -------------------------------------------------------------------------
 
