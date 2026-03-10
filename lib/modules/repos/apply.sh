@@ -34,7 +34,13 @@ while IFS= read -r line; do
             repo_name="$(basename "$repo_arg" .repo)"
             if ! repo_exists "$repo_name"; then
                 log_info "Adding repo from: ${repo_arg}"
-                sudo curl -fsSL -o "/etc/yum.repos.d/${repo_name}.repo" "$repo_arg"
+                if [[ "$repo_arg" == http://* || "$repo_arg" == https://* ]]; then
+                    sudo curl -fsSL -o "/etc/yum.repos.d/${repo_name}.repo" "$repo_arg"
+                else
+                    # Local path relative to state directory
+                    local_path="$(dirname "$STATE_FILE")/${repo_arg}"
+                    sudo cp "$local_path" "/etc/yum.repos.d/${repo_name}.repo"
+                fi
                 changes_made=1
             fi
             ;;

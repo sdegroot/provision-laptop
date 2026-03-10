@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   proper error handling and logging to `/root/kickstart-post-nochroot.log`.
 - **Unnecessary git package layering** — removed `git` from `kickstart-packages.service`
   since it is already bundled in the Silverblue ostree image.
+- **Netbird repo URL broken** — `https://pkgs.netbird.io/yum/netbird.repo` now returns
+  an HTML page instead of a `.repo` file. Shipped the repo definition locally in
+  `state/repos.d/netbird.repo` and added local file support to the `repofile` type.
 
 ### Added
 - **Netbird VPN** — multi-account VPN management via `bin/netbird` with 1Password-backed
