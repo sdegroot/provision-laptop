@@ -2,9 +2,16 @@
 # patch-grub.sh — Patch GRUB configuration on USB to auto-load kickstart.
 #
 # Finds all grub.cfg files on the EFI partition and:
-# 1. Adds inst.ks and rd.live.check=0 directly to any linux/linuxefi lines
-# 2. Prepends set extra_cmdline= so Fedora's configfile-loaded GRUB picks it up
-# 3. Fixes stale inst.stage2=hd:LABEL= references (when ISO version changes)
+# 1. Adds kernel params directly to any linux/linuxefi lines
+# 2. Prepends set extra_cmdline= so Fedora's chainloaded GRUB picks them up
+# 3. Fixes stale inst.stage2=hd:LABEL= references in writable EFI grub.cfg files
+#
+# The chainloaded grub.cfg (on the read-only ISO9660 filesystem) may have a
+# stale inst.stage2 label. extra_cmdline appends AFTER it so our value wins.
+#
+# Kickstart is NOT passed via inst.ks here — Anaconda auto-detects a partition
+# labeled OEMDRV and loads ks.cfg from it once the installer is fully running.
+# Dracut's early inst.ks processing cannot reliably mount the OEMDRV partition.
 #
 # Usage: usb/patch-grub.sh --device /dev/sdX [--iso-label LABEL]
 
@@ -13,6 +20,7 @@ set -euo pipefail
 DEVICE=""
 EFI_PART_NUM="${EFI_PART_NUM:-2}"
 ISO_LABEL=""
+KS_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -28,8 +36,12 @@ while [[ $# -gt 0 ]]; do
             ISO_LABEL="${2:?--iso-label requires a volume label}"
             shift 2
             ;;
+        --ks-file)
+            KS_FILE="${2:?--ks-file requires a path to ks.cfg}"
+            shift 2
+            ;;
         --help|-h)
-            echo "Usage: $(basename "$0") --device /dev/sdX [--efi-part N] [--iso-label LABEL]"
+            echo "Usage: $(basename "$0") --device /dev/sdX [--efi-part N] [--iso-label LABEL] [--ks-file PATH]"
             echo ""
             echo "Patches GRUB on a Fedora USB installer to auto-load the"
             echo "kickstart from the OEMDRV partition."
@@ -38,6 +50,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --device /dev/sdX   USB device"
             echo "  --efi-part N        EFI partition number (default: 2)"
             echo "  --iso-label LABEL   ISO volume label (for fixing inst.stage2)"
+            echo "  --ks-file PATH      Copy kickstart to EFI partition (fallback)"
             exit 0
             ;;
         *)
@@ -52,8 +65,15 @@ if [[ -z "$DEVICE" ]]; then
     exit 1
 fi
 
-KS_PARAM="inst.ks=hd:LABEL=OEMDRV:/ks.cfg"
-EXTRA_PARAMS="${KS_PARAM} rd.live.check=0"
+# Always disable the ISO checksum check (it fails on USB) and override
+# inst.stage2 so the correct ISO label is used even when the chainloaded
+# grub.cfg (on the read-only ISO) still references an old Fedora version label.
+ALREADY_PATCHED_MARKER="rd.live.check=0"
+if [[ -n "$ISO_LABEL" ]]; then
+    EXTRA_PARAMS="rd.live.check=0 inst.stage2=hd:LABEL=${ISO_LABEL}"
+else
+    EXTRA_PARAMS="rd.live.check=0"
+fi
 
 # Determine the EFI partition device path
 DISK_BASE="$(basename "$DEVICE")"
@@ -90,7 +110,7 @@ fi
 patched=0
 
 while IFS= read -r -d '' grub_cfg; do
-    if grep -q "$KS_PARAM" "$grub_cfg" 2>/dev/null; then
+    if grep -q "$ALREADY_PATCHED_MARKER" "$grub_cfg" 2>/dev/null; then
         echo "Already patched: ${grub_cfg#${MOUNT_DIR}}"
         patched=1
         continue
@@ -98,7 +118,8 @@ while IFS= read -r -d '' grub_cfg; do
 
     echo "Patching: ${grub_cfg#${MOUNT_DIR}}"
 
-    # Strategy 1: If there are linux/linuxefi lines, patch them directly
+    # Strategy 1: If there are linux/linuxefi lines in this EFI grub.cfg,
+    # append params directly. Also replace any stale inst.stage2 label.
     if grep -qE '^\s*(linux|linuxefi)\s' "$grub_cfg" 2>/dev/null; then
         sudo sed -i.bak \
             -e "/^[[:space:]]*linux[[:space:]]/ s|\$| ${EXTRA_PARAMS}|" \
@@ -106,12 +127,21 @@ while IFS= read -r -d '' grub_cfg; do
             "$grub_cfg"
         sudo rm -f "${grub_cfg}.bak"
         echo "  Patched linux/linuxefi lines"
+        # Also fix stale inst.stage2 in-place (belt-and-suspenders)
+        if [[ -n "$ISO_LABEL" ]] && grep -qE 'inst\.stage2=hd:LABEL=' "$grub_cfg" 2>/dev/null; then
+            sudo sed -i.bak \
+                "s|inst\.stage2=hd:LABEL=[^ ]*|inst.stage2=hd:LABEL=${ISO_LABEL}|g" \
+                "$grub_cfg"
+            sudo rm -f "${grub_cfg}.bak"
+            echo "  Fixed inst.stage2 label -> ${ISO_LABEL}"
+        fi
     fi
 
-    # Strategy 2: Prepend extra_cmdline variable for Fedora's chainloaded config
-    # Fedora's real grub.cfg (on the ISO9660 filesystem) appends $extra_cmdline
-    # to every linux line. By setting it here before the configfile call, our
-    # parameters get picked up even though the ISO is read-only.
+    # Strategy 2: Prepend extra_cmdline variable for Fedora's chainloaded config.
+    # Fedora's real grub.cfg (on the read-only ISO9660 filesystem) appends
+    # $extra_cmdline to every linuxefi line. Setting it here before the configfile
+    # call injects our params — including the inst.stage2 override which overrides
+    # the stale label baked into the ISO's grub.cfg (last value wins on cmdline).
     if grep -qE 'configfile|source' "$grub_cfg" 2>/dev/null; then
         sudo sed -i.bak \
             "1i\\
@@ -119,20 +149,6 @@ set extra_cmdline=\"${EXTRA_PARAMS}\"" \
             "$grub_cfg"
         sudo rm -f "${grub_cfg}.bak"
         echo "  Set extra_cmdline for chainloaded config"
-    fi
-
-    # Strategy 3: Fix stale inst.stage2 volume labels
-    # When dd writes a newer ISO over an older one, the EFI partition's grub.cfg
-    # may still reference the old ISO's volume label (e.g. Fedora-SB-ostree-x86_64-41
-    # instead of -43). This causes "missing inst.stage2" errors during boot.
-    if [[ -n "$ISO_LABEL" ]]; then
-        if grep -qE 'inst\.stage2=hd:LABEL=' "$grub_cfg" 2>/dev/null; then
-            sudo sed -i.bak \
-                "s|inst\.stage2=hd:LABEL=[^ ]*|inst.stage2=hd:LABEL=${ISO_LABEL}|g" \
-                "$grub_cfg"
-            sudo rm -f "${grub_cfg}.bak"
-            echo "  Fixed inst.stage2 label -> ${ISO_LABEL}"
-        fi
     fi
 
     patched=1
@@ -148,5 +164,13 @@ if [[ $patched -eq 0 ]]; then
     exit 1
 fi
 
+# Copy kickstart to EFI partition as an additional fallback.
+# Anaconda's OEMDRV auto-detection is the primary mechanism, but having ks.cfg
+# on the EFI partition too means it can be referenced if OEMDRV fails.
+if [[ -n "$KS_FILE" && -f "$KS_FILE" ]]; then
+    sudo cp "$KS_FILE" "${MOUNT_DIR}/ks.cfg"
+    echo "Copied ks.cfg to EFI partition"
+fi
+
 echo ""
-echo "GRUB patched. Anaconda will auto-load the kickstart on boot."
+echo "GRUB patched. Anaconda will auto-detect kickstart from OEMDRV partition."

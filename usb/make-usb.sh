@@ -339,13 +339,16 @@ fi
 
 echo ""
 echo "Step 4/4: Patching GRUB to auto-load kickstart..."
+
+PATCH_ARGS=(--device "$DEVICE" --ks-file "${WORK_DIR}/ks.cfg")
 if [[ -n "$ISO_LABEL" ]]; then
     echo "  ISO volume label: ${ISO_LABEL}"
-    "${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE" --iso-label "$ISO_LABEL"
+    PATCH_ARGS+=(--iso-label "$ISO_LABEL")
 else
     echo "  WARNING: Could not detect ISO volume label, skipping inst.stage2 fix"
-    "${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
 fi
+
+"${SCRIPT_DIR}/patch-grub.sh" "${PATCH_ARGS[@]}"
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil eject "$DEVICE" 2>/dev/null || true
