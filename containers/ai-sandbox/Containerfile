@@ -1,7 +1,7 @@
 # AI Sandbox Container
 # Isolated environment for running AI coding agents (Claude Code, Codex, Gemini CLI)
 # with full code access but no host secrets.
-FROM registry.fedoraproject.org/fedora:41
+FROM registry.fedoraproject.org/fedora:43
 
 RUN dnf install -y \
     git \

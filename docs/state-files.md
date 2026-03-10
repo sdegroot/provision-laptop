@@ -125,7 +125,7 @@ YAML definitions of toolbox container profiles. Parsed via Python's PyYAML.
 ```yaml
 profiles:
   dev-base:
-    image: registry.fedoraproject.org/fedora-toolbox:41
+    image: registry.fedoraproject.org/fedora-toolbox:43
     packages:
       - gcc
       - make

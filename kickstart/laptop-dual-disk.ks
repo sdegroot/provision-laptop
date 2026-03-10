@@ -29,7 +29,7 @@ services --enabled=NetworkManager
 %include includes/partitioning-laptop.ks
 
 # Select Silverblue environment (x86_64 for laptop hardware)
-ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/41/x86_64/silverblue --nogpg
+ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/43/x86_64/silverblue --nogpg
 
 # Post-install script
 %post --log=/root/kickstart-post.log

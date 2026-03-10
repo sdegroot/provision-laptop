@@ -10,7 +10,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ISO_DIR="${SCRIPT_DIR}"
 
-FEDORA_VERSION="${FEDORA_VERSION:-41}"
+FEDORA_VERSION="${FEDORA_VERSION:-43}"
 ARCH=""
 
 while [[ $# -gt 0 ]]; do
@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
             echo "Defaults to the host architecture ($(uname -m))."
             echo ""
             echo "Environment variables:"
-            echo "  FEDORA_VERSION  Fedora release version (default: 41)"
+            echo "  FEDORA_VERSION  Fedora release version (default: 43)"
             exit 0
             ;;
         *)
@@ -47,7 +47,8 @@ if [[ "$ARCH" != "x86_64" && "$ARCH" != "aarch64" ]]; then
     exit 1
 fi
 
-ISO_NAME="Fedora-Silverblue-ostree-${ARCH}-${FEDORA_VERSION}-1.4.iso"
+FEDORA_BUILD="${FEDORA_BUILD:-1.1}"
+ISO_NAME="Fedora-Silverblue-ostree-${ARCH}-${FEDORA_VERSION}-${FEDORA_BUILD}.iso"
 ISO_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Silverblue/${ARCH}/iso/${ISO_NAME}"
 ISO_PATH="${ISO_DIR}/${ISO_NAME}"
 

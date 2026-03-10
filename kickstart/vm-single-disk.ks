@@ -13,7 +13,7 @@ services --enabled=sshd,NetworkManager
 %include includes/partitioning-vm.ks
 
 # Select Silverblue environment (aarch64 for Apple Silicon VM)
-ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/41/aarch64/silverblue --nogpg
+ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/43/aarch64/silverblue --nogpg
 
 # Post-install script
 %post --log=/root/kickstart-post.log

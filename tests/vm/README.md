@@ -39,7 +39,7 @@ All scripts accept environment variables:
 | `VM_CPUS` | `4` | Number of CPU cores |
 | `VM_SSH_PORT` | `2222` | Host port forwarded to VM port 22 |
 | `VM_USER` | `admin` | SSH username |
-| `FEDORA_VERSION` | `41` | Fedora release to download |
+| `FEDORA_VERSION` | `43` | Fedora release to download |
 
 ## Architecture
 

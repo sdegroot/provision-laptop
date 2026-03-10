@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `fzf` package for fuzzy finding (used by fzf-tab and shell keybindings)
 - Security module sets zsh as default login shell via `usermod`
 
+### Changed
+- **Fedora 41 -> 43** — updated all ostree refs, container base images,
+  toolbox profiles, ISO download script, and documentation
+
 ### Added
 - **AI sandbox** — `bin/ai-sandbox` runner for autonomous AI coding agents (Claude Code,
   Codex, Gemini CLI) in isolated Podman containers with git worktree isolation, strict
