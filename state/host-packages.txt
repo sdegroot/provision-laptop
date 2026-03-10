@@ -35,6 +35,9 @@ lm_sensors
 ghostty
 jetbrains-mono-fonts
 
+# Fonts
+google-noto-fonts
+
 # Podman
 podman-compose
 
