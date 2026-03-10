@@ -3,6 +3,10 @@
 # This file is included by environment-specific kickstart files.
 # Do NOT use standalone.
 
+# Text-mode install — auto-proceeds when all kickstart directives are present
+# (graphical mode uses the Anaconda "hub" which always requires manual clicks)
+text
+
 # System language and keyboard
 lang en_US.UTF-8
 keyboard us

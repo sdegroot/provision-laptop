@@ -27,6 +27,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (JetBrains Mono, catppuccin-mocha theme, zsh integration, GTK titlebar-less)
 
 ### Fixed
+- **USB kickstart unattended install** — added `text` mode to `base.ks` and
+  `ignoredisk --only-use=nvme0n1,nvme1n1` to `partitioning-laptop.ks`. Without
+  these, Anaconda used the graphical hub (requiring manual clicks) and prompted
+  for disk selection because it saw the USB drive alongside the NVMe drives.
 - **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
   (official Fedora tool). The kickstart is now embedded directly into the ISO before
   writing to USB. Root cause: dracut cannot reliably mount partitions added via

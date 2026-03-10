@@ -11,6 +11,10 @@
 #   sudo systemd-cryptenroll --fido2-device=auto /dev/nvme1n1p1
 # Then optionally remove the temporary passphrase.
 
+# Ignore all disks except the two NVMe drives (prevents Anaconda from
+# prompting about the USB installer drive or any other attached storage)
+ignoredisk --only-use=nvme0n1,nvme1n1
+
 # Clear all partitions on both disks
 zerombr
 clearpart --all --initlabel --disklabel=gpt --drives=nvme0n1,nvme1n1
