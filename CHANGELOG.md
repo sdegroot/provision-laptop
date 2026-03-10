@@ -27,17 +27,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (JetBrains Mono, catppuccin-mocha theme, zsh integration, GTK titlebar-less)
 
 ### Fixed
-- **USB installer** — `patch-grub.sh` now actually patches GRUB config to add
-  `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` to kernel boot lines (was a stub with manual
-  instructions). Called automatically from `make-usb.sh` after writing the ISO.
-- **USB installer** — `patch-grub.sh` now overrides stale `inst.stage2` labels
-  baked into the read-only ISO grub.cfg by injecting the correct label via
-  `extra_cmdline` (last value wins on kernel command line). Previously only fixed
-  writable grub.cfg files on the EFI partition, missing the chainloaded ISO config.
-- **USB installer** — removed `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` from kernel
-  params. Dracut cannot reliably mount OEMDRV during early boot; instead, Anaconda
-  auto-detects the OEMDRV-labeled partition once the installer is fully running.
-  ks.cfg is also copied to the EFI partition as a fallback.
+- **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
+  (official Fedora tool). The kickstart is now embedded directly into the ISO before
+  writing to USB. Root cause: dracut cannot reliably mount partitions added via
+  sgdisk after dd'ing an ISO (non-standard GPT with partition 1 at sector 0).
+  OEMDRV partition is still used for the repo bundle (accessed only during `%post`,
+  where the full kernel has all filesystem modules loaded).
 
 ### Changed
 - **Fedora 41 -> 43** — updated all ostree refs, container base images,

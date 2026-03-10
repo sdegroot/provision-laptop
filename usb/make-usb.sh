@@ -2,10 +2,16 @@
 # make-usb.sh — Create a bootable USB installer for Fedora Silverblue.
 #
 # Creates a USB drive with:
-#   1. Fedora Silverblue ISO written directly to the drive
+#   1. Fedora Silverblue ISO with embedded kickstart (via mkksiso)
 #   2. An additional OEMDRV partition containing:
-#      - Flattened kickstart (ks.cfg) — auto-detected by Anaconda
 #      - Bundled provision-laptop repo — copied to /home during install
+#
+# The kickstart is embedded directly into the ISO using mkksiso (the official
+# Fedora tool). This avoids the unreliable OEMDRV partition detection during
+# dracut early boot. The OEMDRV partition is still used for the repo bundle,
+# which is only accessed during %post (full kernel, reliable mounting).
+#
+# Requires: podman or docker (for mkksiso), sgdisk (brew install gptfdisk)
 #
 # Usage: usb/make-usb.sh --device /dev/sdX
 #
@@ -30,6 +36,8 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Creates a bootable Fedora Silverblue USB installer with"
             echo "kickstart and bundled provisioning repo."
+            echo ""
+            echo "Requires: podman or docker (for mkksiso), sgdisk"
             echo ""
             echo "WARNING: This will erase ALL data on the target device."
             exit 0
@@ -61,6 +69,24 @@ for sys_disk in "/dev/sda" "/dev/nvme0n1" "/dev/nvme1n1"; do
         exit 1
     fi
 done
+
+# Check for container runtime (needed for mkksiso)
+CONTAINER_CMD=""
+if command -v podman &>/dev/null; then
+    CONTAINER_CMD="podman"
+elif command -v docker &>/dev/null; then
+    CONTAINER_CMD="docker"
+else
+    echo "ERROR: podman or docker is required to run mkksiso."
+    echo ""
+    echo "Install podman:"
+    echo "  brew install podman && podman machine init && podman machine start"
+    echo ""
+    echo "Or install Docker Desktop from https://docker.com/products/docker-desktop"
+    exit 1
+fi
+
+echo "Using container runtime: ${CONTAINER_CMD}"
 
 # Find x86_64 ISO (the laptop kickstart targets x86_64)
 # Pick the newest ISO by sorting in reverse (highest version first)
@@ -149,21 +175,52 @@ else
 fi
 
 # -------------------------------------------------------------------------
+# Create modified ISO with embedded kickstart (mkksiso)
+# -------------------------------------------------------------------------
+
+echo ""
+echo "Creating kickstart-enabled ISO with mkksiso..."
+echo "  (this downloads lorax in a container — may take a minute on first run)"
+
+ISO_DIR="$(cd "$(dirname "$ISO_PATH")" && pwd)"
+MODIFIED_ISO="${WORK_DIR}/modified.iso"
+
+$CONTAINER_CMD run --rm \
+    -v "${WORK_DIR}:/work:z" \
+    -v "${ISO_DIR}:/iso:ro" \
+    fedora:43 bash -c "
+        dnf install -y lorax 2>&1 | tail -1 &&
+        mkksiso --ks /work/ks.cfg \
+            --cmdline 'rd.live.check=0' \
+            '/iso/$(basename "$ISO_PATH")' \
+            /work/modified.iso
+    "
+
+if [[ ! -f "$MODIFIED_ISO" ]]; then
+    echo "ERROR: mkksiso failed — modified ISO not created."
+    echo "Check container output above for errors."
+    exit 1
+fi
+
+echo "Kickstart-enabled ISO created."
+
+# -------------------------------------------------------------------------
 # Confirm with user
 # -------------------------------------------------------------------------
 
-ISO_SIZE=$(du -h "$ISO_PATH" | cut -f1)
+ISO_SIZE=$(du -h "$MODIFIED_ISO" | cut -f1)
 
 echo ""
 echo "=== USB Installer Creation ==="
-echo "  ISO:      ${ISO_PATH} (${ISO_SIZE})"
-echo "  Device:   ${DEVICE}"
-echo "  Kickstart: laptop-dual-disk.ks (flattened)"
-echo "  Repo:     bundled ($(find "$BUNDLE_DIR" -type f | wc -l | tr -d ' ') files)"
+echo "  Base ISO:   ${ISO_PATH}"
+echo "  Modified:   kickstart embedded via mkksiso (${ISO_SIZE})"
+echo "  Device:     ${DEVICE}"
+echo "  Kickstart:  laptop-dual-disk.ks (flattened)"
+echo "  Repo:       bundled ($(find "$BUNDLE_DIR" -type f | wc -l | tr -d ' ') files)"
 echo ""
 echo "This will:"
-echo "  1. Write the Fedora Silverblue ISO to ${DEVICE}"
-echo "  2. Create an OEMDRV partition with kickstart + repo"
+echo "  1. Write the modified ISO to ${DEVICE}"
+echo "  2. Create an OEMDRV partition with the bundled repo"
 echo ""
 echo "WARNING: ALL DATA on ${DEVICE} will be ERASED!"
 read -rp "Type 'YES' to continue: " confirm
@@ -173,19 +230,19 @@ if [[ "$confirm" != "YES" ]]; then
 fi
 
 # -------------------------------------------------------------------------
-# Step 1: Write ISO to USB
+# Step 1: Write modified ISO to USB
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 1/4: Writing ISO to USB (this may take a while)..."
+echo "Step 1/3: Writing ISO to USB (this may take a while)..."
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
-    sudo dd if="$ISO_PATH" of="$DEVICE" bs=4m status=progress
+    sudo dd if="$MODIFIED_ISO" of="$DEVICE" bs=4m status=progress
     sync
 else
     sudo umount "${DEVICE}"* 2>/dev/null || true
-    sudo dd if="$ISO_PATH" of="$DEVICE" bs=4M status=progress oflag=sync
+    sudo dd if="$MODIFIED_ISO" of="$DEVICE" bs=4M status=progress oflag=sync
 fi
 
 echo "ISO written."
@@ -195,10 +252,10 @@ echo "ISO written."
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 2/4: Creating OEMDRV partition..."
+echo "Step 2/3: Creating OEMDRV partition..."
 
 # Get ISO size in bytes and calculate start sector for new partition
-ISO_BYTES=$(stat -f%z "$ISO_PATH" 2>/dev/null || stat -c%s "$ISO_PATH")
+ISO_BYTES=$(stat -f%z "$MODIFIED_ISO" 2>/dev/null || stat -c%s "$MODIFIED_ISO")
 ISO_SECTORS=$(( (ISO_BYTES + 511) / 512 ))
 # Leave a 2048-sector gap after ISO
 OEMDRV_START=$(( ISO_SECTORS + 2048 ))
@@ -297,11 +354,11 @@ else
 fi
 
 # -------------------------------------------------------------------------
-# Step 3: Copy kickstart + repo to OEMDRV
+# Step 3: Copy repo bundle to OEMDRV
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 3/4: Copying kickstart and repo to OEMDRV..."
+echo "Step 3/3: Copying repo bundle to OEMDRV..."
 
 OEMDRV_MOUNT="${WORK_DIR}/oemdrv-mount"
 mkdir -p "$OEMDRV_MOUNT"
@@ -314,7 +371,6 @@ else
     sudo mount "$OEMDRV_PART" "$OEMDRV_MOUNT"
 fi
 
-sudo cp "${WORK_DIR}/ks.cfg" "${OEMDRV_MOUNT}/ks.cfg"
 sudo cp -r "$BUNDLE_DIR" "${OEMDRV_MOUNT}/provision-laptop"
 
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -324,31 +380,8 @@ else
 fi
 
 # -------------------------------------------------------------------------
-# Step 4: Patch GRUB to auto-load kickstart
+# Eject
 # -------------------------------------------------------------------------
-# Done AFTER all partition table changes (sgdisk) to avoid macOS
-# re-reading the partition table and reverting the EFI partition changes.
-
-# Detect the ISO volume label so patch-grub can fix stale inst.stage2 references.
-# The label is embedded in the ISO9660 header; `file` extracts it as 'LABEL' (quoted).
-ISO_LABEL=""
-if file_output="$(file "$ISO_PATH" 2>/dev/null)"; then
-    # file output: "... 'Fedora-SB-ostree-x86_64-43' (bootable)"
-    ISO_LABEL="$(echo "$file_output" | sed -n "s/.*'\\([^']*\\)'.*/\\1/p")"
-fi
-
-echo ""
-echo "Step 4/4: Patching GRUB to auto-load kickstart..."
-
-PATCH_ARGS=(--device "$DEVICE" --ks-file "${WORK_DIR}/ks.cfg")
-if [[ -n "$ISO_LABEL" ]]; then
-    echo "  ISO volume label: ${ISO_LABEL}"
-    PATCH_ARGS+=(--iso-label "$ISO_LABEL")
-else
-    echo "  WARNING: Could not detect ISO volume label, skipping inst.stage2 fix"
-fi
-
-"${SCRIPT_DIR}/patch-grub.sh" "${PATCH_ARGS[@]}"
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil eject "$DEVICE" 2>/dev/null || true
@@ -360,7 +393,8 @@ echo ""
 echo "=== USB installer created successfully! ==="
 echo ""
 echo "Boot from this USB to install Fedora Silverblue."
-echo "Anaconda will auto-detect the kickstart from the OEMDRV partition."
+echo "The kickstart is embedded in the ISO (via mkksiso) and will load"
+echo "automatically — no manual selection needed."
 echo ""
 echo "After install & first boot:"
 echo "  1. Enroll YubiKey for LUKS unlock"
