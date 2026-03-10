@@ -10,8 +10,88 @@
 
 ## Prerequisites
 
-- Disable Secure Boot in BIOS (simplifies DKMS module loading)
 - WiFi available for initial provisioning (Ethernet driver installed later)
+- BIOS settings configured (see BIOS Setup section below)
+
+## BIOS Setup
+
+Before installing Fedora Silverblue, configure BIOS settings for optimal compatibility and performance.
+
+### How to Enter BIOS
+
+1. Power off the laptop completely
+2. Power on and immediately press **Delete** or **F2** (varies by model)
+   - If BIOS doesn't open, try **F12** or **Esc** during startup
+3. You should see the BIOS/UEFI menu
+
+### Required Settings
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| **Secure Boot** | **Disabled** | Required for DKMS modules (Ethernet driver, others) |
+| **SATA Mode** | **AHCI** | Standard mode, usually default |
+| **Virtualization (AMD-V)** | **Enabled** | Required for VMs, containers, KVM |
+
+### Recommended Settings
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| **XMP / DOCP** | Enabled (if RAM upgraded) | Better memory performance |
+| **AMD PST / CPU Power Management** | Keep default | AMD P-State driver handles this |
+| **Wake on LAN** | Disabled | Save battery if not needed |
+| **Fingerprint Reader** | Enabled | For biometric authentication |
+| **Integrated Camera** | Disable if unused | Save power, improve privacy |
+| **Bluetooth** | Enable | WiFi card has integrated Bluetooth |
+
+### Step-by-Step: Disable Secure Boot
+
+1. Enter BIOS (press Delete/F2 at startup)
+2. Navigate to **Security** tab
+3. Find **Secure Boot** setting
+4. Change to **Disabled**
+5. If prompted, confirm and allow BIOS to reset defaults
+6. Save and Exit (usually **F10**)
+
+### Step-by-Step: Enable Virtualization
+
+1. Enter BIOS
+2. Navigate to **Processor** or **CPU** tab
+3. Find **Virtualization Technology** or **SVM Mode**
+4. Change to **Enabled**
+5. Save and Exit (**F10**)
+
+### Step-by-Step: Set SATA to AHCI
+
+1. Enter BIOS
+2. Navigate to **Storage** or **Integrated Peripherals**
+3. Find **SATA Mode** or **Storage Configuration**
+4. Change from RAID to **AHCI** (if not already set)
+5. Save and Exit (**F10**)
+
+### Verification After Boot
+
+After installing Fedora Silverblue, verify BIOS settings took effect:
+
+```bash
+# Check Secure Boot is disabled
+mokutil --sb-state
+
+# Check virtualization is enabled
+lscpu | grep -i virtual
+
+# Check SATA mode
+lsblk -d -o name,model
+```
+
+### Common BIOS Menu Layouts
+
+**Different BIOS vendors use different tab names:**
+
+| Item | AMI/Award BIOS | Phoenix BIOS | UEFI | Where to Look |
+|------|---|---|---|---|
+| Secure Boot | Security → Secure Boot | Security → Secure Boot | Security → Secure Boot | Usually under Security tab |
+| Virtualization | Processor → Virtualization Tech | CPU → CPU Virtualization | Processor → SVM Mode | Under CPU/Processor settings |
+| SATA Mode | Storage → SATA | Storage → SATA Mode | Integrated Peripherals → SATA | Storage/Peripherals section |
 
 ## What Gets Configured
 
