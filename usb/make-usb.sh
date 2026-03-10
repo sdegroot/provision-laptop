@@ -212,12 +212,16 @@ if ! command -v sgdisk &>/dev/null; then
     exit 1
 fi
 
+# After dd'ing the ISO, the GPT backup header still reflects the ISO's
+# original size, not the USB drive's actual size. Move it to the real end
+# of the disk so sgdisk can use the remaining space.
+echo "Relocating GPT backup header to end of disk..."
+sudo sgdisk --move-second-header "$DEVICE"
+
 # Snapshot partition count before adding the new one
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
 fi
-
-PARTS_BEFORE="$(sgdisk --print "$DEVICE" 2>/dev/null | grep -c '^ *[0-9]')" || PARTS_BEFORE=0
 
 echo "Creating OEMDRV partition starting at sector ${OEMDRV_START}..."
 sudo sgdisk \
@@ -226,17 +230,25 @@ sudo sgdisk \
     --change-name=0:OEMDRV \
     "$DEVICE"
 
-# Re-read partition table and find the new partition
+# Find the new OEMDRV partition by its GPT label
+DISK_BASE="$(basename "$DEVICE")"
+
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
     sleep 2
 
-    # Determine the new partition number from sgdisk output
-    PARTS_AFTER="$(sgdisk --print "$DEVICE" 2>/dev/null | grep -c '^ *[0-9]')" || PARTS_AFTER=0
-    NEW_PART_NUM=$(( PARTS_AFTER ))
+    # Parse the new partition number: find the highest-numbered partition
+    # from sgdisk --print (the one we just created).
+    NEW_PART_NUM="$(sudo sgdisk --print "$DEVICE" 2>/dev/null \
+        | grep '^ *[0-9]' | awk '{print $1}' | sort -n | tail -1)"
 
-    # On macOS, disk partitions are named /dev/diskNsM
-    DISK_BASE="$(basename "$DEVICE")"
+    if [[ -z "$NEW_PART_NUM" ]]; then
+        echo "ERROR: Could not determine new partition number from sgdisk."
+        echo "Check 'diskutil list ${DEVICE}' and format the last partition manually:"
+        echo "  sudo newfs_msdos -F 32 -v OEMDRV /dev/${DISK_BASE}sN"
+        exit 1
+    fi
+
     OEMDRV_PART="/dev/${DISK_BASE}s${NEW_PART_NUM}"
 
     # Wait for the partition to appear (macOS can be slow to re-read)
@@ -255,13 +267,31 @@ if [[ "$(uname)" == "Darwin" ]]; then
         exit 1
     fi
 
+    echo "Formatting ${OEMDRV_PART} as FAT32..."
     sudo newfs_msdos -F 32 -v OEMDRV "$OEMDRV_PART"
 else
     sudo partprobe "$DEVICE"
     sleep 2
 
-    # The new partition is the last one listed
-    OEMDRV_PART="$(lsblk -lnp -o NAME "$DEVICE" | tail -1)"
+    # Find the new partition: highest-numbered partition from sgdisk
+    NEW_PART_NUM="$(sudo sgdisk --print "$DEVICE" 2>/dev/null \
+        | grep '^ *[0-9]' | awk '{print $1}' | sort -n | tail -1)"
+
+    if [[ -z "$NEW_PART_NUM" ]]; then
+        echo "ERROR: Could not determine new partition number from sgdisk."
+        echo "Check 'lsblk ${DEVICE}' and format the last partition manually:"
+        echo "  sudo mkfs.vfat -F 32 -n OEMDRV ${DEVICE}N"
+        exit 1
+    fi
+
+    # Linux partition naming: /dev/sdb4 or /dev/nvme0n1p4
+    if [[ "$DEVICE" =~ [0-9]$ ]]; then
+        OEMDRV_PART="${DEVICE}p${NEW_PART_NUM}"
+    else
+        OEMDRV_PART="${DEVICE}${NEW_PART_NUM}"
+    fi
+
+    echo "Formatting ${OEMDRV_PART} as FAT32..."
     sudo mkfs.vfat -F 32 -n OEMDRV "$OEMDRV_PART"
 fi
 
