@@ -30,6 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **USB installer** — `patch-grub.sh` now actually patches GRUB config to add
   `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` to kernel boot lines (was a stub with manual
   instructions). Called automatically from `make-usb.sh` after writing the ISO.
+- **USB installer** — `patch-grub.sh` now fixes stale `inst.stage2=hd:LABEL=`
+  references when the ISO version changes (e.g. F41 → F43). `make-usb.sh` detects
+  the ISO volume label automatically and passes it via `--iso-label`.
 
 ### Changed
 - **Fedora 41 -> 43** — updated all ostree refs, container base images,

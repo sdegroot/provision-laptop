@@ -177,7 +177,7 @@ fi
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 1/3: Writing ISO to USB (this may take a while)..."
+echo "Step 1/4: Writing ISO to USB (this may take a while)..."
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil unmountDisk "$DEVICE" 2>/dev/null || true
@@ -195,7 +195,7 @@ echo "ISO written."
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 2/3: Creating OEMDRV partition..."
+echo "Step 2/4: Creating OEMDRV partition..."
 
 # Get ISO size in bytes and calculate start sector for new partition
 ISO_BYTES=$(stat -f%z "$ISO_PATH" 2>/dev/null || stat -c%s "$ISO_PATH")
@@ -301,7 +301,7 @@ fi
 # -------------------------------------------------------------------------
 
 echo ""
-echo "Step 3/3: Copying kickstart and repo to OEMDRV..."
+echo "Step 3/4: Copying kickstart and repo to OEMDRV..."
 
 OEMDRV_MOUNT="${WORK_DIR}/oemdrv-mount"
 mkdir -p "$OEMDRV_MOUNT"
@@ -329,9 +329,23 @@ fi
 # Done AFTER all partition table changes (sgdisk) to avoid macOS
 # re-reading the partition table and reverting the EFI partition changes.
 
+# Detect the ISO volume label so patch-grub can fix stale inst.stage2 references.
+# The label is embedded in the ISO9660 header; `file` extracts it as 'LABEL' (quoted).
+ISO_LABEL=""
+if file_output="$(file "$ISO_PATH" 2>/dev/null)"; then
+    # file output: "... 'Fedora-SB-ostree-x86_64-43' (bootable)"
+    ISO_LABEL="$(echo "$file_output" | sed -n "s/.*'\\([^']*\\)'.*/\\1/p")"
+fi
+
 echo ""
 echo "Step 4/4: Patching GRUB to auto-load kickstart..."
-"${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
+if [[ -n "$ISO_LABEL" ]]; then
+    echo "  ISO volume label: ${ISO_LABEL}"
+    "${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE" --iso-label "$ISO_LABEL"
+else
+    echo "  WARNING: Could not detect ISO volume label, skipping inst.stage2 fix"
+    "${SCRIPT_DIR}/patch-grub.sh" --device "$DEVICE"
+fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
     diskutil eject "$DEVICE" 2>/dev/null || true

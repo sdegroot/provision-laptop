@@ -4,13 +4,15 @@
 # Finds all grub.cfg files on the EFI partition and:
 # 1. Adds inst.ks and rd.live.check=0 directly to any linux/linuxefi lines
 # 2. Prepends set extra_cmdline= so Fedora's configfile-loaded GRUB picks it up
+# 3. Fixes stale inst.stage2=hd:LABEL= references (when ISO version changes)
 #
-# Usage: usb/patch-grub.sh --device /dev/sdX
+# Usage: usb/patch-grub.sh --device /dev/sdX [--iso-label LABEL]
 
 set -euo pipefail
 
 DEVICE=""
 EFI_PART_NUM="${EFI_PART_NUM:-2}"
+ISO_LABEL=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -22,8 +24,12 @@ while [[ $# -gt 0 ]]; do
             EFI_PART_NUM="${2:?--efi-part requires a partition number}"
             shift 2
             ;;
+        --iso-label)
+            ISO_LABEL="${2:?--iso-label requires a volume label}"
+            shift 2
+            ;;
         --help|-h)
-            echo "Usage: $(basename "$0") --device /dev/sdX [--efi-part N]"
+            echo "Usage: $(basename "$0") --device /dev/sdX [--efi-part N] [--iso-label LABEL]"
             echo ""
             echo "Patches GRUB on a Fedora USB installer to auto-load the"
             echo "kickstart from the OEMDRV partition."
@@ -31,6 +37,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --device /dev/sdX   USB device"
             echo "  --efi-part N        EFI partition number (default: 2)"
+            echo "  --iso-label LABEL   ISO volume label (for fixing inst.stage2)"
             exit 0
             ;;
         *)
@@ -112,6 +119,20 @@ set extra_cmdline=\"${EXTRA_PARAMS}\"" \
             "$grub_cfg"
         sudo rm -f "${grub_cfg}.bak"
         echo "  Set extra_cmdline for chainloaded config"
+    fi
+
+    # Strategy 3: Fix stale inst.stage2 volume labels
+    # When dd writes a newer ISO over an older one, the EFI partition's grub.cfg
+    # may still reference the old ISO's volume label (e.g. Fedora-SB-ostree-x86_64-41
+    # instead of -43). This causes "missing inst.stage2" errors during boot.
+    if [[ -n "$ISO_LABEL" ]]; then
+        if grep -qE 'inst\.stage2=hd:LABEL=' "$grub_cfg" 2>/dev/null; then
+            sudo sed -i.bak \
+                "s|inst\.stage2=hd:LABEL=[^ ]*|inst.stage2=hd:LABEL=${ISO_LABEL}|g" \
+                "$grub_cfg"
+            sudo rm -f "${grub_cfg}.bak"
+            echo "  Fixed inst.stage2 label -> ${ISO_LABEL}"
+        fi
     fi
 
     patched=1
