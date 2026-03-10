@@ -39,6 +39,40 @@
 - SSH agent provides key management
 - CLI (`op`) available in toolboxes for scripting
 
+## Client Isolation (Future Idea)
+
+When working for multiple clients, you may want full isolation between environments — separate git config, SSH keys, project files, and IDE settings per client. Several approaches were considered:
+
+| Approach | Isolation | Switching speed | Disk cost | IntelliJ support |
+|----------|-----------|----------------|-----------|-----------------|
+| Different directories | None (shared git/ssh) | Instant | Low | Native |
+| Toolboxes | Partial (shared `$HOME`) | Fast | Medium | Limited |
+| Dev Containers | Full | Medium | Medium | Native (Gateway) |
+| **Different Linux users** | **Full** | **Slow (session switch)** | **High** | **Native** |
+
+### Recommended: Different Linux Users
+
+Create per-client users (e.g. `sdegroot-clienta`, `sdegroot-clientb`). Each gets:
+
+- Separate `$HOME` — `.gitconfig`, `.ssh/`, `.config/`, `.local/`
+- Own mise environments, toolbox containers, Flatpak overrides
+- OS-level file permission boundary
+- Own IntelliJ settings, recent projects, plugins
+- Separate Wayland session via GNOME fast user switching
+
+**How to provision:** Run `bin/apply` as each user independently. Flatpaks are installed system-wide, but overrides (`flatpak override --user`) are per-user.
+
+**Trade-offs:**
+
+- Session switching is heavier than switching directories (full GNOME session)
+- Disk usage multiplied per user (~2-5 GB for mise runtimes per user)
+- Each user needs their own 1Password agent or SSH keys
+- No shared clipboard/windows between sessions (separate Wayland compositors)
+
+**Best suited for:** One client per day, where strong isolation matters more than fast switching.
+
+**Not yet implemented.** If needed, the provisioning system could be extended with `--user` support to set up multiple users declaratively.
+
 ## Verification
 
 Run the security module check:
