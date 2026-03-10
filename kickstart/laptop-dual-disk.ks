@@ -45,21 +45,36 @@ systemctl set-default graphical.target
 echo "sdegroot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sdegroot
 chmod 0440 /etc/sudoers.d/sdegroot
 
-# --- Layer essential packages via rpm-ostree ---
-# These are needed before bin/apply can run
+# --- Layer essential packages on first boot ---
+# rpm-ostree install doesn't persist during Anaconda %post because the ostree
+# deployment isn't fully active. Instead, create a one-shot systemd service
+# that layers the packages on first boot, then reboots into the new deployment.
+cat > /etc/systemd/system/kickstart-packages.service <<'UNIT'
+[Unit]
+Description=Layer kickstart packages via rpm-ostree
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/kickstart-packages.done
 
-# YubiKey support (for LUKS FIDO2 enrollment + authentication)
-# libfido2: FIDO2 library (used by systemd-cryptenroll)
-# yubikey-manager: CLI tool for YubiKey management (ykman)
-# pam-u2f: PAM module for U2F/FIDO2 auth (sudo, login)
-rpm-ostree install \
-    libfido2 \
-    yubikey-manager \
-    pam-u2f \
-    --allow-inactive
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c ' \
+    rpm-ostree install \
+        libfido2 \
+        yubikey-manager \
+        pam-u2f \
+        git && \
+    touch /var/lib/kickstart-packages.done && \
+    systemctl reboot'
+ExecStartPost=/usr/bin/touch /var/lib/kickstart-packages.done
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
 
-# Git (for pulling repo updates after first boot)
-rpm-ostree install git --allow-inactive
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl enable kickstart-packages.service
 
 # --- Copy provisioning repo from OEMDRV volume ---
 # The USB installer bundles the repo on the OEMDRV partition.

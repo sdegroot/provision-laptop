@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Partitioning on ostree** — moved `/work` and `/sandbox` subvolume mount points
   to `/var/work` and `/var/sandbox`. The ostree root filesystem is immutable, so
   arbitrary top-level directories cannot be created during installation.
+- **rpm-ostree packages not persisting** — `rpm-ostree install` during Anaconda
+  `%post` doesn't persist because the ostree deployment isn't fully active.
+  Replaced with a `kickstart-packages.service` one-shot systemd unit that layers
+  packages on first boot and reboots into the new deployment.
 - **USB installer** — switched from GRUB patching + OEMDRV kickstart to `mkksiso`
   (official Fedora tool). The kickstart is now embedded directly into the ISO before
   writing to USB. Root cause: dracut cannot reliably mount partitions added via
