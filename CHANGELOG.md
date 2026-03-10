@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **OEMDRV repo copy failing silently during kickstart** — the `%post` script runs
+  inside a chroot at `/mnt/sysroot` where mounting USB partitions fails silently.
+  Moved the OEMDRV copy to a `%post --nochroot` section that runs in the real
+  installer environment with full device access. Also replaced `|| true` with
+  proper error handling and logging to `/root/kickstart-post-nochroot.log`.
+- **Unnecessary git package layering** — removed `git` from `kickstart-packages.service`
+  since it is already bundled in the Silverblue ostree image.
+
 ### Added
 - **Netbird VPN** — multi-account VPN management via `bin/netbird` with 1Password-backed
   setup keys for headless authentication. Supports `up`, `down`, `switch`, `status`, and

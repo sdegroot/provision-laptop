@@ -62,8 +62,7 @@ ExecStart=/bin/bash -c ' \
     rpm-ostree install \
         libfido2 \
         yubikey-manager \
-        pam-u2f \
-        git && \
+        pam-u2f && \
     touch /var/lib/kickstart-packages.done && \
     systemctl reboot'
 ExecStartPost=/usr/bin/touch /var/lib/kickstart-packages.done
@@ -75,35 +74,6 @@ StandardError=journal+console
 WantedBy=multi-user.target
 UNIT
 systemctl enable kickstart-packages.service
-
-# --- Copy provisioning repo from OEMDRV volume ---
-# The USB installer bundles the repo on the OEMDRV partition.
-# We copy it to the user's home directory for immediate use.
-
-OEMDRV_MOUNT=""
-for dev in /dev/disk/by-label/OEMDRV; do
-    if [[ -e "$dev" ]]; then
-        OEMDRV_MOUNT="/mnt/oemdrv"
-        mkdir -p "$OEMDRV_MOUNT"
-        mount "$dev" "$OEMDRV_MOUNT" || true
-        break
-    fi
-done
-
-if [[ -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then
-    echo "Copying provisioning repo from OEMDRV..."
-    cp -a "${OEMDRV_MOUNT}/provision-laptop" /home/sdegroot/provision-laptop
-    chown -R sdegroot:sdegroot /home/sdegroot/provision-laptop
-    echo "Provisioning repo copied to /home/sdegroot/provision-laptop"
-else
-    echo "WARNING: provision-laptop not found on OEMDRV volume"
-    echo "After first boot, clone manually:"
-    echo "  git clone git@github.com:sdegroot/provision-laptop.git"
-fi
-
-if [[ -n "$OEMDRV_MOUNT" ]]; then
-    umount "$OEMDRV_MOUNT" 2>/dev/null || true
-fi
 
 # --- Configure FIDO2 for LUKS unlock ---
 # We can't enroll the YubiKey during kickstart (no USB access in %post),
@@ -119,4 +89,47 @@ echo "After first boot:"
 echo "  1. Enroll YubiKey for LUKS (systemd-cryptenroll --fido2-device=auto)"
 echo "  2. Install & configure 1Password"
 echo "  3. cd ~/provision-laptop && git pull && bin/apply"
+%end
+
+# Copy provisioning repo from OEMDRV volume (nochroot)
+# Runs in the real installer environment with full device access.
+# The chrooted %post cannot reliably mount USB partitions — mount fails
+# silently inside the /mnt/sysroot chroot.
+%post --nochroot --log=/mnt/sysroot/root/kickstart-post-nochroot.log
+
+echo "=== Post-install (nochroot): copying provisioning repo ==="
+
+OEMDRV_DEV="/dev/disk/by-label/OEMDRV"
+OEMDRV_MOUNT="/mnt/oemdrv"
+TARGET_DIR="/mnt/sysroot/home/sdegroot/provision-laptop"
+
+if [[ ! -e "$OEMDRV_DEV" ]]; then
+    echo "ERROR: OEMDRV device not found at $OEMDRV_DEV"
+    echo "After first boot, clone manually:"
+    echo "  git clone git@github.com:sdegroot/provision-laptop.git"
+    exit 1
+fi
+
+mkdir -p "$OEMDRV_MOUNT"
+if ! mount "$OEMDRV_DEV" "$OEMDRV_MOUNT"; then
+    echo "ERROR: Failed to mount $OEMDRV_DEV at $OEMDRV_MOUNT"
+    exit 1
+fi
+
+if [[ ! -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then
+    echo "ERROR: provision-laptop not found on OEMDRV volume"
+    echo "Contents of OEMDRV:"
+    ls -la "$OEMDRV_MOUNT"
+    umount "$OEMDRV_MOUNT"
+    exit 1
+fi
+
+echo "Copying provisioning repo from OEMDRV..."
+cp -a "${OEMDRV_MOUNT}/provision-laptop" "$TARGET_DIR"
+# Use numeric UID/GID — passwd is inside the chroot, not accessible here
+chown -R 1000:1000 "$TARGET_DIR"
+echo "Provisioning repo copied to $TARGET_DIR"
+
+umount "$OEMDRV_MOUNT"
+echo "=== Post-install (nochroot) complete ==="
 %end
