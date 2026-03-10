@@ -33,6 +33,7 @@ lm_sensors
 
 # Terminal
 ghostty
+jetbrains-mono-fonts
 
 # Podman
 podman-compose
