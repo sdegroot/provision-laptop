@@ -25,6 +25,10 @@ libfido2
 yubikey-manager
 pam-u2f
 
+# Fingerprint reader
+fprintd
+libfprint
+
 # Sensors
 lm_sensors
 

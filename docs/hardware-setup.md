@@ -48,6 +48,8 @@ The Tuxedo repo and yt6801-dkms COPR are tagged `[x86_64]` — they are skipped 
 | `libfido2` | all | FIDO2 library for YubiKey |
 | `yubikey-manager` | all | YubiKey configuration tool (`ykman`) |
 | `pam-u2f` | all | PAM module for U2F/FIDO2 auth |
+| `fprintd` | all | Fingerprint daemon |
+| `libfprint` | all | Fingerprint library |
 | `lm_sensors` | all | Hardware sensor monitoring |
 
 ### Modprobe Configuration
@@ -139,6 +141,7 @@ These require manual steps — see linked documentation.
 | Item | Reason | Documentation |
 |------|--------|---------------|
 | YubiKey LUKS enrollment | Requires physical key tap | [YubiKey Setup](yubikey-setup.md) |
+| Fingerprint enrollment | Requires fingerprint scans | [Fingerprint Setup](fingerprint-setup.md) |
 | Firmware updates | User decides when to apply | `fwupdmgr get-updates` |
 | Tuxedo Control Center fan profiles | Configured via GUI | See below |
 | Battery charge thresholds | Depends on tuxedo-drivers EC | See below |
