@@ -36,6 +36,11 @@ ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/43/x86_64/sil
 
 echo "=== Post-install: configuring laptop ==="
 
+# Ensure graphical desktop starts after boot — the 'text' kickstart directive
+# (used for unattended install) sets the default target to multi-user.target,
+# but Silverblue's GNOME desktop is part of the ostree image and should start.
+systemctl set-default graphical.target
+
 # Passwordless sudo for provisioning (remove after setup if desired)
 echo "sdegroot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sdegroot
 chmod 0440 /etc/sudoers.d/sdegroot
