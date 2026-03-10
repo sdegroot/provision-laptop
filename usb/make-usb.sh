@@ -185,14 +185,13 @@ echo "  (this downloads lorax in a container — may take a minute on first run)
 ISO_DIR="$(cd "$(dirname "$ISO_PATH")" && pwd)"
 MODIFIED_ISO="${WORK_DIR}/modified.iso"
 
-$CONTAINER_CMD run --rm \
+$CONTAINER_CMD run --rm --platform linux/amd64 \
     -v "${WORK_DIR}:/work:z" \
     -v "${ISO_DIR}:/iso:ro" \
     fedora:43 bash -c "
         dnf install -y lorax 2>&1 | tail -1 &&
         mkksiso --ks /work/ks.cfg \
             --cmdline 'rd.live.check=0' \
-            --skip-mkefiboot \
             '/iso/$(basename "$ISO_PATH")' \
             /work/modified.iso
     "
