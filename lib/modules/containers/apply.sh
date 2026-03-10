@@ -11,6 +11,15 @@ if ! has_command podman; then
     exit 0
 fi
 
+# Enable podman socket (Docker-compatible API for Testcontainers, etc.)
+if [[ -z "$PROVISION_ROOT" ]]; then
+    if ! systemctl --user is-enabled podman.socket &>/dev/null; then
+        log_info "Enabling podman.socket (Docker-compatible API)..."
+        systemctl --user enable --now podman.socket
+        changes_made=1
+    fi
+fi
+
 while IFS= read -r line; do
     IFS=':' read -r name build_ctx description <<< "$line"
 

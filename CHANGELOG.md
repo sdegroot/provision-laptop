@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Netbird documentation (`docs/netbird-setup.md`) with setup guide and troubleshooting
 - Netbird test suite (26 tests for account parsing, validation, dry-run commands)
 - Directory for Netbird config (`~/.config/netbird`)
+- **Testcontainers + Podman** — Docker-compatible API via `podman.socket`, `DOCKER_HOST`
+  env var in `.bashrc`, and `.testcontainers.properties` with Ryuk disabled
+- `podman-compose` package (`state/host-packages.txt`)
 
 ### Added
 - **AI sandbox** — `bin/ai-sandbox` runner for autonomous AI coding agents (Claude Code,

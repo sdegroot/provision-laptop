@@ -27,6 +27,9 @@ alias grep='grep --color=auto'
 # Local bin
 export PATH="${HOME}/.local/bin:${PATH}"
 
+# Podman socket — Docker-compatible API for tools like Testcontainers
+export DOCKER_HOST="unix://${XDG_RUNTIME_DIR}/podman/podman.sock"
+
 # Mise (runtime version manager)
 if command -v mise &>/dev/null; then
     eval "$(mise activate bash)"
