@@ -20,6 +20,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **hardware**: swap/hibernate setup guarded — if `/swap` cannot be created
     (not Btrfs, or creation failed), logs a warning and skips instead of running
     commands against a nonexistent directory
+- **Mesa freeworld override attempted on every run** — the check only looked at
+  installed packages (`rpm -q`), missing overrides pending in staged deployments.
+  Now checks `rpm-ostree status --json` for pending deployments. Both VA-API and
+  VDPAU overrides are combined into a single atomic `rpm-ostree` command.
+- **`google-noto-fonts` package not found** — `google-noto-fonts` is a source
+  package name, not an installable RPM. Changed to `google-noto-sans-fonts`.
 
 ### Removed
 - **yt6801-dkms** — Motorcomm YT6801 Ethernet driver COPR and package removed;

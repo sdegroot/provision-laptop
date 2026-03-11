@@ -121,17 +121,32 @@ done < <(parse_state_file "$STATE_FILE")
 
 # VA-API freeworld override (x86_64 only — needs hardware GPU)
 if [[ "$(current_arch)" == "x86_64" ]]; then
-    if ! rpm -q mesa-va-drivers-freeworld &>/dev/null; then
+    # Check installed packages AND pending deployments for freeworld drivers
+    freeworld_present=false
+    if rpm -q mesa-va-drivers-freeworld &>/dev/null; then
+        freeworld_present=true
+    elif rpm-ostree status --json 2>/dev/null | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+for dep in data.get("deployments", []):
+    pkgs = dep.get("requested-packages", [])
+    removals = [r if isinstance(r, str) else r.get("name","") for r in dep.get("base-removals", [])]
+    if "mesa-va-drivers-freeworld" in pkgs or "mesa-va-drivers" in removals:
+        sys.exit(0)
+sys.exit(1)
+' 2>/dev/null; then
+        freeworld_present=true
+    fi
+
+    if ! $freeworld_present; then
         log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
-        if ! rpm-ostree override remove mesa-va-drivers --install mesa-va-drivers-freeworld 2>/dev/null; then
-            log_error "Failed to override mesa-va-drivers with freeworld"
+        if ! sudo rpm-ostree override remove mesa-va-drivers mesa-vdpau-drivers \
+                --install mesa-va-drivers-freeworld --install mesa-vdpau-drivers-freeworld; then
+            log_error "Failed to override mesa drivers with freeworld versions"
             has_errors=1
+        else
+            changes_made=1
         fi
-        if ! rpm-ostree override remove mesa-vdpau-drivers --install mesa-vdpau-drivers-freeworld 2>/dev/null; then
-            log_error "Failed to override mesa-vdpau-drivers with freeworld"
-            has_errors=1
-        fi
-        changes_made=1
     fi
 fi
 

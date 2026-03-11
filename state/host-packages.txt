@@ -37,7 +37,7 @@ ghostty
 jetbrains-mono-fonts
 
 # Fonts
-google-noto-fonts
+google-noto-sans-fonts
 
 # Podman
 podman-compose
