@@ -48,5 +48,8 @@ podman-compose
 # Power management
 power-profiles-daemon
 
+# GNOME extensions
+gnome-shell-extension-gsconnect
+
 # Netbird VPN
 netbird

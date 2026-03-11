@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **KDE Connect flatpak unavailable** — `org.kde.kdeconnect` is not on Flathub (KDE
+  Connect needs deep system integration incompatible with Flatpak sandboxing). Replaced
+  with `gnome-shell-extension-gsconnect`, a native GNOME Shell extension that implements
+  the KDE Connect protocol and pairs with the same Android app.
+
+### Changed
+- Moved phone connectivity from Flatpak (`org.kde.kdeconnect`) to host package
+  (`gnome-shell-extension-gsconnect`)
+
+### Fixed
 - **OEMDRV repo copy failing silently during kickstart** — the `%post` script runs
   inside a chroot at `/mnt/sysroot` where mounting USB partitions fails silently.
   Moved the OEMDRV copy to a `%post --nochroot` section that runs in the real

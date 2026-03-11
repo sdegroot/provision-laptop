@@ -22,7 +22,6 @@ com.onepassword.OnePassword
 org.videolan.VLC
 
 # Connectivity
-org.kde.kdeconnect
 org.localsend.localsend_app
 
 # Utilities
