@@ -75,7 +75,7 @@ while IFS= read -r line; do
         rpmfusion-free)
             if ! repo_exists "rpmfusion-free"; then
                 log_info "Adding RPM Fusion Free"
-                if ! sudo rpm-ostree install --idempotent --allow-inactive \
+                if ! rpm_ostree_with_gpg_retry install --idempotent --allow-inactive \
                     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"; then
                     log_error "Failed to install RPM Fusion Free"
                     has_errors=1
@@ -87,7 +87,7 @@ while IFS= read -r line; do
         rpmfusion-nonfree)
             if ! repo_exists "rpmfusion-nonfree"; then
                 log_info "Adding RPM Fusion Non-Free"
-                if ! sudo rpm-ostree install --idempotent --allow-inactive \
+                if ! rpm_ostree_with_gpg_retry install --idempotent --allow-inactive \
                     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"; then
                     log_error "Failed to install RPM Fusion Non-Free"
                     has_errors=1
@@ -144,7 +144,7 @@ sys.exit(1)
         # Override each driver independently — mesa-vdpau-drivers may not be
         # in the base image (e.g. F43 Silverblue doesn't ship it).
         if rpm -q mesa-va-drivers &>/dev/null; then
-            if ! sudo rpm-ostree override remove mesa-va-drivers \
+            if ! rpm_ostree_with_gpg_retry override remove mesa-va-drivers \
                     --install mesa-va-drivers-freeworld; then
                 log_error "Failed to override mesa-va-drivers with freeworld"
                 has_errors=1
@@ -153,7 +153,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-va-drivers not in base image — installing freeworld directly"
-            if ! sudo rpm-ostree install --idempotent mesa-va-drivers-freeworld; then
+            if ! rpm_ostree_with_gpg_retry install --idempotent mesa-va-drivers-freeworld; then
                 log_error "Failed to install mesa-va-drivers-freeworld"
                 has_errors=1
             else
@@ -162,7 +162,7 @@ sys.exit(1)
         fi
 
         if rpm -q mesa-vdpau-drivers &>/dev/null; then
-            if ! sudo rpm-ostree override remove mesa-vdpau-drivers \
+            if ! rpm_ostree_with_gpg_retry override remove mesa-vdpau-drivers \
                     --install mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to override mesa-vdpau-drivers with freeworld"
                 has_errors=1
@@ -171,7 +171,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-vdpau-drivers not in base image — installing freeworld directly"
-            if ! sudo rpm-ostree install --idempotent mesa-vdpau-drivers-freeworld; then
+            if ! rpm_ostree_with_gpg_retry install --idempotent mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to install mesa-vdpau-drivers-freeworld"
                 has_errors=1
             else

@@ -30,6 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   F43 Silverblue base image, causing the combined override command to fail. Now
   handles each driver independently: overrides when the base package exists,
   installs freeworld directly otherwise.
+- **F43 GPG subkey bug blocks rpm-ostree operations** — RPM 6 auto-imports GPG
+  subkeys but libdnf re-imports them causing "failed to add subkey" errors on
+  third-party repos (Tuxedo, RPM Fusion, etc.). Added `rpm_ostree_with_gpg_retry`
+  helper that detects the failure and retries after temporarily disabling
+  gpgcheck on third-party repos (rpm#3954, rpm-ostree#5494).
 
 ### Removed
 - **`power-profiles-daemon`** — replaced by `tuned-ppd` in Fedora 41+, which is
