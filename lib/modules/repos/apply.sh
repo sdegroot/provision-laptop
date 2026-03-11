@@ -119,11 +119,22 @@ sys.exit(1)
 
         # Override each driver independently — mesa-vdpau-drivers may not be
         # in the base image (e.g. F43 Silverblue doesn't ship it).
-        # Use --idempotent --allow-inactive to handle re-runs gracefully
-        # when a previous transaction already requested the freeworld packages.
+        # Capture stderr to detect "already requested" (from a prior partial
+        # run) and treat it as success rather than a fatal error.
+        mesa_override() {
+            local output
+            output="$(sudo rpm-ostree "$@" 2>&1)" && return 0
+            if echo "$output" | grep -q "already requested"; then
+                log_info "Freeworld package already requested (pending reboot)"
+                return 0
+            fi
+            echo "$output" >&2
+            return 1
+        }
+
         if rpm -q mesa-va-drivers &>/dev/null; then
-            if ! sudo rpm-ostree override remove mesa-va-drivers \
-                    --install mesa-va-drivers-freeworld --idempotent --allow-inactive; then
+            if ! mesa_override override remove mesa-va-drivers \
+                    --install mesa-va-drivers-freeworld; then
                 log_error "Failed to override mesa-va-drivers with freeworld"
                 has_errors=1
             else
@@ -131,7 +142,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-va-drivers not in base image — installing freeworld directly"
-            if ! sudo rpm-ostree install --idempotent mesa-va-drivers-freeworld; then
+            if ! mesa_override install --idempotent mesa-va-drivers-freeworld; then
                 log_error "Failed to install mesa-va-drivers-freeworld"
                 has_errors=1
             else
@@ -140,8 +151,8 @@ sys.exit(1)
         fi
 
         if rpm -q mesa-vdpau-drivers &>/dev/null; then
-            if ! sudo rpm-ostree override remove mesa-vdpau-drivers \
-                    --install mesa-vdpau-drivers-freeworld --idempotent --allow-inactive; then
+            if ! mesa_override override remove mesa-vdpau-drivers \
+                    --install mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to override mesa-vdpau-drivers with freeworld"
                 has_errors=1
             else
@@ -149,7 +160,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-vdpau-drivers not in base image — installing freeworld directly"
-            if ! sudo rpm-ostree install --idempotent mesa-vdpau-drivers-freeworld; then
+            if ! mesa_override install --idempotent mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to install mesa-vdpau-drivers-freeworld"
                 has_errors=1
             else
