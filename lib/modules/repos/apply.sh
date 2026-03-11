@@ -140,12 +140,43 @@ sys.exit(1)
 
     if ! $freeworld_present; then
         log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
-        if ! sudo rpm-ostree override remove mesa-va-drivers mesa-vdpau-drivers \
-                --install mesa-va-drivers-freeworld --install mesa-vdpau-drivers-freeworld; then
-            log_error "Failed to override mesa drivers with freeworld versions"
-            has_errors=1
+
+        # Override each driver independently — mesa-vdpau-drivers may not be
+        # in the base image (e.g. F43 Silverblue doesn't ship it).
+        if rpm -q mesa-va-drivers &>/dev/null; then
+            if ! sudo rpm-ostree override remove mesa-va-drivers \
+                    --install mesa-va-drivers-freeworld; then
+                log_error "Failed to override mesa-va-drivers with freeworld"
+                has_errors=1
+            else
+                changes_made=1
+            fi
         else
-            changes_made=1
+            log_info "mesa-va-drivers not in base image — installing freeworld directly"
+            if ! sudo rpm-ostree install --idempotent mesa-va-drivers-freeworld; then
+                log_error "Failed to install mesa-va-drivers-freeworld"
+                has_errors=1
+            else
+                changes_made=1
+            fi
+        fi
+
+        if rpm -q mesa-vdpau-drivers &>/dev/null; then
+            if ! sudo rpm-ostree override remove mesa-vdpau-drivers \
+                    --install mesa-vdpau-drivers-freeworld; then
+                log_error "Failed to override mesa-vdpau-drivers with freeworld"
+                has_errors=1
+            else
+                changes_made=1
+            fi
+        else
+            log_info "mesa-vdpau-drivers not in base image — installing freeworld directly"
+            if ! sudo rpm-ostree install --idempotent mesa-vdpau-drivers-freeworld; then
+                log_error "Failed to install mesa-vdpau-drivers-freeworld"
+                has_errors=1
+            else
+                changes_made=1
+            fi
         fi
     fi
 fi

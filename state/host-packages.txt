@@ -42,8 +42,7 @@ google-noto-sans-fonts
 # Podman
 podman-compose
 
-# Power management
-power-profiles-daemon
+# Power management (tuned-ppd is in F43 base image, replaces power-profiles-daemon)
 
 # GNOME extensions
 gnome-shell-extension-gsconnect

@@ -26,6 +26,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   VDPAU overrides are combined into a single atomic `rpm-ostree` command.
 - **`google-noto-fonts` package not found** — `google-noto-fonts` is a source
   package name, not an installable RPM. Changed to `google-noto-sans-fonts`.
+- **Mesa freeworld override fails on F43** — `mesa-vdpau-drivers` is not in the
+  F43 Silverblue base image, causing the combined override command to fail. Now
+  handles each driver independently: overrides when the base package exists,
+  installs freeworld directly otherwise.
+
+### Removed
+- **`power-profiles-daemon`** — replaced by `tuned-ppd` in Fedora 41+, which is
+  already in the F43 Silverblue base image and provides the same D-Bus API.
 
 ### Removed
 - **yt6801-dkms** — Motorcomm YT6801 Ethernet driver COPR and package removed;
