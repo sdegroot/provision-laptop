@@ -17,7 +17,9 @@ gh
 fzf
 
 # Tuxedo hardware (fan control, keyboard backlight, EC interface — x86_64 only)
-[x86_64] tuxedo-drivers
+# Uses gladion136/tuxedo-drivers-kmod COPR (kmod build) instead of official
+# tuxedo-drivers (DKMS) which is incompatible with rpm-ostree's bwrap sandbox.
+[x86_64] tuxedo-drivers-kmod-common
 [x86_64] tuxedo-control-center
 
 # YubiKey

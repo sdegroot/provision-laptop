@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Switch tuxedo-drivers from DKMS to kmod build** — the official `tuxedo-drivers`
+  package uses DKMS which is incompatible with rpm-ostree's bwrap sandbox
+  (`/var/lib/dkms` not writable). Replaced with `tuxedo-drivers-kmod-common` from
+  the `gladion136/tuxedo-drivers-kmod` COPR, which provides pre-built kernel modules
+  via akmods. `tuxedo-control-center` remains from the official Tuxedo repo.
 - **Ship third-party repos locally to avoid F43 GPG subkey bug** — Tuxedo and
   RPM Fusion repos are now shipped as local `.repo` files in `state/repos.d/`
   with `gpgcheck=0`, matching the existing `netbird.repo` pattern. This avoids
