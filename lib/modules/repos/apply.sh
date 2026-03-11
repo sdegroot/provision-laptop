@@ -119,9 +119,11 @@ sys.exit(1)
 
         # Override each driver independently — mesa-vdpau-drivers may not be
         # in the base image (e.g. F43 Silverblue doesn't ship it).
+        # Use --idempotent --allow-inactive to handle re-runs gracefully
+        # when a previous transaction already requested the freeworld packages.
         if rpm -q mesa-va-drivers &>/dev/null; then
             if ! sudo rpm-ostree override remove mesa-va-drivers \
-                    --install mesa-va-drivers-freeworld; then
+                    --install mesa-va-drivers-freeworld --idempotent --allow-inactive; then
                 log_error "Failed to override mesa-va-drivers with freeworld"
                 has_errors=1
             else
@@ -139,7 +141,7 @@ sys.exit(1)
 
         if rpm -q mesa-vdpau-drivers &>/dev/null; then
             if ! sudo rpm-ostree override remove mesa-vdpau-drivers \
-                    --install mesa-vdpau-drivers-freeworld; then
+                    --install mesa-vdpau-drivers-freeworld --idempotent --allow-inactive; then
                 log_error "Failed to override mesa-vdpau-drivers with freeworld"
                 has_errors=1
             else
