@@ -6,6 +6,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 STATE_FILE="$(state_file_path "flatpaks.txt")"
 OVERRIDES_FILE="$(state_file_path "flatpak-overrides.conf")"
 changes_made=0
+has_errors=0
 
 if ! has_command flatpak; then
     log_error "flatpak command not found"
@@ -31,6 +32,7 @@ while IFS= read -r app_id; do
         changes_made=1
     else
         log_error "Failed to install: ${app_id}"
+        has_errors=1
     fi
 done < <(parse_state_file "$STATE_FILE")
 
@@ -62,6 +64,11 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                 ;;
         esac
     done < <(parse_state_file "$OVERRIDES_FILE")
+fi
+
+if [[ $has_errors -ne 0 ]]; then
+    log_error "Flatpak apply completed with errors"
+    exit 1
 fi
 
 if [[ $changes_made -eq 0 ]]; then

@@ -7,6 +7,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Silent failures in `bin/apply`** — the `set -e` inside the engine subshell
+  (`() || exit_code=$?`) is disabled by bash, so command failures were silently
+  ignored. Added explicit error handling to each module:
+  - **repos**: `curl` and `cp` failures now tracked and exit non-zero; local
+    repofiles are re-copied when content differs from system copy (fixes corrupt
+    `netbird.repo`)
+  - **host-packages**: `rpm-ostree install` exit code checked; fails loudly
+    instead of reporting success
+  - **flatpaks**: install failures now propagate — module exits non-zero when
+    any flatpak fails to install
+  - **hardware**: swap/hibernate setup guarded — if `/swap` cannot be created
+    (not Btrfs, or creation failed), logs a warning and skips instead of running
+    commands against a nonexistent directory
+
+### Removed
+- **yt6801-dkms** — Motorcomm YT6801 Ethernet driver COPR and package removed;
+  driver is mainline in Fedora 43 kernel
+
+### Fixed
 - **KDE Connect flatpak unavailable** — `org.kde.kdeconnect` is not on Flathub (KDE
   Connect needs deep system integration incompatible with Flatpak sandboxing). Replaced
   with `gnome-shell-extension-gsconnect`, a native GNOME Shell extension that implements

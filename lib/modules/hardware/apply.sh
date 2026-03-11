@@ -106,10 +106,22 @@ apply_hibernate() {
     if ! findmnt /swap &>/dev/null; then
         if command -v btrfs &>/dev/null; then
             log_info "Creating Btrfs swap subvolume"
-            sudo btrfs subvolume create /swap 2>/dev/null || true
+            if ! sudo btrfs subvolume create /swap 2>/dev/null; then
+                log_warn "Failed to create Btrfs swap subvolume — skipping swap/hibernate setup"
+                return 0
+            fi
             sudo chattr +C /swap
             changes_made=1
+        else
+            log_warn "Btrfs not available — skipping swap/hibernate setup"
+            return 0
         fi
+    fi
+
+    # Verify /swap exists before proceeding
+    if [[ ! -d /swap ]]; then
+        log_warn "/swap directory does not exist — skipping swapfile creation"
+        return 0
     fi
 
     # Create swapfile if it doesn't exist

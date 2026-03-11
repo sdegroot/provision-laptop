@@ -10,6 +10,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
 STATE_FILE="$(state_file_path "repos.conf")"
 changes_made=0
+has_errors=0
 
 if ! is_silverblue; then
     log_warn "Not running on Silverblue — skipping repos apply"
@@ -26,38 +27,73 @@ repo_exists() {
     grep -rql "\[.*${name}.*\]" /etc/yum.repos.d/ &>/dev/null 2>&1
 }
 
+# Check if a local repofile needs updating (content differs from system copy)
+repo_needs_update() {
+    local local_path="$1"
+    local system_path="$2"
+    if [[ ! -f "$system_path" ]]; then
+        return 0  # needs update (missing)
+    fi
+    if ! diff -q "$local_path" "$system_path" &>/dev/null; then
+        return 0  # needs update (content differs)
+    fi
+    return 1  # up to date
+}
+
 while IFS= read -r line; do
     read -r repo_type repo_arg <<< "$line"
 
     case "$repo_type" in
         repofile)
             repo_name="$(basename "$repo_arg" .repo)"
-            if ! repo_exists "$repo_name"; then
-                log_info "Adding repo from: ${repo_arg}"
-                if [[ "$repo_arg" == http://* || "$repo_arg" == https://* ]]; then
-                    sudo curl -fsSL -o "/etc/yum.repos.d/${repo_name}.repo" "$repo_arg"
-                else
-                    # Local path relative to state directory
-                    local_path="$(dirname "$STATE_FILE")/${repo_arg}"
-                    sudo cp "$local_path" "/etc/yum.repos.d/${repo_name}.repo"
+            system_path="/etc/yum.repos.d/${repo_name}.repo"
+
+            if [[ "$repo_arg" == http://* || "$repo_arg" == https://* ]]; then
+                if ! repo_exists "$repo_name"; then
+                    log_info "Adding repo from: ${repo_arg}"
+                    if sudo curl -fsSL -o "$system_path" "$repo_arg"; then
+                        changes_made=1
+                    else
+                        log_error "Failed to download repo: ${repo_arg}"
+                        has_errors=1
+                    fi
                 fi
-                changes_made=1
+            else
+                # Local path relative to state directory
+                local_path="$(dirname "$STATE_FILE")/${repo_arg}"
+                if ! repo_exists "$repo_name" || repo_needs_update "$local_path" "$system_path"; then
+                    log_info "Deploying repo file: ${repo_arg}"
+                    if sudo cp "$local_path" "$system_path"; then
+                        changes_made=1
+                    else
+                        log_error "Failed to copy repo file: ${local_path}"
+                        has_errors=1
+                    fi
+                fi
             fi
             ;;
         rpmfusion-free)
             if ! repo_exists "rpmfusion-free"; then
                 log_info "Adding RPM Fusion Free"
-                sudo rpm-ostree install --idempotent --allow-inactive \
-                    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"
-                changes_made=1
+                if ! sudo rpm-ostree install --idempotent --allow-inactive \
+                    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"; then
+                    log_error "Failed to install RPM Fusion Free"
+                    has_errors=1
+                else
+                    changes_made=1
+                fi
             fi
             ;;
         rpmfusion-nonfree)
             if ! repo_exists "rpmfusion-nonfree"; then
                 log_info "Adding RPM Fusion Non-Free"
-                sudo rpm-ostree install --idempotent --allow-inactive \
-                    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"
-                changes_made=1
+                if ! sudo rpm-ostree install --idempotent --allow-inactive \
+                    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"; then
+                    log_error "Failed to install RPM Fusion Non-Free"
+                    has_errors=1
+                else
+                    changes_made=1
+                fi
             fi
             ;;
         copr)
@@ -68,13 +104,17 @@ while IFS= read -r line; do
                 log_info "Enabling COPR: ${repo_arg}"
                 # Download .repo file directly from COPR API (no dnf needed)
                 copr_repo_url="https://copr.fedorainfracloud.org/coprs/${copr_owner}/${copr_project}/repo/fedora-${fedora_version}/${copr_owner}-${copr_project}-fedora-${fedora_version}.repo"
-                sudo curl -fsSL -o "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${copr_owner}:${copr_project}.repo" "$copr_repo_url"
-                changes_made=1
+                if ! sudo curl -fsSL -o "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${copr_owner}:${copr_project}.repo" "$copr_repo_url"; then
+                    log_error "Failed to download COPR repo: ${repo_arg}"
+                    has_errors=1
+                else
+                    changes_made=1
+                fi
             fi
             ;;
         *)
             log_error "Unknown repo type: ${repo_type}"
-            exit 1
+            has_errors=1
             ;;
     esac
 done < <(parse_state_file "$STATE_FILE")
@@ -83,10 +123,21 @@ done < <(parse_state_file "$STATE_FILE")
 if [[ "$(current_arch)" == "x86_64" ]]; then
     if ! rpm -q mesa-va-drivers-freeworld &>/dev/null; then
         log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
-        rpm-ostree override remove mesa-va-drivers --install mesa-va-drivers-freeworld 2>/dev/null || true
-        rpm-ostree override remove mesa-vdpau-drivers --install mesa-vdpau-drivers-freeworld 2>/dev/null || true
+        if ! rpm-ostree override remove mesa-va-drivers --install mesa-va-drivers-freeworld 2>/dev/null; then
+            log_error "Failed to override mesa-va-drivers with freeworld"
+            has_errors=1
+        fi
+        if ! rpm-ostree override remove mesa-vdpau-drivers --install mesa-vdpau-drivers-freeworld 2>/dev/null; then
+            log_error "Failed to override mesa-vdpau-drivers with freeworld"
+            has_errors=1
+        fi
         changes_made=1
     fi
+fi
+
+if [[ $has_errors -ne 0 ]]; then
+    log_error "Repos apply completed with errors"
+    exit 1
 fi
 
 if [[ $changes_made -eq 0 ]]; then
