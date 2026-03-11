@@ -35,7 +35,7 @@ if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
 fi
 
 log_info "Installing ${#missing_pkgs[@]} packages: ${missing_pkgs[*]}"
-if ! rpm_ostree_with_gpg_retry install --idempotent --allow-inactive "${missing_pkgs[@]}"; then
+if ! sudo rpm-ostree install --idempotent --allow-inactive "${missing_pkgs[@]}"; then
     log_error "rpm-ostree install failed for: ${missing_pkgs[*]}"
     exit 1
 fi

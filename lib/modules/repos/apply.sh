@@ -2,8 +2,8 @@
 # repos/apply.sh — Configure third-party repos.
 #
 # Silverblue does not ship dnf — repo management uses:
-#   - curl to download .repo files into /etc/yum.repos.d/
-#   - rpm-ostree install for RPM Fusion release packages
+#   - Local .repo files copied into /etc/yum.repos.d/
+#   - curl to download remote .repo files
 #   - COPR .repo files via the Fedora COPR API
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
@@ -16,8 +16,6 @@ if ! is_silverblue; then
     log_warn "Not running on Silverblue — skipping repos apply"
     exit 0
 fi
-
-fedora_version="$(rpm -E %fedora)"
 
 # Check if a repo is already present by looking for .repo files or rpm-ostree packages
 repo_exists() {
@@ -72,30 +70,6 @@ while IFS= read -r line; do
                 fi
             fi
             ;;
-        rpmfusion-free)
-            if ! repo_exists "rpmfusion-free"; then
-                log_info "Adding RPM Fusion Free"
-                if ! rpm_ostree_with_gpg_retry install --idempotent --allow-inactive \
-                    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"; then
-                    log_error "Failed to install RPM Fusion Free"
-                    has_errors=1
-                else
-                    changes_made=1
-                fi
-            fi
-            ;;
-        rpmfusion-nonfree)
-            if ! repo_exists "rpmfusion-nonfree"; then
-                log_info "Adding RPM Fusion Non-Free"
-                if ! rpm_ostree_with_gpg_retry install --idempotent --allow-inactive \
-                    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"; then
-                    log_error "Failed to install RPM Fusion Non-Free"
-                    has_errors=1
-                else
-                    changes_made=1
-                fi
-            fi
-            ;;
         copr)
             copr_owner="$(echo "$repo_arg" | cut -d/ -f1)"
             copr_project="$(echo "$repo_arg" | cut -d/ -f2)"
@@ -103,6 +77,8 @@ while IFS= read -r line; do
                ! repo_exists "_copr.*${copr_owner}.*${copr_project}"; then
                 log_info "Enabling COPR: ${repo_arg}"
                 # Download .repo file directly from COPR API (no dnf needed)
+                local fedora_version
+                fedora_version="$(rpm -E %fedora)"
                 copr_repo_url="https://copr.fedorainfracloud.org/coprs/${copr_owner}/${copr_project}/repo/fedora-${fedora_version}/${copr_owner}-${copr_project}-fedora-${fedora_version}.repo"
                 if ! sudo curl -fsSL -o "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${copr_owner}:${copr_project}.repo" "$copr_repo_url"; then
                     log_error "Failed to download COPR repo: ${repo_arg}"
@@ -144,7 +120,7 @@ sys.exit(1)
         # Override each driver independently — mesa-vdpau-drivers may not be
         # in the base image (e.g. F43 Silverblue doesn't ship it).
         if rpm -q mesa-va-drivers &>/dev/null; then
-            if ! rpm_ostree_with_gpg_retry override remove mesa-va-drivers \
+            if ! sudo rpm-ostree override remove mesa-va-drivers \
                     --install mesa-va-drivers-freeworld; then
                 log_error "Failed to override mesa-va-drivers with freeworld"
                 has_errors=1
@@ -153,7 +129,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-va-drivers not in base image — installing freeworld directly"
-            if ! rpm_ostree_with_gpg_retry install --idempotent mesa-va-drivers-freeworld; then
+            if ! sudo rpm-ostree install --idempotent mesa-va-drivers-freeworld; then
                 log_error "Failed to install mesa-va-drivers-freeworld"
                 has_errors=1
             else
@@ -162,7 +138,7 @@ sys.exit(1)
         fi
 
         if rpm -q mesa-vdpau-drivers &>/dev/null; then
-            if ! rpm_ostree_with_gpg_retry override remove mesa-vdpau-drivers \
+            if ! sudo rpm-ostree override remove mesa-vdpau-drivers \
                     --install mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to override mesa-vdpau-drivers with freeworld"
                 has_errors=1
@@ -171,7 +147,7 @@ sys.exit(1)
             fi
         else
             log_info "mesa-vdpau-drivers not in base image — installing freeworld directly"
-            if ! rpm_ostree_with_gpg_retry install --idempotent mesa-vdpau-drivers-freeworld; then
+            if ! sudo rpm-ostree install --idempotent mesa-vdpau-drivers-freeworld; then
                 log_error "Failed to install mesa-vdpau-drivers-freeworld"
                 has_errors=1
             else

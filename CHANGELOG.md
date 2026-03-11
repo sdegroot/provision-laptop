@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Ship third-party repos locally to avoid F43 GPG subkey bug** — Tuxedo and
+  RPM Fusion repos are now shipped as local `.repo` files in `state/repos.d/`
+  with `gpgcheck=0`, matching the existing `netbird.repo` pattern. This avoids
+  the RPM 6 / libdnf GPG subkey bug (rpm#3954, rpm-ostree#5494) entirely by
+  never importing GPG keys that contain subkeys. Removed the runtime
+  `rpm_ostree_with_gpg_retry` workaround from `lib/common.sh` since it is no
+  longer needed. COPR ghostty is unaffected and remains dynamic.
+
 ### Fixed
 - **Silent failures in `bin/apply`** — the `set -e` inside the engine subshell
   (`() || exit_code=$?`) is disabled by bash, so command failures were silently

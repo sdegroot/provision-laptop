@@ -34,22 +34,6 @@ while IFS= read -r line; do
                 drift_found=1
             fi
             ;;
-        rpmfusion-free)
-            if repo_exists "rpmfusion-free"; then
-                log_ok "Repo present: rpmfusion-free"
-            else
-                log_error "Missing repo: rpmfusion-free"
-                drift_found=1
-            fi
-            ;;
-        rpmfusion-nonfree)
-            if repo_exists "rpmfusion-nonfree"; then
-                log_ok "Repo present: rpmfusion-nonfree"
-            else
-                log_error "Missing repo: rpmfusion-nonfree"
-                drift_found=1
-            fi
-            ;;
         copr)
             copr_owner="$(echo "$repo_arg" | cut -d/ -f1)"
             copr_project="$(echo "$repo_arg" | cut -d/ -f2)"

@@ -1,0 +1,6 @@
+[tuxedo]
+name=Tuxedo - F$releasever
+baseurl=https://rpm.tuxedocomputers.com/fedora/$releasever/x86_64/base/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=False

@@ -21,7 +21,7 @@ STATE_FILE="$(state_file_path "repos.conf")"
 output="$(parse_state_file "$STATE_FILE")"
 
 # Should contain repo entries
-assert_contains "$output" "rpmfusion-free"
+assert_contains "$output" "repofile"
 teardown_test_tmpdir
 
 begin_test "repos.conf contains expected repo types"
@@ -34,24 +34,20 @@ output="$(PROVISION_ARCH=x86_64 parse_state_file "$STATE_FILE")"
 
 # Verify all expected types are present
 has_repofile=false
-has_free=false
-has_nonfree=false
 has_copr=false
 
 while IFS= read -r line; do
     read -r repo_type _ <<< "$line"
     case "$repo_type" in
         repofile) has_repofile=true ;;
-        rpmfusion-free) has_free=true ;;
-        rpmfusion-nonfree) has_nonfree=true ;;
         copr) has_copr=true ;;
     esac
 done <<< "$output"
 
-if $has_repofile && $has_free && $has_nonfree && $has_copr; then
+if $has_repofile && $has_copr; then
     pass_test
 else
-    fail_test "Missing repo types: repofile=$has_repofile free=$has_free nonfree=$has_nonfree copr=$has_copr"
+    fail_test "Missing repo types: repofile=$has_repofile copr=$has_copr"
 fi
 teardown_test_tmpdir
 

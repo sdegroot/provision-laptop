@@ -32,18 +32,6 @@ while IFS= read -r line; do
                 changes_planned=1
             fi
             ;;
-        rpmfusion-free)
-            if ! repo_exists "rpmfusion-free"; then
-                log_plan "Would add RPM Fusion Free"
-                changes_planned=1
-            fi
-            ;;
-        rpmfusion-nonfree)
-            if ! repo_exists "rpmfusion-nonfree"; then
-                log_plan "Would add RPM Fusion Non-Free"
-                changes_planned=1
-            fi
-            ;;
         copr)
             copr_owner="$(echo "$repo_arg" | cut -d/ -f1)"
             copr_project="$(echo "$repo_arg" | cut -d/ -f2)"
