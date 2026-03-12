@@ -13,6 +13,12 @@ if ! has_command flatpak; then
     exit 1
 fi
 
+# Ensure Flatpak exports are in XDG_DATA_DIRS — suppresses the
+# "not in the search path" warning during non-interactive provisioning.
+if [[ ":${XDG_DATA_DIRS:-}:" != *":/var/lib/flatpak/exports/share:"* ]]; then
+    export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:/var/lib/flatpak/exports/share"
+fi
+
 # Ensure Flathub remote is configured
 if ! flatpak remote-list --columns=name 2>/dev/null | grep -q "^flathub$"; then
     log_info "Adding Flathub remote..."

@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Net reduction: ~280 lines removed with no functional changes.
 
 ### Fixed
+- **Flatpak "not in the search path" warning during provisioning** — `XDG_DATA_DIRS`
+  didn't include `/var/lib/flatpak/exports/share` in the non-interactive provisioning
+  shell. Added the path to `XDG_DATA_DIRS` in the flatpaks apply module before any
+  `flatpak install` runs. Normal login sessions are unaffected (set via profile.d).
 - **hardware check.sh did not verify sleep.conf deployment** — the systemd file
   loop only matched `*.service` and `*.timer` globs, so `sleep.conf` was never
   checked. Refactoring to the shared `iter_hardware_config_files()` iterator
