@@ -38,20 +38,13 @@ ensure_python() {
 }
 
 ensure_installed() {
-    if command -v amd_s2idle &>/dev/null; then
+    # Check if the package is importable
+    if python3 -c "import amd_debug.s2idle" &>/dev/null 2>&1; then
         return 0
     fi
 
     log_info "Installing amd-debug-tools..."
-    python3 -m pip install --user amd-debug-tools
-
-    # Ensure ~/.local/bin is in PATH for the freshly installed command
-    export PATH="${HOME}/.local/bin:${PATH}"
-
-    if ! command -v amd_s2idle &>/dev/null; then
-        log_error "amd-debug-tools installed but amd_s2idle not found in PATH"
-        exit 1
-    fi
+    python3 -m pip install amd-debug-tools
 }
 
 # ---------------------------------------------------------------------------
@@ -69,4 +62,4 @@ ensure_installed
 log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
 echo
 
-sudo amd_s2idle "$@"
+sudo "$(command -v python3)" -m amd_debug.s2idle "$@"
