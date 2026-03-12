@@ -4,6 +4,32 @@ Research date: 2026-03-09
 
 ---
 
+## Findings: tuxedo-drivers NOT functional on SKIKK Green 7 (Strix Point)
+
+**Date:** 2026-03-12
+
+Diagnostics confirmed that tuxedo-drivers is **not functional** on the SKIKK Green 7 (Tongfang GX4 with AMD Strix Point / Ryzen AI 9 HX 370):
+
+- **`uniwill_wmi`** — fails to load: the BIOS does not expose the expected Uniwill WMI GUIDs
+- **`tuxedo_io`**, **`tuxedo_nb05_ec`**, **`tuxedo_nb05_fan_control`** — all fail with "No such device"
+- Three modules load but have 0 users (wrong hardware generation)
+- **TCC daemon** (`tccd.service`) — disabled/dead, no functional backend modules
+
+The hardware is actually managed by:
+
+| Driver | Purpose |
+|--------|---------|
+| `amd_pmf` | AMD Platform Management Framework (TDP, thermal profiles) |
+| `asus_wmi` | ASUS-compatible WMI interface (Tongfang BIOS exposes ASUS WMI GUIDs) |
+| `platform_profile` | Kernel interface for GNOME power profiles (`tuned-ppd`) |
+| BIOS fan curves | Built-in, work without any driver |
+
+**Action taken:** Removed `akmod-tuxedo-drivers`, `tuxedo-drivers-kmod-common`, `tuxedo-control-center`, the Tuxedo repo, and the `sdegroot/tuxedo-drivers-kmod` COPR. This eliminates kernel taint (12288), unnecessary COPR dependency, wrong modules loading, and log noise.
+
+The research below is retained as reference for the Tongfang GX4 platform.
+
+---
+
 ## 1. Hardware Identification
 
 The **Tongfang GX4** is an ODM (Original Design Manufacturer) chassis sold under multiple brands:

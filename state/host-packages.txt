@@ -16,14 +16,6 @@ zsh
 gh
 fzf
 
-# Tuxedo hardware (fan control, keyboard backlight, EC interface — x86_64 only)
-# Uses sdegroot/tuxedo-drivers-kmod COPR (akmod build) instead of official
-# tuxedo-drivers (DKMS) which is incompatible with rpm-ostree's bwrap sandbox.
-# akmod-tuxedo-drivers compiles kernel modules during rpm-ostree transaction.
-[x86_64] akmod-tuxedo-drivers
-[x86_64] tuxedo-drivers-kmod-common
-[x86_64] tuxedo-control-center
-
 # YubiKey
 libfido2
 yubikey-manager

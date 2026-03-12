@@ -111,20 +111,13 @@ Applied via `rpm-ostree kargs` — active after reboot.
 
 | Repo | Type | Purpose |
 |------|------|---------|
-| Tuxedo | repofile | Fan control, keyboard backlight, EC interface drivers |
 | RPM Fusion Free | release RPM | VA-API freeworld codecs |
 | RPM Fusion Non-Free | release RPM | Additional codec support |
-| nuzar/yt6801-dkms | COPR | Motorcomm YT6801 Ethernet driver |
-
-The Tuxedo repo and yt6801-dkms COPR are tagged `[x86_64]` — they are skipped on aarch64 (VM development).
 
 ### Hardware Packages (`state/host-packages.txt`)
 
 | Package | Arch | Purpose |
 |---------|------|---------|
-| `tuxedo-drivers` | x86_64 | Tuxedo EC interface, keyboard backlight |
-| `tuxedo-control-center` | x86_64 | Fan curves, power profiles (GUI) |
-| `yt6801-dkms` | x86_64 | Motorcomm YT6801 Ethernet (DKMS) |
 | `libfido2` | all | FIDO2 library for YubiKey |
 | `yubikey-manager` | all | YubiKey configuration tool (`ykman`) |
 | `pam-u2f` | all | PAM module for U2F/FIDO2 auth |
@@ -238,15 +231,19 @@ These require manual steps — see linked documentation.
 | YubiKey LUKS enrollment | Requires physical key tap | [YubiKey Setup](yubikey-setup.md) |
 | Fingerprint enrollment | Requires fingerprint scans | [Fingerprint Setup](fingerprint-setup.md) |
 | Firmware updates | User decides when to apply | `fwupdmgr get-updates` |
-| Tuxedo Control Center fan profiles | Configured via GUI | See below |
-| Battery charge thresholds | Depends on tuxedo-drivers EC | See below |
 
-### Tuxedo Control Center
+### Platform Power Management
 
-After provisioning, open Tuxedo Control Center to configure:
-- Fan curve profiles (quiet, balanced, performance)
-- Keyboard backlight color and brightness
-- Power profiles
+The SKIKK Green 7 (Tongfang GX4, Strix Point) does **not** use tuxedo-drivers. The BIOS does not expose the expected Uniwill WMI GUIDs, so tuxedo-drivers modules fail with "No such device". Instead, the platform is managed by:
+
+- **`amd_pmf`** — AMD Platform Management Framework (TDP, thermal profiles)
+- **`asus_wmi`** — ASUS-compatible WMI interface (the Tongfang BIOS exposes ASUS WMI GUIDs)
+- **`platform_profile`** — kernel interface used by GNOME power profiles (`tuned-ppd`)
+- **BIOS built-in fan curves** — work without any driver
+
+GNOME Settings → Power provides power profile switching (balanced/performance/power-saver) via `tuned-ppd` and the `platform_profile` kernel interface.
+
+See [Research: Tongfang GX4 Tuxedo Drivers](research-tongfang-gx4-tuxedo-drivers.md) for full diagnostics.
 
 ### Firmware Updates
 
@@ -260,11 +257,4 @@ fwupdmgr update
 
 ### Battery Charge Thresholds
 
-If tuxedo-drivers exposes battery charge thresholds via sysfs:
-```bash
-# Check if available
-ls /sys/class/power_supply/BAT0/charge_control_*
-
-# Set threshold (example)
-echo 80 | sudo tee /sys/class/power_supply/BAT0/charge_control_end_threshold
-```
+Battery charge thresholds are not available on this hardware — the Tongfang BIOS does not expose the required EC interface. This would require firmware support from SKIKK/Tongfang.

@@ -96,15 +96,13 @@ echo "0000:64:00.0" | sudo tee /sys/bus/pci/drivers/yt6801/bind
 
 This is optional — S0ix works regardless.
 
-### 3. Tainted Kernel (12288)
+### 3. Tainted Kernel (12288) — Resolved
 
-**Severity:** Expected — no action needed.
+**Severity:** Resolved — tuxedo-drivers removed.
 
-Kernel taint value `12288` (`0x3000`) indicates:
-- Bit 12: Unsigned module loaded
-- Bit 13: Module from staging tree
+Kernel taint value `12288` (`0x3000`) was caused by `tuxedo-drivers-kmod` loading unsigned/staging modules. Since tuxedo-drivers is not functional on this hardware (Uniwill WMI GUIDs not exposed by BIOS), the packages have been removed. After reboot, `cat /proc/sys/kernel/tainted` should return `0`.
 
-This is caused by `tuxedo-drivers-kmod` from the `gladion136/tuxedo-drivers-kmod` COPR, which builds unsigned kernel modules via akmods. See [hardware-setup.md](hardware-setup.md) for why this COPR is used instead of DKMS.
+Removing tuxedo-drivers also eliminates unnecessary modules poking the embedded controller, which may improve sleep behavior.
 
 ### 4. "Device Not Power Manageable" Messages
 

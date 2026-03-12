@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+- **tuxedo-drivers** — removed `akmod-tuxedo-drivers`, `tuxedo-drivers-kmod-common`,
+  `tuxedo-control-center`, the Tuxedo repo (`state/repos.d/tuxedo.repo`), and
+  `sdegroot/tuxedo-drivers-kmod` COPR. Diagnostics confirmed tuxedo-drivers is not
+  functional on the SKIKK Green 7 (Tongfang GX4, Strix Point): the BIOS does not
+  expose the expected Uniwill WMI GUIDs, so all critical modules (`uniwill_wmi`,
+  `tuxedo_io`, `tuxedo_nb05_ec`, `tuxedo_nb05_fan_control`) fail with "No such device".
+  The platform is managed by `amd_pmf`, `asus_wmi`, and `platform_profile` instead.
+  Removing tuxedo-drivers eliminates kernel taint (12288), unnecessary COPR dependency,
+  wrong modules loading, and log noise.
+
 ### Added
 - **S2idle diagnostics documentation** — documented s2idle test results for the SKIKK
   Green 7 (Ryzen AI 9 HX 370): 66.67% hardware sleep residency, known ACPI BIOS bug
