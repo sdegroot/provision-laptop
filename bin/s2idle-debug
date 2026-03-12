@@ -5,7 +5,7 @@
 # (sudo) — performs a timed suspend cycle and reports which devices or
 # constraints prevent the system from reaching the deepest S0ix sleep state.
 #
-# Prerequisites: mise with Python configured (see mise/mise.toml)
+# Prerequisites: mise (https://mise.jdx.dev) — Python is managed via .mise.toml
 #
 # Usage:
 #   bin/s2idle-debug              Run diagnostics (suspends briefly)
@@ -19,39 +19,34 @@ PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../lib/common.sh
 source "${PROVISION_DIR}/lib/common.sh"
 
-ensure_python() {
-    # Activate mise if available but not yet in PATH
-    if ! command -v python3 &>/dev/null && command -v mise &>/dev/null; then
-        eval "$(mise activate bash)"
-    fi
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    if ! command -v python3 &>/dev/null; then
-        log_error "Python 3 not found — run 'bin/apply --module mise' first"
+mise_exec() {
+    # Run a command using the mise-managed Python from .mise.toml.
+    # This works regardless of whether mise is "activated" in the shell.
+    mise exec --cd "$PROVISION_DIR" python -- "$@"
+}
+
+ensure_mise() {
+    if ! command -v mise &>/dev/null; then
+        log_error "mise is not installed — see https://mise.jdx.dev for installation"
         exit 1
-    fi
-
-    # Bootstrap pip if missing (mise-built Python has ensurepip but pip isn't bootstrapped by default)
-    if ! python3 -m pip --version &>/dev/null 2>&1; then
-        log_info "Bootstrapping pip..."
-        python3 -m ensurepip --upgrade
     fi
 }
 
 ensure_installed() {
-    # pip install puts amd-s2idle in the same bin dir as the mise python3
-    local python_bin
-    python_bin="$(dirname "$(command -v python3)")"
-    export PATH="${python_bin}:${PATH}"
-
-    if [[ -x "${python_bin}/amd-s2idle" ]]; then
+    # Check if amd-s2idle is already available in the mise Python environment
+    if mise_exec python3 -c "import shutil; exit(0 if shutil.which('amd-s2idle') else 1)" 2>/dev/null; then
         return 0
     fi
 
     log_info "Installing amd-debug-tools..."
-    python3 -m pip install amd-debug-tools
+    mise_exec python3 -m pip install amd-debug-tools
 
-    if [[ ! -x "${python_bin}/amd-s2idle" ]]; then
-        log_error "amd-debug-tools installed but amd-s2idle not found in ${python_bin}"
+    if ! mise_exec python3 -c "import shutil; exit(0 if shutil.which('amd-s2idle') else 1)" 2>/dev/null; then
+        log_error "amd-debug-tools installed but amd-s2idle entry point not found"
         exit 1
     fi
 }
@@ -65,10 +60,13 @@ if [[ "$(uname)" == "Darwin" ]]; then
     exit 1
 fi
 
-ensure_python
+ensure_mise
 ensure_installed
+
+# Resolve the absolute path to amd-s2idle so sudo can find it
+AMD_S2IDLE="$(mise_exec python3 -c "import shutil; print(shutil.which('amd-s2idle'))")"
 
 log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
 echo
 
-sudo "$(dirname "$(command -v python3)")/amd-s2idle" "$@"
+sudo "$AMD_S2IDLE" "$@"

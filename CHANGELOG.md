@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **s2idle-debug: use `mise exec` instead of relying on activated shell** — the script
+  kept failing because the repo had no `.mise.toml` to declare its Python dependency,
+  and the system Python has no pip. Added `.mise.toml` with `python = "3.12"` at repo
+  root and rewrote `bin/s2idle-debug` to use `mise exec python --` for all Python
+  commands. This works regardless of whether mise is activated in the current shell.
+
 ### Fixed
 - **Keyboard not working after suspend/resume** — the i8042 PS/2 controller fails
   to reinitialize after S0ix/s2idle resume on AMD laptops (`atkbd serio0: Failed to
