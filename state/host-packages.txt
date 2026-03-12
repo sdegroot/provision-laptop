@@ -33,8 +33,10 @@ pam-u2f
 fprintd
 libfprint
 
-# ACPI diagnostics
+# ACPI / EDID diagnostics (dependencies of amd-debug-tools)
 [x86_64] acpica-tools
+[x86_64] edid-decode
+[x86_64] libdisplay-info-tools
 
 # Sensors
 lm_sensors

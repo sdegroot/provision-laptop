@@ -64,8 +64,14 @@ fi
 
 ensure_mise
 
-if ! command -v iasl &>/dev/null; then
-    log_error "iasl not found — install acpica-tools: bin/apply --module host-packages"
+missing=()
+command -v iasl &>/dev/null         || missing+=("iasl (acpica-tools)")
+command -v edid-decode &>/dev/null   || missing+=("edid-decode (edid-decode)")
+command -v di-edid-decode &>/dev/null || missing+=("di-edid-decode (libdisplay-info-tools)")
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    log_error "Missing host tools: ${missing[*]}"
+    log_error "Install via: bin/apply --module host-packages"
     exit 1
 fi
 
