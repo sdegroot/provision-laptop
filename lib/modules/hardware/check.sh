@@ -101,66 +101,36 @@ check_config_files() {
 
 check_hibernate() {
     local effective_root="${PROVISION_ROOT:-}"
-
+    local swapfile_path="${effective_root}/var/swap/swapfile"
     local swapfile_size_gb=96
 
-    if [[ -n "$effective_root" ]]; then
-        # In test mode, check for the marker directory and fstab entries
-        if [[ -d "${effective_root}/swap" ]]; then
-            log_ok "Swap subvolume exists"
-        else
-            log_error "Missing swap subvolume at /swap"
+    # Check swapfile exists
+    if [[ -f "$swapfile_path" ]]; then
+        log_ok "Swapfile exists"
+
+        # Verify size
+        local actual_bytes expected_bytes
+        actual_bytes="$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)"
+        expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+        if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
+            log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
             drift_found=1
-        fi
-
-        # Verify swapfile size if present
-        if [[ -f "${effective_root}/swap/swapfile" ]]; then
-            local actual_bytes expected_bytes
-            actual_bytes="$(wc -c < "${effective_root}/swap/swapfile" 2>/dev/null | tr -d ' ' || echo 0)"
-            expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
-            if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
-                log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
-                drift_found=1
-            else
-                log_ok "Swapfile size: ${swapfile_size_gb}GB"
-            fi
-        fi
-
-        local fstab="${effective_root}/etc/fstab"
-        if [[ -f "$fstab" ]]; then
-            if grep -q '/swap.*btrfs.*subvol=swap' "$fstab" 2>/dev/null; then
-                log_ok "Fstab: /swap subvolume mount entry"
-            else
-                log_error "Missing fstab entry for /swap subvolume mount"
-                drift_found=1
-            fi
-            if grep -q '/swap/swapfile.*x-systemd.requires=swap.mount' "$fstab" 2>/dev/null; then
-                log_ok "Fstab: swapfile entry with mount ordering"
-            else
-                log_error "Missing or incorrect fstab entry for /swap/swapfile"
-                drift_found=1
-            fi
+        else
+            log_ok "Swapfile size: ${swapfile_size_gb}GB"
         fi
     else
-        local swapfile_size_gb=96
-        if findmnt /swap &>/dev/null || [[ -f /swap/swapfile ]]; then
-            log_ok "Swap subvolume/swapfile exists"
-        else
-            log_error "Missing swap subvolume or swapfile at /swap"
-            drift_found=1
-        fi
+        log_error "Missing swapfile at /var/swap/swapfile"
+        drift_found=1
+    fi
 
-        # Verify swapfile size matches expected
-        if [[ -f /swap/swapfile ]]; then
-            local actual_bytes expected_bytes
-            actual_bytes="$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)"
-            expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
-            if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
-                log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
-                drift_found=1
-            else
-                log_ok "Swapfile size: ${swapfile_size_gb}GB"
-            fi
+    # Check fstab entry
+    local fstab="${effective_root}/etc/fstab"
+    if [[ -f "$fstab" ]]; then
+        if grep -q '/var/swap/swapfile' "$fstab" 2>/dev/null; then
+            log_ok "Fstab: swapfile entry"
+        else
+            log_error "Missing fstab entry for /var/swap/swapfile"
+            drift_found=1
         fi
     fi
 }

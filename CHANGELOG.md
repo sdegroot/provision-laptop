@@ -11,18 +11,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   from the repos module. VDPAU is an NVIDIA-oriented API not relevant for AMD GPUs;
   VA-API is the correct hardware video API. The VDPAU freeworld package frequently
   lags behind the system mesa version causing depsolve failures that block provisioning.
-- **Swap/hibernate setup silently failing on Fedora 43 (composefs)** — `apply_hibernate()`
-  used `findmnt -no SOURCE /` and `findmnt -no UUID /` to find the btrfs device and UUID.
-  On Fedora 43+, `/` is a composefs overlay — these commands return `composefs` and empty
-  respectively, causing the entire swap subvolume creation, fstab entry, and swapfile setup
-  to silently bail out. Fixed by looking at `/sysroot` first (where the real btrfs lives),
-  falling back to `/` for older Fedora versions.
-- **Swapfile not resized when desired size changes** — `apply_hibernate()` only checked
-  whether `/swap/swapfile` existed, not whether it was the correct size. If the swapfile
-  was created at a different size, subsequent runs would skip it entirely. Now compares
-  actual file size against expected (96GB) and recreates the swapfile if mismatched. Also
-  updates the `resume_offset` kernel parameter after recreation (the physical disk offset
-  changes with a new file). `check.sh` and `plan.sh` also detect and report size drift.
+- **Swap/hibernate setup broken on Silverblue with composefs** — completely rewrote
+  `apply_hibernate()`. The old approach created a separate btrfs swap subvolume and
+  mounted it at `/swap`, which failed on Fedora 43 for two reasons: (1) composefs
+  makes `/` read-only so `mkdir /swap` fails, and (2) `findmnt -no SOURCE /` returns
+  `composefs` instead of the btrfs device. Replaced with a much simpler approach:
+  create the swapfile directly at `/var/swap/swapfile` — `/var` is writable on
+  Silverblue, and `btrfs filesystem mkswapfile` handles NOCOW per-file (no subvolume
+  needed). Removed all subvolume creation, raw btrfs mount, subvolume fstab entry,
+  and mount ordering dependency logic. Also enforces swapfile size (96GB) — if an
+  existing file is the wrong size, it gets recreated and the `resume_offset` kernel
+  param is updated.
 - **rpm-ostree transaction conflicts during provisioning** — `bin/apply` failed on
   fresh installs because multiple modules called `rpm-ostree` sequentially without
   waiting for prior transactions to complete. Added `wait_for_rpm_ostree()` helper

@@ -147,7 +147,7 @@ cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
 fake_root="${TEST_TMPDIR}/fake-root"
 mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/etc/sysctl.d" \
     "${fake_root}/etc/dracut.conf.d" "${fake_root}/etc/systemd/system" \
-    "${fake_root}/etc/systemd/sleep.conf.d" "${fake_root}/swap"
+    "${fake_root}/etc/systemd/sleep.conf.d" "${fake_root}/var/swap"
 
 cp "${custom_dir}/hardware/modprobe/"*.conf "${fake_root}/etc/modprobe.d/"
 cp "${custom_dir}/hardware/sysctl/"*.conf "${fake_root}/etc/sysctl.d/"
@@ -156,10 +156,10 @@ cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
 cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
 cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
 
-# Create fstab with swap mount entries
+# Create swapfile and fstab entry
+truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
 cat > "${fake_root}/etc/fstab" <<'FSTAB'
-UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
-/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
+/var/swap/swapfile none swap defaults,nofail 0 0
 FSTAB
 
 exit_code=0
@@ -169,7 +169,7 @@ output="$(
     source "${custom_dir}/lib/modules/hardware/check.sh"
 ) 2>&1" || exit_code=$?
 
-# Should pass (all files deployed, swap dir exists, fstab correct, not Silverblue so kargs skipped)
+# Should pass (all files deployed, swapfile correct size, fstab correct, not Silverblue so kargs skipped)
 assert_equals "0" "$exit_code"
 teardown_test_tmpdir
 
@@ -268,9 +268,9 @@ output="$(
 assert_equals "1" "$exit_code"
 teardown_test_tmpdir
 
-# --- Check detects missing fstab swap entries ---
+# --- Check detects missing fstab swap entry ---
 
-begin_test "check detects missing fstab swap mount entry"
+begin_test "check detects missing fstab swapfile entry"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
@@ -282,10 +282,11 @@ cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/h
 cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
 
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc" "${fake_root}/swap"
+mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
 
-# fstab with old-style swap entry (no subvolume mount, no ordering)
-echo '/swap/swapfile none swap defaults 0 0' > "${fake_root}/etc/fstab"
+# Create swapfile but no fstab entry
+truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
+echo '# empty fstab' > "${fake_root}/etc/fstab"
 
 exit_code=0
 output="$(
@@ -295,11 +296,10 @@ output="$(
 )" || exit_code=$?
 
 assert_equals "1" "$exit_code"
-assert_contains "$output" "Missing fstab entry for /swap subvolume mount"
-assert_contains "$output" "Missing or incorrect fstab entry for /swap/swapfile"
+assert_contains "$output" "Missing fstab entry for /var/swap/swapfile"
 teardown_test_tmpdir
 
-begin_test "check passes with correct fstab swap entries"
+begin_test "check passes with correct fstab swapfile entry"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
@@ -311,11 +311,11 @@ cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/h
 cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
 
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc" "${fake_root}/swap"
+mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
 
+truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
 cat > "${fake_root}/etc/fstab" <<'FSTAB'
-UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
-/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
+/var/swap/swapfile none swap defaults,nofail 0 0
 FSTAB
 
 exit_code=0
@@ -325,51 +325,28 @@ output="$(
     source "${custom_dir}/lib/modules/hardware/check.sh" 2>&1
 )" || exit_code=$?
 
-# Should detect fstab entries as OK (config file drift is expected since we didn't deploy those)
-assert_contains "$output" "Fstab: /swap subvolume mount entry"
-assert_contains "$output" "Fstab: swapfile entry with mount ordering"
+assert_contains "$output" "Fstab: swapfile entry"
 teardown_test_tmpdir
 
 # --- Swapfile size drift detection ---
 
-begin_test "check detects swapfile size mismatch in test mode"
+begin_test "check detects swapfile size mismatch"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
 mkdir -p "${custom_dir}/lib/modules/hardware"
 mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-mkdir -p "${custom_dir}/hardware/sysctl"
-mkdir -p "${custom_dir}/hardware/dracut"
-mkdir -p "${custom_dir}/hardware/systemd"
 
 cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
 cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-cp "${SCRIPT_DIR}/../hardware/sysctl/"*.conf "${custom_dir}/hardware/sysctl/"
-cp "${SCRIPT_DIR}/../hardware/dracut/"*.conf "${custom_dir}/hardware/dracut/"
-cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
 
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/etc/sysctl.d" \
-    "${fake_root}/etc/dracut.conf.d" "${fake_root}/etc/systemd/system" \
-    "${fake_root}/etc/systemd/sleep.conf.d" "${fake_root}/swap"
+mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
 
-cp "${custom_dir}/hardware/modprobe/"*.conf "${fake_root}/etc/modprobe.d/"
-cp "${custom_dir}/hardware/sysctl/"*.conf "${fake_root}/etc/sysctl.d/"
-cp "${custom_dir}/hardware/dracut/"*.conf "${fake_root}/etc/dracut.conf.d/"
-cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
-
-cat > "${fake_root}/etc/fstab" <<'FSTAB'
-UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
-/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
-FSTAB
-
-# Create an undersized swapfile (8GB instead of 96GB) — use truncate for speed
-truncate -s $((8 * 1024 * 1024 * 1024)) "${fake_root}/swap/swapfile"
+# Create an undersized swapfile (8GB instead of 96GB)
+truncate -s $((8 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
+echo '/var/swap/swapfile none swap defaults,nofail 0 0' > "${fake_root}/etc/fstab"
 
 exit_code=0
 output="$(
@@ -388,38 +365,16 @@ setup_test_tmpdir
 custom_dir="${TEST_TMPDIR}/provision"
 mkdir -p "${custom_dir}/lib/modules/hardware"
 mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-mkdir -p "${custom_dir}/hardware/sysctl"
-mkdir -p "${custom_dir}/hardware/dracut"
-mkdir -p "${custom_dir}/hardware/systemd"
 
 cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
 cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-cp "${SCRIPT_DIR}/../hardware/sysctl/"*.conf "${custom_dir}/hardware/sysctl/"
-cp "${SCRIPT_DIR}/../hardware/dracut/"*.conf "${custom_dir}/hardware/dracut/"
-cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
 
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/etc/sysctl.d" \
-    "${fake_root}/etc/dracut.conf.d" "${fake_root}/etc/systemd/system" \
-    "${fake_root}/etc/systemd/sleep.conf.d" "${fake_root}/swap"
+mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
 
-cp "${custom_dir}/hardware/modprobe/"*.conf "${fake_root}/etc/modprobe.d/"
-cp "${custom_dir}/hardware/sysctl/"*.conf "${fake_root}/etc/sysctl.d/"
-cp "${custom_dir}/hardware/dracut/"*.conf "${fake_root}/etc/dracut.conf.d/"
-cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
-
-cat > "${fake_root}/etc/fstab" <<'FSTAB'
-UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
-/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
-FSTAB
-
-# Create correctly-sized swapfile (96GB)
-truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/swap/swapfile"
+truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
+echo '/var/swap/swapfile none swap defaults,nofail 0 0' > "${fake_root}/etc/fstab"
 
 exit_code=0
 output="$(
