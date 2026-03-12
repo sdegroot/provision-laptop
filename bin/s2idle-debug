@@ -22,13 +22,17 @@ ensure_installed() {
         return 0
     fi
 
-    if ! command -v pipx &>/dev/null; then
-        log_error "pipx is required — install it with: sudo dnf install pipx"
+    log_info "Installing amd-debug-tools..."
+    if command -v pipx &>/dev/null; then
+        pipx install amd-debug-tools
+    elif command -v pip &>/dev/null; then
+        pip install --user amd-debug-tools
+    elif command -v pip3 &>/dev/null; then
+        pip3 install --user amd-debug-tools
+    else
+        log_error "No pip or pipx found — install Python pip first"
         exit 1
     fi
-
-    log_info "Installing amd-debug-tools via pipx..."
-    pipx install amd-debug-tools
 }
 
 # ---------------------------------------------------------------------------
