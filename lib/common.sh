@@ -201,3 +201,18 @@ has_command() {
     command -v "$cmd" >/dev/null 2>&1
 }
 
+# get_layered_packages
+#   Prints the list of requested (layered) packages from the current
+#   rpm-ostree deployment, one per line.
+get_layered_packages() {
+    rpm-ostree status --json 2>/dev/null | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+deployments = data.get("deployments", [])
+if deployments:
+    pkgs = deployments[0].get("requested-packages", [])
+    for p in pkgs:
+        print(p)
+' 2>/dev/null || true
+}
+

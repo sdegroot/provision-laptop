@@ -12,15 +12,7 @@ fi
 
 changes_planned=0
 
-layered="$(rpm-ostree status --json 2>/dev/null | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-deployments = data.get("deployments", [])
-if deployments:
-    pkgs = deployments[0].get("requested-packages", [])
-    for p in pkgs:
-        print(p)
-' 2>/dev/null || true)"
+layered="$(get_layered_packages)"
 
 while IFS= read -r pkg; do
     if ! echo "$layered" | grep -q "^${pkg}$"; then

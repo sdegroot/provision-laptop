@@ -2,6 +2,7 @@
 # hardware/check.sh — Verify hardware configuration matches desired state.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 drift_found=0
 
@@ -35,98 +36,21 @@ check_kernel_params() {
 # 2. Hardware config files
 # -------------------------------------------------------------------------
 
-check_config_files() {
-    local hardware_dir="${PROVISION_DIR}/hardware"
+_check_single_config() {
+    local src="$1"
+    local dest="$2"
     local effective_root="${PROVISION_ROOT:-}"
 
-    # modprobe configs -> /etc/modprobe.d/
-    for src in "${hardware_dir}"/modprobe/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/modprobe.d/$(basename "$src")"
-        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/modprobe.d/$(basename "$src")"
-        else
-            log_error "Config drift: /etc/modprobe.d/$(basename "$src")"
-            drift_found=1
-        fi
-    done
-
-    # sysctl configs -> /etc/sysctl.d/
-    for src in "${hardware_dir}"/sysctl/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/sysctl.d/$(basename "$src")"
-        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/sysctl.d/$(basename "$src")"
-        else
-            log_error "Config drift: /etc/sysctl.d/$(basename "$src")"
-            drift_found=1
-        fi
-    done
-
-    # dracut configs -> /etc/dracut.conf.d/
-    for src in "${hardware_dir}"/dracut/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/dracut.conf.d/$(basename "$src")"
-        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/dracut.conf.d/$(basename "$src")"
-        else
-            log_error "Config drift: /etc/dracut.conf.d/$(basename "$src")"
-            drift_found=1
-        fi
-    done
-
-    # udev rules -> /etc/udev/rules.d/
-    for src in "${hardware_dir}"/udev/*.rules; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/udev/rules.d/$(basename "$src")"
-        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/udev/rules.d/$(basename "$src")"
-        else
-            log_error "Config drift: /etc/udev/rules.d/$(basename "$src")"
-            drift_found=1
-        fi
-    done
-
-    # systemd units -> /etc/systemd/system/
-    for src in "${hardware_dir}"/systemd/*.service "${hardware_dir}"/systemd/*.timer; do
-        [[ -f "$src" ]] || continue
-        local basename_src
-        basename_src="$(basename "$src")"
-        # sleep.conf goes to sleep.conf.d/
-        if [[ "$basename_src" == "sleep.conf" ]]; then
-            local dest="${effective_root}/etc/systemd/sleep.conf.d/${basename_src}"
-        else
-            local dest="${effective_root}/etc/systemd/system/${basename_src}"
-        fi
-        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
-            log_ok "Config: ${dest#"${effective_root}"}"
-        else
-            log_error "Config drift: ${dest#"${effective_root}"}"
-            drift_found=1
-        fi
-    done
-
-    # sleep.conf -> /etc/systemd/sleep.conf.d/
-    if [[ -f "${hardware_dir}/systemd/sleep.conf" ]]; then
-        local dest="${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
-        if [[ -f "$dest" ]] && diff -q "${hardware_dir}/systemd/sleep.conf" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/systemd/sleep.conf.d/sleep.conf"
-        else
-            log_error "Config drift: /etc/systemd/sleep.conf.d/sleep.conf"
-            drift_found=1
-        fi
+    if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
+        log_ok "Config: ${dest#"${effective_root}"}"
+    else
+        log_error "Config drift: ${dest#"${effective_root}"}"
+        drift_found=1
     fi
+}
 
-    # zram-generator.conf -> /etc/systemd/zram-generator.conf.d/
-    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
-        local dest="${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
-        if [[ -f "$dest" ]] && diff -q "${hardware_dir}/systemd/zram-generator.conf" "$dest" &>/dev/null; then
-            log_ok "Config: /etc/systemd/zram-generator.conf.d/override.conf"
-        else
-            log_error "Config drift: /etc/systemd/zram-generator.conf.d/override.conf"
-            drift_found=1
-        fi
-    fi
+check_config_files() {
+    iter_hardware_config_files _check_single_config
 }
 
 # -------------------------------------------------------------------------
@@ -135,35 +59,34 @@ check_config_files() {
 
 check_hibernate() {
     local effective_root="${PROVISION_ROOT:-}"
-    local swapfile_path="${effective_root}/var/swap/swapfile"
-    local swapfile_size_gb=96
+    local swapfile="${effective_root}${SWAPFILE_PATH}"
 
     # Check swapfile exists
-    if [[ -f "$swapfile_path" ]]; then
+    if [[ -f "$swapfile" ]]; then
         log_ok "Swapfile exists"
 
         # Verify size
         local actual_bytes expected_bytes
-        actual_bytes="$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)"
-        expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+        actual_bytes="$(get_swapfile_actual_bytes "$swapfile")"
+        expected_bytes="$(get_swapfile_expected_bytes)"
         if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
-            log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
+            log_error "Swapfile size mismatch: expected ${SWAPFILE_SIZE_GB}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
             drift_found=1
         else
-            log_ok "Swapfile size: ${swapfile_size_gb}GB"
+            log_ok "Swapfile size: ${SWAPFILE_SIZE_GB}GB"
         fi
     else
-        log_error "Missing swapfile at /var/swap/swapfile"
+        log_error "Missing swapfile at ${SWAPFILE_PATH}"
         drift_found=1
     fi
 
     # Check fstab entry
     local fstab="${effective_root}/etc/fstab"
     if [[ -f "$fstab" ]]; then
-        if grep -q '/var/swap/swapfile' "$fstab" 2>/dev/null; then
+        if grep -q "${SWAPFILE_PATH}" "$fstab" 2>/dev/null; then
             log_ok "Fstab: swapfile entry"
         else
-            log_error "Missing fstab entry for /var/swap/swapfile"
+            log_error "Missing fstab entry for ${SWAPFILE_PATH}"
             drift_found=1
         fi
     fi

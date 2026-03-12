@@ -2,6 +2,7 @@
 # hardware/apply.sh — Apply hardware configuration.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 changes_made=0
 
@@ -54,50 +55,7 @@ deploy_config_file() {
 }
 
 apply_config_files() {
-    local hardware_dir="${PROVISION_DIR}/hardware"
-    local effective_root="${PROVISION_ROOT:-}"
-
-    # modprobe configs -> /etc/modprobe.d/
-    for src in "${hardware_dir}"/modprobe/*.conf; do
-        [[ -f "$src" ]] || continue
-        deploy_config_file "$src" "${effective_root}/etc/modprobe.d/$(basename "$src")"
-    done
-
-    # sysctl configs -> /etc/sysctl.d/
-    for src in "${hardware_dir}"/sysctl/*.conf; do
-        [[ -f "$src" ]] || continue
-        deploy_config_file "$src" "${effective_root}/etc/sysctl.d/$(basename "$src")"
-    done
-
-    # dracut configs -> /etc/dracut.conf.d/
-    for src in "${hardware_dir}"/dracut/*.conf; do
-        [[ -f "$src" ]] || continue
-        deploy_config_file "$src" "${effective_root}/etc/dracut.conf.d/$(basename "$src")"
-    done
-
-    # udev rules -> /etc/udev/rules.d/
-    for src in "${hardware_dir}"/udev/*.rules; do
-        [[ -f "$src" ]] || continue
-        deploy_config_file "$src" "${effective_root}/etc/udev/rules.d/$(basename "$src")"
-    done
-
-    # systemd units -> /etc/systemd/system/ (except sleep.conf)
-    for src in "${hardware_dir}"/systemd/*.service "${hardware_dir}"/systemd/*.timer; do
-        [[ -f "$src" ]] || continue
-        deploy_config_file "$src" "${effective_root}/etc/systemd/system/$(basename "$src")"
-    done
-
-    # sleep.conf -> /etc/systemd/sleep.conf.d/
-    if [[ -f "${hardware_dir}/systemd/sleep.conf" ]]; then
-        deploy_config_file "${hardware_dir}/systemd/sleep.conf" \
-            "${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
-    fi
-
-    # zram-generator.conf -> /etc/systemd/zram-generator.conf.d/
-    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
-        deploy_config_file "${hardware_dir}/systemd/zram-generator.conf" \
-            "${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
-    fi
+    iter_hardware_config_files deploy_config_file
 }
 
 # -------------------------------------------------------------------------
@@ -105,9 +63,6 @@ apply_config_files() {
 # -------------------------------------------------------------------------
 
 apply_hibernate() {
-    local swapfile_path="/var/swap/swapfile"
-    local swapfile_size_gb=96
-
     if [[ -n "${PROVISION_ROOT:-}" ]]; then
         log_warn "Skipping hibernate setup in test mode"
         return 0
@@ -121,41 +76,42 @@ apply_hibernate() {
     # --- Step 1: Create swapfile directory and swapfile ---
     # /var is writable on Silverblue — no subvolume needed.
     # btrfs filesystem mkswapfile handles NOCOW automatically.
-    sudo mkdir -p "$(dirname "$swapfile_path")"
+    sudo mkdir -p "$(dirname "$SWAPFILE_PATH")"
 
-    local swapfile_expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+    local swapfile_expected_bytes
+    swapfile_expected_bytes="$(get_swapfile_expected_bytes)"
     local swapfile_needs_creation=0
 
-    if [[ ! -f "$swapfile_path" ]]; then
+    if [[ ! -f "$SWAPFILE_PATH" ]]; then
         swapfile_needs_creation=1
-    elif [[ "$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)" -ne "$swapfile_expected_bytes" ]]; then
+    elif [[ "$(get_swapfile_actual_bytes "$SWAPFILE_PATH")" -ne "$swapfile_expected_bytes" ]]; then
         local actual_bytes
-        actual_bytes="$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)"
-        log_info "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB — recreating"
-        sudo swapoff "$swapfile_path" 2>/dev/null || true
-        sudo rm -f "$swapfile_path"
+        actual_bytes="$(get_swapfile_actual_bytes "$SWAPFILE_PATH")"
+        log_info "Swapfile size mismatch: expected ${SWAPFILE_SIZE_GB}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB — recreating"
+        sudo swapoff "$SWAPFILE_PATH" 2>/dev/null || true
+        sudo rm -f "$SWAPFILE_PATH"
         swapfile_needs_creation=1
     fi
 
     if [[ "$swapfile_needs_creation" -eq 1 ]]; then
-        log_info "Creating swapfile (${swapfile_size_gb}GB)"
+        log_info "Creating swapfile (${SWAPFILE_SIZE_GB}GB)"
         if command -v btrfs &>/dev/null && btrfs filesystem mkswapfile --help &>/dev/null 2>&1; then
-            sudo btrfs filesystem mkswapfile --size "${swapfile_size_gb}G" "$swapfile_path"
+            sudo btrfs filesystem mkswapfile --size "${SWAPFILE_SIZE_GB}G" "$SWAPFILE_PATH"
         else
-            sudo truncate -s 0 "$swapfile_path"
-            sudo chattr +C "$swapfile_path"
-            sudo fallocate -l "${swapfile_size_gb}G" "$swapfile_path"
-            sudo chmod 600 "$swapfile_path"
-            sudo mkswap "$swapfile_path"
+            sudo truncate -s 0 "$SWAPFILE_PATH"
+            sudo chattr +C "$SWAPFILE_PATH"
+            sudo fallocate -l "${SWAPFILE_SIZE_GB}G" "$SWAPFILE_PATH"
+            sudo chmod 600 "$SWAPFILE_PATH"
+            sudo mkswap "$SWAPFILE_PATH"
         fi
-        sudo swapon "$swapfile_path"
+        sudo swapon "$SWAPFILE_PATH"
         changes_made=1
     fi
 
     # --- Step 2: Ensure swapfile is in fstab ---
-    if ! grep -q "$swapfile_path" /etc/fstab 2>/dev/null; then
+    if ! grep -q "$SWAPFILE_PATH" /etc/fstab 2>/dev/null; then
         log_info "Adding swapfile to fstab"
-        echo "${swapfile_path} none swap defaults,nofail 0 0" \
+        echo "${SWAPFILE_PATH} none swap defaults,nofail 0 0" \
             | sudo tee -a /etc/fstab >/dev/null
         changes_made=1
     fi
@@ -171,7 +127,7 @@ apply_hibernate() {
     if ! echo "$current_kargs" | grep -q "resume="; then
         if [[ -n "$root_uuid" ]]; then
             local resume_offset
-            resume_offset="$(sudo filefrag -v "$swapfile_path" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
+            resume_offset="$(sudo filefrag -v "$SWAPFILE_PATH" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
             if [[ -n "$resume_offset" ]]; then
                 wait_for_rpm_ostree
                 log_info "Adding hibernate resume kernel params"
@@ -183,7 +139,7 @@ apply_hibernate() {
     elif [[ "$swapfile_needs_creation" -eq 1 ]] && echo "$current_kargs" | grep -q "resume_offset="; then
         # Swapfile was recreated — the physical offset has changed
         local new_offset
-        new_offset="$(sudo filefrag -v "$swapfile_path" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
+        new_offset="$(sudo filefrag -v "$SWAPFILE_PATH" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
         if [[ -n "$new_offset" ]]; then
             local old_offset
             old_offset="$(echo "$current_kargs" | grep -o 'resume_offset=[^ ]*')"

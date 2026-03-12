@@ -4,6 +4,7 @@
 # Checks /etc/yum.repos.d/ for repo presence (works on Silverblue without dnf).
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 STATE_FILE="$(state_file_path "repos.conf")"
 changes_planned=0
@@ -12,14 +13,6 @@ if ! is_silverblue; then
     log_warn "Not running on Silverblue — skipping repos plan"
     exit 0
 fi
-
-# Check if a repo is present by scanning /etc/yum.repos.d/
-repo_exists() {
-    local name="$1"
-    local repo_dir="${PROVISION_ROOT}/etc/yum.repos.d"
-    ls "${repo_dir}"/*"${name}"* &>/dev/null 2>&1 || \
-    grep -rql "\[.*${name}.*\]" "${repo_dir}/" &>/dev/null 2>&1
-}
 
 while IFS= read -r line; do
     read -r repo_type repo_arg <<< "$line"
@@ -45,23 +38,7 @@ while IFS= read -r line; do
 done < <(parse_state_file "$STATE_FILE")
 
 if [[ "$(current_arch)" == "x86_64" ]]; then
-    freeworld_present=false
-    if rpm -q mesa-va-drivers-freeworld &>/dev/null; then
-        freeworld_present=true
-    elif rpm-ostree status --json 2>/dev/null | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-for dep in data.get("deployments", []):
-    pkgs = dep.get("requested-packages", [])
-    removals = [r if isinstance(r, str) else r.get("name","") for r in dep.get("base-removals", [])]
-    if "mesa-va-drivers-freeworld" in pkgs or "mesa-va-drivers" in removals:
-        sys.exit(0)
-sys.exit(1)
-' 2>/dev/null; then
-        freeworld_present=true
-    fi
-
-    if ! $freeworld_present; then
+    if ! check_freeworld_present; then
         log_plan "Would swap mesa VA-API drivers for freeworld version"
         changes_planned=1
     fi

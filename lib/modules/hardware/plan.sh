@@ -2,6 +2,7 @@
 # hardware/plan.sh — Show planned hardware configuration changes (dry-run).
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 changes_planned=0
 
@@ -33,70 +34,19 @@ plan_kernel_params() {
 # 2. Hardware config files
 # -------------------------------------------------------------------------
 
-plan_config_files() {
-    local hardware_dir="${PROVISION_DIR}/hardware"
+_plan_single_config() {
+    local src="$1"
+    local dest="$2"
     local effective_root="${PROVISION_ROOT:-}"
 
-    for src in "${hardware_dir}"/modprobe/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/modprobe.d/$(basename "$src")"
-        if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/modprobe.d/$(basename "$src")"
-            changes_planned=1
-        fi
-    done
-
-    for src in "${hardware_dir}"/sysctl/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/sysctl.d/$(basename "$src")"
-        if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/sysctl.d/$(basename "$src")"
-            changes_planned=1
-        fi
-    done
-
-    for src in "${hardware_dir}"/dracut/*.conf; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/dracut.conf.d/$(basename "$src")"
-        if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/dracut.conf.d/$(basename "$src")"
-            changes_planned=1
-        fi
-    done
-
-    for src in "${hardware_dir}"/udev/*.rules; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/udev/rules.d/$(basename "$src")"
-        if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/udev/rules.d/$(basename "$src")"
-            changes_planned=1
-        fi
-    done
-
-    for src in "${hardware_dir}"/systemd/*.service "${hardware_dir}"/systemd/*.timer; do
-        [[ -f "$src" ]] || continue
-        local dest="${effective_root}/etc/systemd/system/$(basename "$src")"
-        if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/systemd/system/$(basename "$src")"
-            changes_planned=1
-        fi
-    done
-
-    if [[ -f "${hardware_dir}/systemd/sleep.conf" ]]; then
-        local dest="${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
-        if [[ ! -f "$dest" ]] || ! diff -q "${hardware_dir}/systemd/sleep.conf" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/systemd/sleep.conf.d/sleep.conf"
-            changes_planned=1
-        fi
+    if [[ ! -f "$dest" ]] || ! diff -q "$src" "$dest" &>/dev/null; then
+        log_plan "Would deploy: ${dest#"${effective_root}"}"
+        changes_planned=1
     fi
+}
 
-    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
-        local dest="${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
-        if [[ ! -f "$dest" ]] || ! diff -q "${hardware_dir}/systemd/zram-generator.conf" "$dest" &>/dev/null; then
-            log_plan "Would deploy: /etc/systemd/zram-generator.conf.d/override.conf"
-            changes_planned=1
-        fi
-    fi
+plan_config_files() {
+    iter_hardware_config_files _plan_single_config
 }
 
 # -------------------------------------------------------------------------
@@ -108,20 +58,17 @@ plan_hibernate() {
         return 0
     fi
 
-    local swapfile_path="/var/swap/swapfile"
-    local swapfile_size_gb=96
-
-    if [[ ! -f "$swapfile_path" ]]; then
-        log_plan "Would create ${swapfile_size_gb}GB swapfile at ${swapfile_path}"
+    if [[ ! -f "$SWAPFILE_PATH" ]]; then
+        log_plan "Would create ${SWAPFILE_SIZE_GB}GB swapfile at ${SWAPFILE_PATH}"
         changes_planned=1
-    elif [[ "$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)" -ne $(( swapfile_size_gb * 1024 * 1024 * 1024 )) ]]; then
+    elif [[ "$(get_swapfile_actual_bytes "$SWAPFILE_PATH")" -ne "$(get_swapfile_expected_bytes)" ]]; then
         local actual_bytes
-        actual_bytes="$(wc -c < "$swapfile_path" 2>/dev/null | tr -d ' ' || echo 0)"
-        log_plan "Would recreate swapfile at ${swapfile_size_gb}GB (currently $((actual_bytes / 1024 / 1024 / 1024))GB)"
+        actual_bytes="$(get_swapfile_actual_bytes "$SWAPFILE_PATH")"
+        log_plan "Would recreate swapfile at ${SWAPFILE_SIZE_GB}GB (currently $((actual_bytes / 1024 / 1024 / 1024))GB)"
         changes_planned=1
     fi
 
-    if ! grep -q "$swapfile_path" /etc/fstab 2>/dev/null; then
+    if ! grep -q "$SWAPFILE_PATH" /etc/fstab 2>/dev/null; then
         log_plan "Would add swapfile to fstab"
         changes_planned=1
     fi

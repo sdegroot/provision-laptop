@@ -6,7 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Refactor: extract shared logic from hardware, repos, and host-packages modules** —
+  created per-module `common.sh` files to eliminate duplicated constants, helper
+  functions, and config iteration logic across apply/check/plan triplets.
+  - `lib/modules/hardware/common.sh`: swapfile constants (`SWAPFILE_PATH`,
+    `SWAPFILE_SIZE_GB`), byte-size helpers, and `iter_hardware_config_files()`
+    callback-based iterator replacing 5 duplicated directory loops per file.
+  - `lib/modules/repos/common.sh`: `repo_exists()` (was duplicated 3x) and
+    `check_freeworld_present()` (encapsulates the Python one-liner for checking
+    mesa freeworld in rpm-ostree deployments, was duplicated 3x).
+  - `lib/common.sh`: `get_layered_packages()` extracts the rpm-ostree JSON
+    parsing for layered packages (was duplicated 6x across repos and host-packages).
+  - `tests/helpers_hardware.sh`: `setup_hardware_test_env()` and
+    `deploy_hardware_configs_to_fake_root()` replace ~20 lines of repeated
+    test setup boilerplate per test case.
+  - Net reduction: ~280 lines removed with no functional changes.
+
 ### Fixed
+- **hardware check.sh did not verify sleep.conf deployment** — the systemd file
+  loop only matched `*.service` and `*.timer` globs, so `sleep.conf` was never
+  checked. Refactoring to the shared `iter_hardware_config_files()` iterator
+  naturally fixed this by including sleep.conf in the iteration.
 - **mesa-vdpau-drivers-freeworld depsolve failure** — removed VDPAU freeworld driver
   from the repos module. VDPAU is an NVIDIA-oriented API not relevant for AMD GPUs;
   VA-API is the correct hardware video API. The VDPAU freeworld package frequently

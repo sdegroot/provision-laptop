@@ -78,7 +78,7 @@ mkdir -p "${custom_dir}/lib/modules/repos"
 mkdir -p "${custom_dir}/state"
 
 cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/repos/check.sh" "${custom_dir}/lib/modules/repos/"
+cp "${SCRIPT_DIR}/../lib/modules/repos/"*.sh "${custom_dir}/lib/modules/repos/"
 cp "${SCRIPT_DIR}/../state/repos.conf" "${custom_dir}/state/"
 
 exit_code=0
@@ -101,7 +101,7 @@ mkdir -p "${custom_dir}/lib/modules/repos"
 mkdir -p "${custom_dir}/state"
 
 cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/repos/plan.sh" "${custom_dir}/lib/modules/repos/"
+cp "${SCRIPT_DIR}/../lib/modules/repos/"*.sh "${custom_dir}/lib/modules/repos/"
 cp "${SCRIPT_DIR}/../state/repos.conf" "${custom_dir}/state/"
 
 exit_code=0

@@ -5,6 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/helpers.sh"
+source "${SCRIPT_DIR}/helpers_hardware.sh"
 
 export NO_COLOR=1
 export PROVISION_ALLOW_NONROOT=1
@@ -95,20 +96,7 @@ begin_test "check detects missing config files"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-mkdir -p "${custom_dir}/hardware/sysctl"
-mkdir -p "${custom_dir}/hardware/dracut"
-mkdir -p "${custom_dir}/hardware/systemd"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-cp "${SCRIPT_DIR}/../hardware/sysctl/"*.conf "${custom_dir}/hardware/sysctl/"
-cp "${SCRIPT_DIR}/../hardware/dracut/"*.conf "${custom_dir}/hardware/dracut/"
-cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
+setup_hardware_test_env "$custom_dir"
 
 exit_code=0
 output="$(
@@ -128,35 +116,12 @@ begin_test "check passes when config files are deployed"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-mkdir -p "${custom_dir}/hardware/sysctl"
-mkdir -p "${custom_dir}/hardware/dracut"
-mkdir -p "${custom_dir}/hardware/systemd"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-cp "${SCRIPT_DIR}/../hardware/sysctl/"*.conf "${custom_dir}/hardware/sysctl/"
-cp "${SCRIPT_DIR}/../hardware/dracut/"*.conf "${custom_dir}/hardware/dracut/"
-cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
-
-# Deploy config files to the fake root
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/etc/sysctl.d" \
-    "${fake_root}/etc/dracut.conf.d" "${fake_root}/etc/systemd/system" \
-    "${fake_root}/etc/systemd/sleep.conf.d" "${fake_root}/var/swap"
-
-cp "${custom_dir}/hardware/modprobe/"*.conf "${fake_root}/etc/modprobe.d/"
-cp "${custom_dir}/hardware/sysctl/"*.conf "${fake_root}/etc/sysctl.d/"
-cp "${custom_dir}/hardware/dracut/"*.conf "${fake_root}/etc/dracut.conf.d/"
-cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
+setup_hardware_test_env "$custom_dir"
+deploy_hardware_configs_to_fake_root "$custom_dir" "$fake_root"
 
 # Create swapfile and fstab entry
+mkdir -p "${fake_root}/var/swap"
 truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
 cat > "${fake_root}/etc/fstab" <<'FSTAB'
 /var/swap/swapfile none swap defaults,nofail 0 0
@@ -179,14 +144,7 @@ begin_test "plan reports config files to deploy"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/plan.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
+setup_hardware_test_env "$custom_dir"
 
 # Don't deploy any config files — plan should report them
 output="$(
@@ -202,32 +160,9 @@ begin_test "plan reports no changes when everything is deployed"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-mkdir -p "${custom_dir}/hardware/sysctl"
-mkdir -p "${custom_dir}/hardware/dracut"
-mkdir -p "${custom_dir}/hardware/systemd"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/plan.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-cp "${SCRIPT_DIR}/../hardware/sysctl/"*.conf "${custom_dir}/hardware/sysctl/"
-cp "${SCRIPT_DIR}/../hardware/dracut/"*.conf "${custom_dir}/hardware/dracut/"
-cp "${SCRIPT_DIR}/../hardware/systemd/"* "${custom_dir}/hardware/systemd/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/etc/sysctl.d" \
-    "${fake_root}/etc/dracut.conf.d" "${fake_root}/etc/systemd/system" \
-    "${fake_root}/etc/systemd/sleep.conf.d"
-
-cp "${custom_dir}/hardware/modprobe/"*.conf "${fake_root}/etc/modprobe.d/"
-cp "${custom_dir}/hardware/sysctl/"*.conf "${fake_root}/etc/sysctl.d/"
-cp "${custom_dir}/hardware/dracut/"*.conf "${fake_root}/etc/dracut.conf.d/"
-cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
-cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
+setup_hardware_test_env "$custom_dir"
+deploy_hardware_configs_to_fake_root "$custom_dir" "$fake_root"
 
 output="$(
     export PROVISION_ROOT="${fake_root}"
@@ -243,17 +178,10 @@ begin_test "check detects config file content drift"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-mkdir -p "${custom_dir}/hardware/modprobe"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-cp "${SCRIPT_DIR}/../hardware/modprobe/"*.conf "${custom_dir}/hardware/modprobe/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc/modprobe.d" "${fake_root}/swap"
+setup_hardware_test_env "$custom_dir"
+
+mkdir -p "${fake_root}/etc/modprobe.d"
 
 # Deploy with different content (simulating drift)
 echo "# modified content" > "${fake_root}/etc/modprobe.d/amdgpu.conf"
@@ -274,14 +202,9 @@ begin_test "check detects missing fstab swapfile entry"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
+setup_hardware_test_env "$custom_dir"
+
 mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
 
 # Create swapfile but no fstab entry
@@ -303,15 +226,11 @@ begin_test "check passes with correct fstab swapfile entry"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
+setup_hardware_test_env "$custom_dir"
+deploy_hardware_configs_to_fake_root "$custom_dir" "$fake_root"
+
+mkdir -p "${fake_root}/var/swap"
 
 truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
 cat > "${fake_root}/etc/fstab" <<'FSTAB'
@@ -334,15 +253,11 @@ begin_test "check detects swapfile size mismatch"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
+setup_hardware_test_env "$custom_dir"
+deploy_hardware_configs_to_fake_root "$custom_dir" "$fake_root"
+
+mkdir -p "${fake_root}/var/swap"
 
 # Create an undersized swapfile (8GB instead of 96GB)
 truncate -s $((8 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
@@ -363,15 +278,11 @@ begin_test "check passes when swapfile is correct size"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/hardware"
-mkdir -p "${custom_dir}/state"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
-cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
-
 fake_root="${TEST_TMPDIR}/fake-root"
-mkdir -p "${fake_root}/etc" "${fake_root}/var/swap"
+setup_hardware_test_env "$custom_dir"
+deploy_hardware_configs_to_fake_root "$custom_dir" "$fake_root"
+
+mkdir -p "${fake_root}/var/swap"
 
 truncate -s $((96 * 1024 * 1024 * 1024)) "${fake_root}/var/swap/swapfile"
 echo '/var/swap/swapfile none swap defaults,nofail 0 0' > "${fake_root}/etc/fstab"
