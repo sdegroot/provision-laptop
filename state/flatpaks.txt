@@ -24,6 +24,9 @@ org.videolan.VLC
 # Connectivity
 org.localsend.localsend_app
 
+# Monitoring
+io.missioncenter.MissionCenter
+
 # Utilities
 org.gnome.Calculator
 org.gnome.TextEditor

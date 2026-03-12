@@ -30,8 +30,10 @@ libfprint
 [x86_64] edid-decode
 [x86_64] libdisplay-info-tools
 
-# Sensors
+# Sensors and power monitoring
 lm_sensors
+[x86_64] kernel-tools
+[x86_64] powerstat
 
 # Terminal
 ghostty
