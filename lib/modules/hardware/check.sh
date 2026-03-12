@@ -102,14 +102,29 @@ check_config_files() {
 check_hibernate() {
     local effective_root="${PROVISION_ROOT:-}"
 
-    # Check swap subvolume exists
     if [[ -n "$effective_root" ]]; then
-        # In test mode, check for the marker directory
+        # In test mode, check for the marker directory and fstab entries
         if [[ -d "${effective_root}/swap" ]]; then
             log_ok "Swap subvolume exists"
         else
             log_error "Missing swap subvolume at /swap"
             drift_found=1
+        fi
+
+        local fstab="${effective_root}/etc/fstab"
+        if [[ -f "$fstab" ]]; then
+            if grep -q '/swap.*btrfs.*subvol=swap' "$fstab" 2>/dev/null; then
+                log_ok "Fstab: /swap subvolume mount entry"
+            else
+                log_error "Missing fstab entry for /swap subvolume mount"
+                drift_found=1
+            fi
+            if grep -q '/swap/swapfile.*x-systemd.requires=swap.mount' "$fstab" 2>/dev/null; then
+                log_ok "Fstab: swapfile entry with mount ordering"
+            else
+                log_error "Missing or incorrect fstab entry for /swap/swapfile"
+                drift_found=1
+            fi
         fi
     else
         if findmnt /swap &>/dev/null || [[ -f /swap/swapfile ]]; then

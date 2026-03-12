@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Keyboard not working after suspend/resume** — the i8042 PS/2 controller fails
+  to reinitialize after S0ix/s2idle resume on AMD laptops (`atkbd serio0: Failed to
+  deactivate keyboard` / `Failed to enable keyboard`). Added `i8042.reset=1` kernel
+  parameter to force a full controller reset on resume.
+- **Swapfile not activating on boot** — the `/swap` Btrfs subvolume had no fstab
+  mount entry, so it wasn't mounted when systemd tried to `swapon`. Fixed
+  `apply_hibernate()` to: (1) create the swap subvolume by mounting the raw btrfs
+  volume (works on Silverblue's immutable root), (2) add a proper fstab mount entry
+  for the `/swap` subvolume, (3) add `x-systemd.requires=swap.mount` ordering
+  dependency to the swapfile entry so systemd mounts the subvolume first. Also added
+  `/swap` subvolume to the kickstart partitioning so future installs have it from
+  the start. Uses `btrfs filesystem mkswapfile` when available. Increased
+  swapfile from 8GB to 96GB to match RAM size (required for hibernate).
+- **Battery drain during sleep** — AMD systems not reaching deepest S0ix sleep state
+  (`amd_pmc: Last suspend didn't reach deepest state`) due to Embedded Controller
+  wakeups. Added `acpi.ec_no_wakeup=1` kernel parameter.
+
 ### Changed
 - **Switch tuxedo-drivers from DKMS to kmod build** — the official `tuxedo-drivers`
   package uses DKMS which is incompatible with rpm-ostree's bwrap sandbox

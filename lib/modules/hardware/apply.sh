@@ -102,20 +102,65 @@ apply_hibernate() {
         return 0
     fi
 
-    # Create swap subvolume if it doesn't exist
+    if ! command -v btrfs &>/dev/null; then
+        log_warn "Btrfs not available — skipping swap/hibernate setup"
+        return 0
+    fi
+
+    # --- Step 1: Ensure swap subvolume exists ---
+    # On Silverblue the root is immutable, so we can't just
+    # `btrfs subvolume create /swap`. Instead, mount the raw btrfs volume
+    # and create the subvolume alongside root/var/containers.
     if ! findmnt /swap &>/dev/null; then
-        if command -v btrfs &>/dev/null; then
-            log_info "Creating Btrfs swap subvolume"
-            if ! sudo btrfs subvolume create /swap 2>/dev/null; then
-                log_warn "Failed to create Btrfs swap subvolume — skipping swap/hibernate setup"
-                return 0
-            fi
-            sudo chattr +C /swap
-            changes_made=1
-        else
-            log_warn "Btrfs not available — skipping swap/hibernate setup"
+        local root_dev
+        root_dev="$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*\]//')"
+        if [[ -z "$root_dev" ]]; then
+            log_warn "Cannot determine root device — skipping swap/hibernate setup"
             return 0
         fi
+
+        local tmpdir
+        tmpdir="$(mktemp -d)"
+        if ! sudo mount -t btrfs -o subvol=/ "$root_dev" "$tmpdir" 2>/dev/null; then
+            log_warn "Failed to mount btrfs root — skipping swap/hibernate setup"
+            rmdir "$tmpdir"
+            return 0
+        fi
+
+        if [[ ! -d "${tmpdir}/swap" ]]; then
+            log_info "Creating Btrfs swap subvolume"
+            if ! sudo btrfs subvolume create "${tmpdir}/swap"; then
+                log_warn "Failed to create swap subvolume"
+                sudo umount "$tmpdir"
+                rmdir "$tmpdir"
+                return 0
+            fi
+            changes_made=1
+        fi
+
+        sudo umount "$tmpdir"
+        rmdir "$tmpdir"
+    fi
+
+    # --- Step 2: Ensure /swap subvolume mount is in fstab ---
+    if ! grep -q '/swap.*btrfs.*subvol=swap' /etc/fstab 2>/dev/null; then
+        local root_uuid
+        root_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
+        if [[ -n "$root_uuid" ]]; then
+            log_info "Adding /swap subvolume mount to fstab"
+            echo "UUID=${root_uuid} /swap btrfs subvol=swap,nodatacow,nofail 0 0" \
+                | sudo tee -a /etc/fstab >/dev/null
+            changes_made=1
+        fi
+    fi
+
+    # Mount /swap now if not already mounted
+    if ! findmnt /swap &>/dev/null; then
+        sudo mkdir -p /swap
+        sudo mount /swap || {
+            log_warn "Failed to mount /swap — skipping swapfile creation"
+            return 0
+        }
     fi
 
     # Verify /swap exists before proceeding
@@ -124,23 +169,40 @@ apply_hibernate() {
         return 0
     fi
 
-    # Create swapfile if it doesn't exist
+    # --- Step 3: Create swapfile ---
     if [[ ! -f /swap/swapfile ]]; then
-        log_info "Creating swapfile (8GB)"
-        sudo truncate -s 0 /swap/swapfile
-        sudo chattr +C /swap/swapfile
-        sudo fallocate -l 8G /swap/swapfile
-        sudo chmod 600 /swap/swapfile
-        sudo mkswap /swap/swapfile
-        sudo swapon /swap/swapfile
-        # Add to fstab if not present
-        if ! grep -q '/swap/swapfile' /etc/fstab; then
-            echo '/swap/swapfile none swap defaults 0 0' | sudo tee -a /etc/fstab >/dev/null
+        log_info "Creating swapfile (96GB)"
+        if command -v btrfs &>/dev/null && btrfs filesystem mkswapfile --help &>/dev/null 2>&1; then
+            sudo btrfs filesystem mkswapfile --size 96G /swap/swapfile
+        else
+            sudo truncate -s 0 /swap/swapfile
+            sudo chattr +C /swap/swapfile
+            sudo fallocate -l 96G /swap/swapfile
+            sudo chmod 600 /swap/swapfile
+            sudo mkswap /swap/swapfile
         fi
+        sudo swapon /swap/swapfile
         changes_made=1
     fi
 
-    # Add resume kernel params for hibernate
+    # --- Step 4: Ensure swap entry is in fstab with correct ordering ---
+    # The swap entry must depend on the /swap mount via x-systemd.requires
+    local swap_fstab_entry='/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0'
+    if grep -q '/swap/swapfile' /etc/fstab 2>/dev/null; then
+        # Fix existing entry if it lacks the ordering dependency
+        if ! grep -q 'x-systemd.requires=swap.mount' /etc/fstab 2>/dev/null; then
+            log_info "Fixing swapfile fstab entry with mount ordering dependency"
+            sudo sed -i '\|/swap/swapfile|d' /etc/fstab
+            echo "$swap_fstab_entry" | sudo tee -a /etc/fstab >/dev/null
+            changes_made=1
+        fi
+    else
+        log_info "Adding swapfile to fstab"
+        echo "$swap_fstab_entry" | sudo tee -a /etc/fstab >/dev/null
+        changes_made=1
+    fi
+
+    # --- Step 5: Add resume kernel params for hibernate ---
     local current_kargs
     current_kargs="$(rpm-ostree kargs 2>/dev/null || true)"
 
@@ -148,7 +210,7 @@ apply_hibernate() {
         # For Btrfs swapfile hibernate, resume= takes the UUID of the filesystem
         # containing the swapfile (i.e., root), not a swap partition UUID.
         local root_uuid
-        root_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
+        root_uuid="${root_uuid:-$(findmnt -no UUID / 2>/dev/null || true)}"
         if [[ -n "$root_uuid" ]]; then
             local resume_offset
             resume_offset="$(sudo filefrag -v /swap/swapfile 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"

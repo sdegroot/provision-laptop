@@ -156,6 +156,12 @@ cp "${custom_dir}/hardware/systemd/"*.service "${fake_root}/etc/systemd/system/"
 cp "${custom_dir}/hardware/systemd/"*.timer "${fake_root}/etc/systemd/system/"
 cp "${custom_dir}/hardware/systemd/sleep.conf" "${fake_root}/etc/systemd/sleep.conf.d/"
 
+# Create fstab with swap mount entries
+cat > "${fake_root}/etc/fstab" <<'FSTAB'
+UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
+/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
+FSTAB
+
 exit_code=0
 output="$(
     export PROVISION_ROOT="${fake_root}"
@@ -163,7 +169,7 @@ output="$(
     source "${custom_dir}/lib/modules/hardware/check.sh"
 ) 2>&1" || exit_code=$?
 
-# Should pass (all files deployed, swap dir exists, not Silverblue so kargs skipped)
+# Should pass (all files deployed, swap dir exists, fstab correct, not Silverblue so kargs skipped)
 assert_equals "0" "$exit_code"
 teardown_test_tmpdir
 
@@ -260,6 +266,68 @@ output="$(
 ) 2>&1" || exit_code=$?
 
 assert_equals "1" "$exit_code"
+teardown_test_tmpdir
+
+# --- Check detects missing fstab swap entries ---
+
+begin_test "check detects missing fstab swap mount entry"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/hardware"
+mkdir -p "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
+cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
+
+fake_root="${TEST_TMPDIR}/fake-root"
+mkdir -p "${fake_root}/etc" "${fake_root}/swap"
+
+# fstab with old-style swap entry (no subvolume mount, no ordering)
+echo '/swap/swapfile none swap defaults 0 0' > "${fake_root}/etc/fstab"
+
+exit_code=0
+output="$(
+    export PROVISION_ROOT="${fake_root}"
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/hardware/check.sh" 2>&1
+)" || exit_code=$?
+
+assert_equals "1" "$exit_code"
+assert_contains "$output" "Missing fstab entry for /swap subvolume mount"
+assert_contains "$output" "Missing or incorrect fstab entry for /swap/swapfile"
+teardown_test_tmpdir
+
+begin_test "check passes with correct fstab swap entries"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/hardware"
+mkdir -p "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/hardware/check.sh" "${custom_dir}/lib/modules/hardware/"
+cp "${SCRIPT_DIR}/../state/kernel-params.txt" "${custom_dir}/state/"
+
+fake_root="${TEST_TMPDIR}/fake-root"
+mkdir -p "${fake_root}/etc" "${fake_root}/swap"
+
+cat > "${fake_root}/etc/fstab" <<'FSTAB'
+UUID=test-uuid /swap btrfs subvol=swap,nodatacow,nofail 0 0
+/swap/swapfile none swap defaults,nofail,pri=10,x-systemd.requires=swap.mount 0 0
+FSTAB
+
+exit_code=0
+output="$(
+    export PROVISION_ROOT="${fake_root}"
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/hardware/check.sh" 2>&1
+)" || exit_code=$?
+
+# Should detect fstab entries as OK (config file drift is expected since we didn't deploy those)
+assert_contains "$output" "Fstab: /swap subvolume mount entry"
+assert_contains "$output" "Fstab: swapfile entry with mount ordering"
 teardown_test_tmpdir
 
 print_test_summary "module: hardware"

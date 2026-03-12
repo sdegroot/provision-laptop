@@ -92,12 +92,23 @@ plan_hibernate() {
     fi
 
     if ! findmnt /swap &>/dev/null; then
-        log_plan "Would create Btrfs swap subvolume at /swap"
+        log_plan "Would create Btrfs swap subvolume and mount at /swap"
+        changes_planned=1
+    fi
+
+    if ! grep -q '/swap.*btrfs.*subvol=swap' /etc/fstab 2>/dev/null; then
+        log_plan "Would add /swap subvolume mount to fstab"
         changes_planned=1
     fi
 
     if [[ ! -f /swap/swapfile ]]; then
-        log_plan "Would create 8GB swapfile at /swap/swapfile"
+        log_plan "Would create 96GB swapfile at /swap/swapfile"
+        changes_planned=1
+    fi
+
+    if grep -q '/swap/swapfile' /etc/fstab 2>/dev/null && \
+       ! grep -q 'x-systemd.requires=swap.mount' /etc/fstab 2>/dev/null; then
+        log_plan "Would fix swapfile fstab entry with mount ordering dependency"
         changes_planned=1
     fi
 }

@@ -35,6 +35,7 @@ btrfs none --label=system btrfs.system
 btrfs / --subvol --name=root LABEL=system
 btrfs /var --subvol --name=var LABEL=system
 btrfs /var/lib/containers --subvol --name=containers LABEL=system
+btrfs /swap --subvol --name=swap LABEL=system
 
 # --- Disk 2: Data ---
 

@@ -13,3 +13,11 @@ workqueue.power_efficient=1
 
 # Enable PCIe ASPM (Active State Power Management)
 pcie_aspm=default
+
+# Force i8042 controller reset on resume from suspend
+# Fixes keyboard failing to reinitialize after S0ix/s2idle resume on AMD laptops
+i8042.reset=1
+
+# Prevent Embedded Controller from waking system during s2idle
+# Helps AMD laptops reach the deepest S0ix sleep state
+acpi.ec_no_wakeup=1
