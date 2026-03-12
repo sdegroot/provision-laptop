@@ -63,6 +63,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 ensure_mise
+
+if ! command -v iasl &>/dev/null; then
+    log_error "iasl not found — install acpica-tools: bin/apply --module host-packages"
+    exit 1
+fi
+
 ensure_installed
 
 # Resolve the absolute path to amd-s2idle so sudo can find it

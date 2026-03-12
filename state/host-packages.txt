@@ -33,6 +33,9 @@ pam-u2f
 fprintd
 libfprint
 
+# ACPI diagnostics
+[x86_64] acpica-tools
+
 # Sensors
 lm_sensors
 
