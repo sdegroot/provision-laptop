@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # s2idle-debug — Run AMD s2idle diagnostics to identify sleep blockers.
 #
-# Downloads and runs amd_s2idle.py from the freedesktop.org AMD debug repo.
-# Requires root (sudo) — performs a timed suspend cycle and reports which
-# devices or constraints prevent the system from reaching the deepest
-# S0ix sleep state.
+# Installs amd-debug-tools via pipx and runs amd_s2idle. Requires root
+# (sudo) — performs a timed suspend cycle and reports which devices or
+# constraints prevent the system from reaching the deepest S0ix sleep state.
 #
 # Usage:
 #   bin/s2idle-debug              Run diagnostics (suspends briefly)
-#   bin/s2idle-debug --help       Show amd_s2idle.py help
+#   bin/s2idle-debug --help       Show amd_s2idle help
 
 set -euo pipefail
 
@@ -18,38 +17,18 @@ PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../lib/common.sh
 source "${PROVISION_DIR}/lib/common.sh"
 
-CACHE_DIR="${HOME}/.cache/provision-laptop"
-SCRIPT_URL="https://gitlab.freedesktop.org/drm/amd/-/raw/master/scripts/amd_s2idle.py"
-SCRIPT_PATH="${CACHE_DIR}/amd_s2idle.py"
-
-# Download or update the script
-fetch_script() {
-    mkdir -p "$CACHE_DIR"
-
-    if [[ -f "$SCRIPT_PATH" ]]; then
-        # Re-download if older than 7 days
-        local age_days
-        if [[ "$(uname)" == "Darwin" ]]; then
-            age_days=$(( ($(date +%s) - $(stat -f %m "$SCRIPT_PATH")) / 86400 ))
-        else
-            age_days=$(( ($(date +%s) - $(stat -c %Y "$SCRIPT_PATH")) / 86400 ))
-        fi
-        if [[ $age_days -lt 7 ]]; then
-            return 0
-        fi
-        log_info "Cached script is ${age_days} days old, refreshing..."
+ensure_installed() {
+    if command -v amd_s2idle &>/dev/null; then
+        return 0
     fi
 
-    log_info "Downloading amd_s2idle.py..."
-    if ! curl -fsSL -o "$SCRIPT_PATH" "$SCRIPT_URL"; then
-        if [[ -f "$SCRIPT_PATH" ]]; then
-            log_warn "Download failed, using cached version"
-            return 0
-        fi
-        log_error "Failed to download amd_s2idle.py"
+    if ! command -v pipx &>/dev/null; then
+        log_error "pipx is required — install it with: sudo dnf install pipx"
         exit 1
     fi
-    chmod +x "$SCRIPT_PATH"
+
+    log_info "Installing amd-debug-tools via pipx..."
+    pipx install amd-debug-tools
 }
 
 # ---------------------------------------------------------------------------
@@ -61,10 +40,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     exit 1
 fi
 
-fetch_script
+ensure_installed
 
 log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
-log_info "Script: ${SCRIPT_PATH}"
 echo
 
-sudo python3 "$SCRIPT_PATH" "$@"
+sudo amd_s2idle "$@"
