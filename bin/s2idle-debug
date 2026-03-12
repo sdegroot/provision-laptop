@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # s2idle-debug — Run AMD s2idle diagnostics to identify sleep blockers.
 #
-# Installs amd-debug-tools via pip (from mise-managed Python) and runs
-# amd_s2idle. Requires root (sudo) — performs a timed suspend cycle and
-# reports which devices or constraints prevent the system from reaching
-# the deepest S0ix sleep state.
-#
-# Prerequisites: mise with Python configured (see mise/mise.toml)
+# Clones amd-debug-tools and runs amd_s2idle. Requires root (sudo) —
+# performs a timed suspend cycle and reports which devices or constraints
+# prevent the system from reaching the deepest S0ix sleep state.
 #
 # Usage:
 #   bin/s2idle-debug              Run diagnostics (suspends briefly)
@@ -20,43 +17,27 @@ PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../lib/common.sh
 source "${PROVISION_DIR}/lib/common.sh"
 
-ensure_python() {
-    if command -v python3 &>/dev/null; then
-        return 0
-    fi
+CACHE_DIR="${HOME}/.cache/provision-laptop"
+REPO_DIR="${CACHE_DIR}/amd-debug-tools"
+REPO_URL="https://gitlab.freedesktop.org/drm/amd-debug-tools.git"
 
-    # Activate mise if available but not yet in PATH
-    if command -v mise &>/dev/null; then
-        log_info "Activating mise to get Python..."
-        eval "$(mise activate bash)"
-    fi
+ensure_repo() {
+    mkdir -p "$CACHE_DIR"
 
-    if ! command -v python3 &>/dev/null; then
-        log_error "Python 3 not found — run 'bin/apply --module mise' first to install mise and Python"
-        exit 1
-    fi
-}
-
-ensure_installed() {
-    if command -v amd_s2idle &>/dev/null; then
-        return 0
-    fi
-
-    log_info "Installing amd-debug-tools..."
-    if command -v pipx &>/dev/null; then
-        pipx install amd-debug-tools
+    if [[ -d "$REPO_DIR" ]]; then
+        # Pull if older than 7 days
+        local age_days
+        age_days=$(( ($(date +%s) - $(stat -c %Y "$REPO_DIR/.git/FETCH_HEAD" 2>/dev/null || echo 0)) / 86400 ))
+        if [[ $age_days -ge 7 ]]; then
+            log_info "Updating amd-debug-tools..."
+            git -C "$REPO_DIR" pull --quiet 2>/dev/null || log_warn "Pull failed, using cached version"
+        fi
     else
-        python3 -m pip install --user amd-debug-tools
-    fi
-
-    # Ensure ~/.local/bin is in PATH for the freshly installed command
-    if ! command -v amd_s2idle &>/dev/null; then
-        export PATH="${HOME}/.local/bin:${PATH}"
-    fi
-
-    if ! command -v amd_s2idle &>/dev/null; then
-        log_error "amd-debug-tools installed but amd_s2idle not found in PATH"
-        exit 1
+        log_info "Cloning amd-debug-tools..."
+        if ! git clone --depth 1 --quiet "$REPO_URL" "$REPO_DIR"; then
+            log_error "Failed to clone amd-debug-tools"
+            exit 1
+        fi
     fi
 }
 
@@ -69,10 +50,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     exit 1
 fi
 
-ensure_python
-ensure_installed
+ensure_repo
 
 log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
 echo
 
-sudo amd_s2idle "$@"
+sudo PYTHONPATH="$REPO_DIR/src" python3 -m amd_debug.s2idle "$@"
