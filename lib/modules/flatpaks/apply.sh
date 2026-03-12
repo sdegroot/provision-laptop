@@ -52,10 +52,16 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                 fi
                 ;;
             env)
+                # Flatpak does not expand shell variables in --env values.
+                # Expand them here: $HOME → real home, $PATH → default sandbox PATH.
+                expanded_value="$perm_value"
+                expanded_value="${expanded_value//\$HOME/$HOME}"
+                expanded_value="${expanded_value//\$PATH//app/bin:/usr/bin}"
+
                 current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
-                if ! echo "$current" | grep -Fq "$perm_value"; then
-                    log_info "Setting Flatpak override: ${app_id} --env=${perm_value}"
-                    flatpak override --user --env="$perm_value" "$app_id"
+                if ! echo "$current" | grep -Fq "$expanded_value"; then
+                    log_info "Setting Flatpak override: ${app_id} --env=${expanded_value}"
+                    flatpak override --user --env="$expanded_value" "$app_id"
                     changes_made=1
                 fi
                 ;;
