@@ -152,4 +152,62 @@ begin_test "log_plan outputs PLAN tag"
 output="$(log_plan "test plan" 2>&1)"
 assert_contains "$output" "[PLAN]"
 
+# --- wait_for_rpm_ostree ---
+
+begin_test "wait_for_rpm_ostree returns immediately when no transaction active"
+# Stub rpm-ostree to return idle status
+rpm-ostree() { echo "State: idle"; }
+export -f rpm-ostree
+exit_code=0
+wait_for_rpm_ostree 5 || exit_code=$?
+unset -f rpm-ostree
+assert_equals "0" "$exit_code"
+
+begin_test "wait_for_rpm_ostree times out when transaction stays busy"
+rpm-ostree() { echo "State: busy"; }
+sleep() { :; }  # stub sleep for fast tests
+export -f rpm-ostree sleep
+exit_code=0
+output="$(wait_for_rpm_ostree 1 2>&1)" || exit_code=$?
+unset -f rpm-ostree sleep
+assert_equals "1" "$exit_code"
+
+begin_test "wait_for_rpm_ostree detects 'transaction in progress' text"
+rpm-ostree() { echo "error: Transaction in progress"; }
+sleep() { :; }
+export -f rpm-ostree sleep
+exit_code=0
+output="$(wait_for_rpm_ostree 1 2>&1)" || exit_code=$?
+unset -f rpm-ostree sleep
+assert_equals "1" "$exit_code"
+
+begin_test "wait_for_rpm_ostree logs info on first wait iteration"
+# Use a temp file as counter since subshells can't modify parent vars
+_counter_file="$(mktemp)"
+echo "0" > "$_counter_file"
+rpm-ostree() {
+    local c; c="$(cat "$_counter_file")"
+    echo $((c + 1)) > "$_counter_file"
+    if [[ $c -lt 1 ]]; then echo "State: busy"; else echo "State: idle"; fi
+}
+sleep() { :; }
+export -f rpm-ostree sleep
+export _counter_file
+output="$(wait_for_rpm_ostree 10 2>&1)"
+unset -f rpm-ostree sleep
+rm -f "$_counter_file"
+unset _counter_file
+assert_contains "$output" "Waiting for rpm-ostree transaction"
+
+# --- wait_for_kickstart_packages ---
+
+begin_test "wait_for_kickstart_packages returns immediately when service not active"
+# Stub systemctl to return non-active
+systemctl() { return 1; }
+export -f systemctl
+exit_code=0
+wait_for_kickstart_packages || exit_code=$?
+unset -f systemctl
+assert_equals "0" "$exit_code"
+
 print_test_summary "lib/common.sh"

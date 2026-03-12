@@ -23,6 +23,7 @@ apply_kernel_params() {
 
     while IFS= read -r param; do
         if ! echo "$current_kargs" | grep -q "$param"; then
+            wait_for_rpm_ostree
             log_info "Adding kernel param: ${param}"
             sudo rpm-ostree kargs --append="$param"
             changes_made=1
@@ -215,6 +216,7 @@ apply_hibernate() {
             local resume_offset
             resume_offset="$(sudo filefrag -v /swap/swapfile 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
             if [[ -n "$resume_offset" ]]; then
+                wait_for_rpm_ostree
                 log_info "Adding hibernate resume kernel params"
                 sudo rpm-ostree kargs --append="resume=UUID=${root_uuid}" \
                     --append="resume_offset=${resume_offset}"

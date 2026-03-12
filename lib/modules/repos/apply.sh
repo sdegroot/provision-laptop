@@ -115,6 +115,7 @@ sys.exit(1)
     fi
 
     if ! $freeworld_present; then
+        wait_for_rpm_ostree
         log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
 
         # Override each driver independently — mesa-vdpau-drivers may not be

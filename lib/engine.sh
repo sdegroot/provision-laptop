@@ -116,6 +116,14 @@ run_all_modules() {
     local fail_count=0
     local module_name
 
+    # In apply mode, wait for kickstart-packages.service to finish before
+    # running any modules. On first boot this service layers YubiKey and other
+    # packages via rpm-ostree; running bin/apply concurrently causes
+    # "transaction in progress" failures.
+    if [[ "$mode" == "apply" ]] && is_silverblue; then
+        wait_for_kickstart_packages
+    fi
+
     while IFS= read -r module_name; do
         if run_module "$module_name" "$mode"; then
             (( pass_count++ )) || true

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **rpm-ostree transaction conflicts during provisioning** — `bin/apply` failed on
+  fresh installs because multiple modules called `rpm-ostree` sequentially without
+  waiting for prior transactions to complete. Added `wait_for_rpm_ostree()` helper
+  that polls for idle state before any rpm-ostree operation (repos mesa override,
+  host-packages install, hardware kernel params). Also added `wait_for_kickstart_packages()`
+  so `bin/apply` waits for the first-boot `kickstart-packages.service` to finish
+  before running modules.
+
 ### Removed
 - **tuxedo-drivers** — removed `akmod-tuxedo-drivers`, `tuxedo-drivers-kmod-common`,
   `tuxedo-control-center`, the Tuxedo repo (`state/repos.d/tuxedo.repo`), and

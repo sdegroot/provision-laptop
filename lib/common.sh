@@ -150,6 +150,50 @@ is_silverblue() {
     [[ -x "${PROVISION_ROOT}/usr/bin/rpm-ostree" ]]
 }
 
+# wait_for_rpm_ostree [max_wait_seconds]
+#   Blocks until no rpm-ostree transaction is in progress.
+#   rpm-ostree can only run one transaction at a time; calling rpm-ostree
+#   while another transaction is active causes "transaction in progress"
+#   errors. This function polls `rpm-ostree status` for "State: busy" and
+#   waits until the daemon becomes idle.
+#   Returns 1 if the timeout is reached.
+wait_for_rpm_ostree() {
+    local max_wait="${1:-300}"
+    local waited=0
+    while rpm-ostree status 2>&1 | grep -qi "State:.*busy\|transaction in progress"; do
+        if [[ $waited -ge $max_wait ]]; then
+            log_error "Timed out waiting for rpm-ostree transaction (${max_wait}s)"
+            return 1
+        fi
+        if [[ $waited -eq 0 ]]; then
+            log_info "Waiting for rpm-ostree transaction to complete..."
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+}
+
+# wait_for_kickstart_packages
+#   If kickstart-packages.service is still running (first boot), wait for it
+#   to finish before proceeding. This avoids rpm-ostree transaction conflicts
+#   when the user runs bin/apply before the first-boot package layering completes.
+wait_for_kickstart_packages() {
+    if systemctl is-active --quiet kickstart-packages.service 2>/dev/null; then
+        log_info "Waiting for kickstart-packages.service to finish..."
+        local waited=0
+        local max_wait=600  # 10 minutes — first-boot layering can be slow
+        while systemctl is-active --quiet kickstart-packages.service 2>/dev/null; do
+            if [[ $waited -ge $max_wait ]]; then
+                log_error "Timed out waiting for kickstart-packages.service (${max_wait}s)"
+                return 1
+            fi
+            sleep 5
+            waited=$((waited + 5))
+        done
+        log_ok "kickstart-packages.service completed"
+    fi
+}
+
 # has_command <command>
 #   Returns 0 if the given command is available on PATH, 1 otherwise.
 has_command() {
