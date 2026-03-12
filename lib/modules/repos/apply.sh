@@ -116,10 +116,8 @@ sys.exit(1)
 
     if ! $freeworld_present; then
         wait_for_rpm_ostree
-        log_info "Swapping mesa VA-API/VDPAU drivers for freeworld versions"
+        log_info "Swapping mesa VA-API drivers for freeworld version"
 
-        # Override each driver independently — mesa-vdpau-drivers may not be
-        # in the base image (e.g. F43 Silverblue doesn't ship it).
         # Capture stderr to detect "already requested" (from a prior partial
         # run) and treat it as success rather than a fatal error.
         mesa_override() {
@@ -151,23 +149,6 @@ sys.exit(1)
             fi
         fi
 
-        if rpm -q mesa-vdpau-drivers &>/dev/null; then
-            if ! mesa_override override remove mesa-vdpau-drivers \
-                    --install mesa-vdpau-drivers-freeworld; then
-                log_error "Failed to override mesa-vdpau-drivers with freeworld"
-                has_errors=1
-            else
-                changes_made=1
-            fi
-        else
-            log_info "mesa-vdpau-drivers not in base image — installing freeworld directly"
-            if ! mesa_override install --idempotent mesa-vdpau-drivers-freeworld; then
-                log_error "Failed to install mesa-vdpau-drivers-freeworld"
-                has_errors=1
-            else
-                changes_made=1
-            fi
-        fi
     fi
 fi
 

@@ -62,7 +62,7 @@ sys.exit(1)
     fi
 
     if ! $freeworld_present; then
-        log_plan "Would swap mesa VA-API/VDPAU drivers for freeworld versions"
+        log_plan "Would swap mesa VA-API drivers for freeworld version"
         changes_planned=1
     fi
 fi

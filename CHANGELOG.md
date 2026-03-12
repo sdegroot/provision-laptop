@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **mesa-vdpau-drivers-freeworld depsolve failure** — removed VDPAU freeworld driver
+  from the repos module. VDPAU is an NVIDIA-oriented API not relevant for AMD GPUs;
+  VA-API is the correct hardware video API. The VDPAU freeworld package frequently
+  lags behind the system mesa version causing depsolve failures that block provisioning.
 - **Swap/hibernate setup silently failing on Fedora 43 (composefs)** — `apply_hibernate()`
   used `findmnt -no SOURCE /` and `findmnt -no UUID /` to find the btrfs device and UUID.
   On Fedora 43+, `/` is a composefs overlay — these commands return `composefs` and empty
