@@ -35,7 +35,9 @@ btrfs none --label=system btrfs.system
 btrfs / --subvol --name=root LABEL=system
 btrfs /var --subvol --name=var LABEL=system
 btrfs /var/lib/containers --subvol --name=containers LABEL=system
-btrfs /swap --subvol --name=swap LABEL=system
+# Note: swap subvolume is NOT created here — Anaconda fails with "operation not
+# permitted" when setting nodatacow on the mount point. The hardware module's
+# apply_hibernate() creates it on first boot instead (see lib/modules/hardware/apply.sh).
 
 # --- Disk 2: Data ---
 
