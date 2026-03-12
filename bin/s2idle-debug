@@ -8,7 +8,9 @@
 # Prerequisites: mise (https://mise.jdx.dev) — Python is managed via .mise.toml
 #
 # Usage:
-#   bin/s2idle-debug              Run diagnostics (suspends briefly)
+#   bin/s2idle-debug              Run a single test cycle (suspends briefly)
+#   bin/s2idle-debug test --count 3  Run 3 test cycles
+#   bin/s2idle-debug report       Generate report from previous captures
 #   bin/s2idle-debug --help       Show amd_s2idle help
 
 set -euo pipefail
@@ -66,7 +68,12 @@ ensure_installed
 # Resolve the absolute path to amd-s2idle so sudo can find it
 AMD_S2IDLE="$(mise_exec python3 -c "import shutil; print(shutil.which('amd-s2idle'))")"
 
-log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
+# Default to "test" subcommand when called with no arguments
+if [[ $# -eq 0 ]]; then
+    set -- test
+fi
+
+log_info "Running: amd-s2idle $*"
 echo
 
 sudo "$AMD_S2IDLE" "$@"
