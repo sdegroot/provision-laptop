@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **S2idle diagnostics documentation** — documented s2idle test results for the SKIKK
+  Green 7 (Ryzen AI 9 HX 370): 66.67% hardware sleep residency, known ACPI BIOS bug
+  (`\_SB.ACDC.RTAC` missing symbol), LPI constraint warnings for WLAN/Ethernet bridges,
+  and workarounds. See `docs/s2idle-diagnostics.md`.
+- Updated `docs/hardware-setup.md` with sleep section, SKIKK Green 7 hardware details,
+  and `acpica-tools`/`edid-decode`/`libdisplay-info-tools` in the hardware packages table.
+
 ### Changed
 - **s2idle-debug: use `mise exec` instead of relying on activated shell** — the script
   kept failing because the repo had no `.mise.toml` to declare its Python dependency,

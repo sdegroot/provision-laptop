@@ -1,12 +1,12 @@
-# Hardware Setup — Tongfang GX4
+# Hardware Setup — SKIKK Green 7
 
 ## Target Hardware
 
-- **Laptop:** Tongfang GX4 (OEM for Tuxedo laptops)
-- **CPU:** AMD Ryzen (with AMD P-State driver)
+- **Laptop:** SKIKK Green 7 (Tongfang GX4 variant, STX\KRK)
+- **CPU:** AMD Ryzen AI 9 HX 370 (with AMD P-State driver)
 - **GPU:** AMD RDNA integrated graphics
-- **Ethernet:** Motorcomm YT6801 (requires out-of-tree DKMS driver)
-- **WiFi:** Works out of the box on Fedora
+- **Ethernet:** Motorcomm YT6801 (mainline in Fedora 43 kernel)
+- **WiFi:** MediaTek mt7921e — works out of the box on Fedora
 
 ## Prerequisites
 
@@ -131,6 +131,9 @@ The Tuxedo repo and yt6801-dkms COPR are tagged `[x86_64]` — they are skipped 
 | `fprintd` | all | Fingerprint daemon |
 | `libfprint` | all | Fingerprint library |
 | `lm_sensors` | all | Hardware sensor monitoring |
+| `acpica-tools` | x86_64 | ACPI tools (`iasl`) for amd-debug-tools |
+| `edid-decode` | x86_64 | Display EDID parser for AMD debug diagnostics |
+| `libdisplay-info-tools` | x86_64 | Display info utilities for AMD debug diagnostics |
 
 ### Modprobe Configuration
 
@@ -178,6 +181,18 @@ The hardware module creates:
 2. 8GB swapfile at `/swap/swapfile`
 3. Kernel resume parameters (`resume=UUID=... resume_offset=...`)
 4. fstab entry for the swapfile
+
+### Sleep (S2idle)
+
+The system uses s2idle (S0ix / Modern Standby) for suspend, configured as `suspend-then-hibernate` via systemd — suspends for 60 minutes, then hibernates to save battery during longer sleep periods.
+
+Key kernel parameters for sleep:
+- `acpi.ec_no_wakeup=1` — prevents EC wakeups that block deepest S0ix state
+- `i8042.reset=1` — forces PS/2 controller reset on resume (fixes keyboard not working after wake)
+
+For detailed diagnostics output, known ACPI issues, and workarounds, see [S2idle Diagnostics](s2idle-diagnostics.md).
+
+To run sleep diagnostics: `bin/s2idle-debug`
 
 ### VA-API Video Acceleration (x86_64 only)
 
