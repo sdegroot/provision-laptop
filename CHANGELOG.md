@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Swapfile not resized when desired size changes** — `apply_hibernate()` only checked
+  whether `/swap/swapfile` existed, not whether it was the correct size. If the swapfile
+  was created at a different size (e.g. 8GB) by an earlier version, subsequent runs would
+  skip it entirely. Now compares actual file size against expected (96GB) and recreates the
+  swapfile if mismatched. Also updates the `resume_offset` kernel parameter after recreation
+  (the physical disk offset changes with a new file). `check.sh` and `plan.sh` also detect
+  and report size drift.
 - **rpm-ostree transaction conflicts during provisioning** — `bin/apply` failed on
   fresh installs because multiple modules called `rpm-ostree` sequentially without
   waiting for prior transactions to complete. Added `wait_for_rpm_ostree()` helper

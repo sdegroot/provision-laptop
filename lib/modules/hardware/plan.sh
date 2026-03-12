@@ -101,8 +101,14 @@ plan_hibernate() {
         changes_planned=1
     fi
 
+    local swapfile_size_gb=96
     if [[ ! -f /swap/swapfile ]]; then
-        log_plan "Would create 96GB swapfile at /swap/swapfile"
+        log_plan "Would create ${swapfile_size_gb}GB swapfile at /swap/swapfile"
+        changes_planned=1
+    elif [[ "$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)" -ne $(( swapfile_size_gb * 1024 * 1024 * 1024 )) ]]; then
+        local actual_bytes
+        actual_bytes="$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)"
+        log_plan "Would recreate swapfile at ${swapfile_size_gb}GB (currently $((actual_bytes / 1024 / 1024 / 1024))GB)"
         changes_planned=1
     fi
 

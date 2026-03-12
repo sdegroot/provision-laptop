@@ -102,6 +102,8 @@ check_config_files() {
 check_hibernate() {
     local effective_root="${PROVISION_ROOT:-}"
 
+    local swapfile_size_gb=96
+
     if [[ -n "$effective_root" ]]; then
         # In test mode, check for the marker directory and fstab entries
         if [[ -d "${effective_root}/swap" ]]; then
@@ -109,6 +111,19 @@ check_hibernate() {
         else
             log_error "Missing swap subvolume at /swap"
             drift_found=1
+        fi
+
+        # Verify swapfile size if present
+        if [[ -f "${effective_root}/swap/swapfile" ]]; then
+            local actual_bytes expected_bytes
+            actual_bytes="$(wc -c < "${effective_root}/swap/swapfile" 2>/dev/null | tr -d ' ' || echo 0)"
+            expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+            if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
+                log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
+                drift_found=1
+            else
+                log_ok "Swapfile size: ${swapfile_size_gb}GB"
+            fi
         fi
 
         local fstab="${effective_root}/etc/fstab"
@@ -127,11 +142,25 @@ check_hibernate() {
             fi
         fi
     else
+        local swapfile_size_gb=96
         if findmnt /swap &>/dev/null || [[ -f /swap/swapfile ]]; then
             log_ok "Swap subvolume/swapfile exists"
         else
             log_error "Missing swap subvolume or swapfile at /swap"
             drift_found=1
+        fi
+
+        # Verify swapfile size matches expected
+        if [[ -f /swap/swapfile ]]; then
+            local actual_bytes expected_bytes
+            actual_bytes="$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)"
+            expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+            if [[ "$actual_bytes" -ne "$expected_bytes" ]]; then
+                log_error "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB"
+                drift_found=1
+            else
+                log_ok "Swapfile size: ${swapfile_size_gb}GB"
+            fi
         fi
     fi
 }

@@ -170,15 +170,30 @@ apply_hibernate() {
         return 0
     fi
 
-    # --- Step 3: Create swapfile ---
+    # --- Step 3: Create or resize swapfile ---
+    local swapfile_size_gb=96
+    local swapfile_expected_bytes=$(( swapfile_size_gb * 1024 * 1024 * 1024 ))
+    local swapfile_needs_creation=0
+
     if [[ ! -f /swap/swapfile ]]; then
-        log_info "Creating swapfile (96GB)"
+        swapfile_needs_creation=1
+    elif [[ "$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)" -ne "$swapfile_expected_bytes" ]]; then
+        local actual_bytes
+        actual_bytes="$(wc -c < /swap/swapfile 2>/dev/null | tr -d ' ' || echo 0)"
+        log_info "Swapfile size mismatch: expected ${swapfile_size_gb}GB, got $((actual_bytes / 1024 / 1024 / 1024))GB — recreating"
+        sudo swapoff /swap/swapfile 2>/dev/null || true
+        sudo rm -f /swap/swapfile
+        swapfile_needs_creation=1
+    fi
+
+    if [[ "$swapfile_needs_creation" -eq 1 ]]; then
+        log_info "Creating swapfile (${swapfile_size_gb}GB)"
         if command -v btrfs &>/dev/null && btrfs filesystem mkswapfile --help &>/dev/null 2>&1; then
-            sudo btrfs filesystem mkswapfile --size 96G /swap/swapfile
+            sudo btrfs filesystem mkswapfile --size "${swapfile_size_gb}G" /swap/swapfile
         else
             sudo truncate -s 0 /swap/swapfile
             sudo chattr +C /swap/swapfile
-            sudo fallocate -l 96G /swap/swapfile
+            sudo fallocate -l "${swapfile_size_gb}G" /swap/swapfile
             sudo chmod 600 /swap/swapfile
             sudo mkswap /swap/swapfile
         fi
@@ -203,7 +218,7 @@ apply_hibernate() {
         changes_made=1
     fi
 
-    # --- Step 5: Add resume kernel params for hibernate ---
+    # --- Step 5: Add/update resume kernel params for hibernate ---
     local current_kargs
     current_kargs="$(rpm-ostree kargs 2>/dev/null || true)"
 
@@ -220,6 +235,20 @@ apply_hibernate() {
                 log_info "Adding hibernate resume kernel params"
                 sudo rpm-ostree kargs --append="resume=UUID=${root_uuid}" \
                     --append="resume_offset=${resume_offset}"
+                changes_made=1
+            fi
+        fi
+    elif [[ "$swapfile_needs_creation" -eq 1 ]] && echo "$current_kargs" | grep -q "resume_offset="; then
+        # Swapfile was recreated — the physical offset has changed
+        local new_offset
+        new_offset="$(sudo filefrag -v /swap/swapfile 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
+        if [[ -n "$new_offset" ]]; then
+            local old_offset
+            old_offset="$(echo "$current_kargs" | grep -o 'resume_offset=[^ ]*')"
+            if [[ "resume_offset=${new_offset}" != "$old_offset" ]]; then
+                wait_for_rpm_ostree
+                log_info "Updating hibernate resume_offset kernel param"
+                sudo rpm-ostree kargs --replace="resume_offset=${new_offset}"
                 changes_made=1
             fi
         fi
