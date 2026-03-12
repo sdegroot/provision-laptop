@@ -112,9 +112,16 @@ apply_hibernate() {
     # On Silverblue the root is immutable, so we can't just
     # `btrfs subvolume create /swap`. Instead, mount the raw btrfs volume
     # and create the subvolume alongside root/var/containers.
+    #
+    # On Fedora 43+ with composefs, `/` is a composefs overlay — the real
+    # btrfs filesystem is mounted at `/sysroot`. Fall back to `/` for
+    # older Fedora versions without composefs.
     if ! findmnt /swap &>/dev/null; then
         local root_dev
-        root_dev="$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*\]//')"
+        root_dev="$(findmnt -no SOURCE /sysroot 2>/dev/null | sed 's/\[.*\]//')"
+        if [[ -z "$root_dev" ]]; then
+            root_dev="$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*\]//')"
+        fi
         if [[ -z "$root_dev" ]]; then
             log_warn "Cannot determine root device — skipping swap/hibernate setup"
             return 0
@@ -146,7 +153,10 @@ apply_hibernate() {
     # --- Step 2: Ensure /swap subvolume mount is in fstab ---
     if ! grep -q '/swap.*btrfs.*subvol=swap' /etc/fstab 2>/dev/null; then
         local root_uuid
-        root_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
+        root_uuid="$(findmnt -no UUID /sysroot 2>/dev/null || true)"
+        if [[ -z "$root_uuid" ]]; then
+            root_uuid="$(findmnt -no UUID / 2>/dev/null || true)"
+        fi
         if [[ -n "$root_uuid" ]]; then
             log_info "Adding /swap subvolume mount to fstab"
             echo "UUID=${root_uuid} /swap btrfs subvol=swap,nodatacow,nofail 0 0" \
@@ -226,7 +236,7 @@ apply_hibernate() {
         # For Btrfs swapfile hibernate, resume= takes the UUID of the filesystem
         # containing the swapfile (i.e., root), not a swap partition UUID.
         local root_uuid
-        root_uuid="${root_uuid:-$(findmnt -no UUID / 2>/dev/null || true)}"
+        root_uuid="${root_uuid:-$(findmnt -no UUID /sysroot 2>/dev/null || findmnt -no UUID / 2>/dev/null || true)}"
         if [[ -n "$root_uuid" ]]; then
             local resume_offset
             resume_offset="$(sudo filefrag -v /swap/swapfile 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"

@@ -7,13 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Swap/hibernate setup silently failing on Fedora 43 (composefs)** — `apply_hibernate()`
+  used `findmnt -no SOURCE /` and `findmnt -no UUID /` to find the btrfs device and UUID.
+  On Fedora 43+, `/` is a composefs overlay — these commands return `composefs` and empty
+  respectively, causing the entire swap subvolume creation, fstab entry, and swapfile setup
+  to silently bail out. Fixed by looking at `/sysroot` first (where the real btrfs lives),
+  falling back to `/` for older Fedora versions.
 - **Swapfile not resized when desired size changes** — `apply_hibernate()` only checked
   whether `/swap/swapfile` existed, not whether it was the correct size. If the swapfile
-  was created at a different size (e.g. 8GB) by an earlier version, subsequent runs would
-  skip it entirely. Now compares actual file size against expected (96GB) and recreates the
-  swapfile if mismatched. Also updates the `resume_offset` kernel parameter after recreation
-  (the physical disk offset changes with a new file). `check.sh` and `plan.sh` also detect
-  and report size drift.
+  was created at a different size, subsequent runs would skip it entirely. Now compares
+  actual file size against expected (96GB) and recreates the swapfile if mismatched. Also
+  updates the `resume_offset` kernel parameter after recreation (the physical disk offset
+  changes with a new file). `check.sh` and `plan.sh` also detect and report size drift.
 - **rpm-ostree transaction conflicts during provisioning** — `bin/apply` failed on
   fresh installs because multiple modules called `rpm-ostree` sequentially without
   waiting for prior transactions to complete. Added `wait_for_rpm_ostree()` helper
