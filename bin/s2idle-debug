@@ -38,13 +38,22 @@ ensure_python() {
 }
 
 ensure_installed() {
-    # Check if the package is importable
-    if python3 -c "import amd_debug.s2idle" &>/dev/null 2>&1; then
+    # pip install puts amd-s2idle in the same bin dir as the mise python3
+    local python_bin
+    python_bin="$(dirname "$(command -v python3)")"
+    export PATH="${python_bin}:${PATH}"
+
+    if [[ -x "${python_bin}/amd-s2idle" ]]; then
         return 0
     fi
 
     log_info "Installing amd-debug-tools..."
     python3 -m pip install amd-debug-tools
+
+    if [[ ! -x "${python_bin}/amd-s2idle" ]]; then
+        log_error "amd-debug-tools installed but amd-s2idle not found in ${python_bin}"
+        exit 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -62,4 +71,4 @@ ensure_installed
 log_info "Running AMD s2idle diagnostics (this will briefly suspend the system)..."
 echo
 
-sudo "$(command -v python3)" -m amd_debug.s2idle "$@"
+sudo "$(dirname "$(command -v python3)")/amd-s2idle" "$@"
