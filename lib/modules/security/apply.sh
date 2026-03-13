@@ -70,6 +70,11 @@ if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$AUTHSELECT_FILE" ]] && has_command auth
 
     while IFS= read -r feature; do
         if ! echo "$current_features" | grep -qx "$feature"; then
+            # Skip U2F features if pam_u2f.so is not yet installed (pending reboot)
+            if [[ "$feature" == *pam-u2f* ]] && [[ ! -f /usr/lib64/security/pam_u2f.so ]]; then
+                log_warn "Skipping ${feature} — pam_u2f.so not yet installed (reboot first)"
+                continue
+            fi
             log_info "Enabling authselect feature: ${feature}"
             sudo authselect enable-feature "$feature" 2>/dev/null || true
             changes_made=1
