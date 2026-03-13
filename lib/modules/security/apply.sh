@@ -79,3 +79,14 @@ if [[ $changes_made -eq 0 ]]; then
 else
     log_ok "Security configuration applied"
 fi
+
+# Remind about manual 1Password steps (only on first setup)
+if [[ -z "$PROVISION_ROOT" ]] && has_command 1password; then
+    if [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
+        log_warn "1Password manual setup required — see docs/1password-setup.md"
+        log_warn "  1. Open 1Password → Settings → Developer"
+        log_warn "     - Enable 'Use the SSH agent'"
+        log_warn "     - Enable 'Integrate with 1Password CLI'"
+        log_warn "     - Set SSH agent authorization to 'Allow when unlocked'"
+    fi
+fi
