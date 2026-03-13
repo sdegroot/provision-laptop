@@ -67,6 +67,25 @@ sys.exit(1)
     fi
 fi
 
+# Check base-image package removals
+BASE_REMOVALS_FILE="$(state_file_path "base-removals.txt")"
+if [[ -f "$BASE_REMOVALS_FILE" ]]; then
+    current_removals="$(rpm-ostree status --json 2>/dev/null | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+for dep in data.get("deployments", []):
+    for r in dep.get("base-removals", []):
+        print(r if isinstance(r, str) else r.get("name",""))
+' 2>/dev/null)"
+
+    while IFS= read -r pkg; do
+        if ! echo "$current_removals" | grep -qx "$pkg" && rpm -q "$pkg" &>/dev/null; then
+            log_plan "Would remove base package: ${pkg}"
+            changes_planned=1
+        fi
+    done < <(parse_state_file "$BASE_REMOVALS_FILE")
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No repo changes needed"
 fi

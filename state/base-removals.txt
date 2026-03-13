@@ -1,0 +1,10 @@
+# Packages to remove from the Silverblue base image via rpm-ostree override remove.
+# One package per line. These are base-image bloat — not needed for this workstation.
+
+# IBus input method engines — only Latin keyboard layouts are used
+ibus-typing-booster
+ibus-libpinyin
+ibus-hangul
+ibus-anthy
+ibus-anthy-python
+ibus-m17n

@@ -152,6 +152,37 @@ sys.exit(1)
     fi
 fi
 
+# Base-image package removals (rpm-ostree override remove)
+BASE_REMOVALS_FILE="$(state_file_path "base-removals.txt")"
+if [[ -f "$BASE_REMOVALS_FILE" ]]; then
+    # Get current base-removals from rpm-ostree status
+    current_removals="$(rpm-ostree status --json 2>/dev/null | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+for dep in data.get("deployments", []):
+    for r in dep.get("base-removals", []):
+        print(r if isinstance(r, str) else r.get("name",""))
+' 2>/dev/null)"
+
+    to_remove=()
+    while IFS= read -r pkg; do
+        if ! echo "$current_removals" | grep -qx "$pkg" && rpm -q "$pkg" &>/dev/null; then
+            to_remove+=("$pkg")
+        fi
+    done < <(parse_state_file "$BASE_REMOVALS_FILE")
+
+    if [[ ${#to_remove[@]} -gt 0 ]]; then
+        wait_for_rpm_ostree
+        log_info "Removing base packages: ${to_remove[*]}"
+        if sudo rpm-ostree override remove "${to_remove[@]}" 2>&1; then
+            changes_made=1
+        else
+            log_error "Failed to remove base packages"
+            has_errors=1
+        fi
+    fi
+fi
+
 if [[ $has_errors -ne 0 ]]; then
     log_error "Repos apply completed with errors"
     exit 1
