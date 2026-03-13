@@ -95,6 +95,32 @@ plan_timers() {
 }
 
 # -------------------------------------------------------------------------
+# 5. Hostname
+# -------------------------------------------------------------------------
+
+plan_hostname() {
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        return 0
+    fi
+
+    local hostname_file
+    hostname_file="$(state_file_path "hostname.txt")"
+    [[ -f "$hostname_file" ]] || return 0
+
+    local desired
+    desired="$(head -1 "$hostname_file" | tr -d '[:space:]')"
+    [[ -n "$desired" ]] || return 0
+
+    local current
+    current="$(hostnamectl hostname 2>/dev/null || hostname)"
+
+    if [[ "$current" != "$desired" ]]; then
+        log_plan "Would set hostname: ${current} -> ${desired}"
+        changes_planned=1
+    fi
+}
+
+# -------------------------------------------------------------------------
 # Run all plans
 # -------------------------------------------------------------------------
 
@@ -102,6 +128,7 @@ plan_kernel_params
 plan_config_files
 plan_hibernate
 plan_timers
+plan_hostname
 
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No hardware changes needed"

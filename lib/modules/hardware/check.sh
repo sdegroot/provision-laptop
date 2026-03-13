@@ -118,6 +118,35 @@ check_timers() {
 }
 
 # -------------------------------------------------------------------------
+# 5. Hostname
+# -------------------------------------------------------------------------
+
+check_hostname() {
+    local hostname_file
+    hostname_file="$(state_file_path "hostname.txt")"
+    [[ -f "$hostname_file" ]] || return 0
+
+    local desired
+    desired="$(head -1 "$hostname_file" | tr -d '[:space:]')"
+    [[ -n "$desired" ]] || return 0
+
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        log_warn "Skipping hostname check in test mode"
+        return 0
+    fi
+
+    local current
+    current="$(hostnamectl hostname 2>/dev/null || hostname)"
+
+    if [[ "$current" == "$desired" ]]; then
+        log_ok "Hostname: ${desired}"
+    else
+        log_error "Hostname is '${current}' (expected '${desired}')"
+        drift_found=1
+    fi
+}
+
+# -------------------------------------------------------------------------
 # Run all checks
 # -------------------------------------------------------------------------
 
@@ -125,6 +154,7 @@ check_kernel_params
 check_config_files
 check_hibernate
 check_timers
+check_hostname
 
 if [[ $drift_found -eq 0 ]]; then
     log_ok "All hardware configuration matches desired state"

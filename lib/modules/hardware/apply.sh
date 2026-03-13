@@ -194,6 +194,33 @@ apply_sysctl() {
 }
 
 # -------------------------------------------------------------------------
+# 6. Hostname
+# -------------------------------------------------------------------------
+
+apply_hostname() {
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        return 0
+    fi
+
+    local hostname_file
+    hostname_file="$(state_file_path "hostname.txt")"
+    [[ -f "$hostname_file" ]] || return 0
+
+    local desired
+    desired="$(head -1 "$hostname_file" | tr -d '[:space:]')"
+    [[ -n "$desired" ]] || return 0
+
+    local current
+    current="$(hostnamectl hostname 2>/dev/null || hostname)"
+
+    if [[ "$current" != "$desired" ]]; then
+        log_info "Setting hostname: ${current} -> ${desired}"
+        sudo hostnamectl set-hostname "$desired"
+        changes_made=1
+    fi
+}
+
+# -------------------------------------------------------------------------
 # Run all steps
 # -------------------------------------------------------------------------
 
@@ -202,6 +229,7 @@ apply_config_files
 apply_hibernate
 apply_timers
 apply_sysctl
+apply_hostname
 
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All hardware configuration already correct"
