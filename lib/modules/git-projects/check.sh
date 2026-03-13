@@ -12,13 +12,15 @@ if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
 
-while IFS= read -r url; do
-    target="$(clone_url_to_path "$url")"
+while IFS= read -r line; do
+    read -r url namespace <<< "$line"
+    repo="$(repo_name_from_url "$url")"
+    target="${GIT_PROJECTS_BASE}/${namespace}/${repo}"
 
     if [[ -d "$target/.git" ]]; then
-        log_ok "Cloned: ${target}"
+        log_ok "Cloned: ${namespace}/${repo}"
     else
-        log_error "Missing: ${target} (from ${url})"
+        log_error "Missing: ${namespace}/${repo} (from ${url})"
         drift_found=1
     fi
 done < <(parse_state_file "$STATE_FILE")

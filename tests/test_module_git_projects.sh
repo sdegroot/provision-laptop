@@ -11,30 +11,38 @@ export PROVISION_ALLOW_NONROOT=1
 
 echo "Testing module: git-projects..."
 
-# --- clone_url_to_path ---
+# --- repo_name_from_url ---
 
-begin_test "clone_url_to_path derives correct path from GitHub SSH URL"
+begin_test "repo_name_from_url extracts repo from GitHub SSH URL"
 setup_test_tmpdir
 
 source "${SCRIPT_DIR}/../lib/modules/git-projects/common.sh"
-result="$(clone_url_to_path "git@github.com:sdegroot/provision-laptop.git")"
-assert_contains "$result" "scm/sdegroot/provision-laptop"
+result="$(repo_name_from_url "git@github.com:epistola-app/epistola.git")"
+assert_equals "epistola" "$result"
 teardown_test_tmpdir
 
-begin_test "clone_url_to_path derives correct path from GitLab SSH URL"
+begin_test "repo_name_from_url extracts repo from GitLab nested URL"
 setup_test_tmpdir
 
 source "${SCRIPT_DIR}/../lib/modules/git-projects/common.sh"
-result="$(clone_url_to_path "git@gitlab.com:epistola/backend.git")"
-assert_contains "$result" "scm/epistola/backend"
+result="$(repo_name_from_url "git@gitlab.com:gemeenteutrecht/devops/commutr-reporting.git")"
+assert_equals "commutr-reporting" "$result"
 teardown_test_tmpdir
 
-begin_test "clone_url_to_path handles URL without .git suffix"
+begin_test "repo_name_from_url handles URL without .git suffix"
 setup_test_tmpdir
 
 source "${SCRIPT_DIR}/../lib/modules/git-projects/common.sh"
-result="$(clone_url_to_path "git@github.com:org/repo")"
-assert_contains "$result" "scm/org/repo"
+result="$(repo_name_from_url "git@github.com:org/repo")"
+assert_equals "repo" "$result"
+teardown_test_tmpdir
+
+begin_test "repo_name_from_url handles HTTPS URL"
+setup_test_tmpdir
+
+source "${SCRIPT_DIR}/../lib/modules/git-projects/common.sh"
+result="$(repo_name_from_url "https://gitlab.com/commonground/fsc/try-me.git")"
+assert_equals "try-me" "$result"
 teardown_test_tmpdir
 
 # --- State file ---
@@ -46,11 +54,30 @@ source "${SCRIPT_DIR}/../lib/common.sh"
 STATE_FILE="$(state_file_path "git-projects.conf")"
 output="$(parse_state_file "$STATE_FILE")"
 
-# Should have at least one entry
 if [[ -n "$output" ]]; then
     pass_test
 else
     fail_test "State file is empty after parsing"
+fi
+teardown_test_tmpdir
+
+begin_test "git-projects.conf entries have two fields"
+setup_test_tmpdir
+
+source "${SCRIPT_DIR}/../lib/common.sh"
+STATE_FILE="$(state_file_path "git-projects.conf")"
+has_bad=false
+while IFS= read -r line; do
+    fields=$(echo "$line" | wc -w | tr -d ' ')
+    if [[ "$fields" -ne 2 ]]; then
+        has_bad=true
+    fi
+done < <(parse_state_file "$STATE_FILE")
+
+if [[ "$has_bad" == "false" ]]; then
+    pass_test
+else
+    fail_test "Some entries don't have exactly 2 fields (url + namespace)"
 fi
 teardown_test_tmpdir
 
@@ -66,7 +93,7 @@ cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
 
 cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
-git@github.com:testorg/testrepo.git
+git@github.com:testorg/testrepo.git myns
 CONF
 
 exit_code=0
@@ -78,7 +105,7 @@ output="$(
 )" || exit_code=$?
 
 assert_equals "1" "$exit_code"
-assert_contains "$output" "Missing"
+assert_contains "$output" "Missing: myns/testrepo"
 teardown_test_tmpdir
 
 # --- Check passes when repos exist ---
@@ -93,11 +120,10 @@ cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
 
 cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
-git@github.com:testorg/testrepo.git
+git@github.com:testorg/testrepo.git myns
 CONF
 
-# Simulate a cloned repo
-mkdir -p "${TEST_TMPDIR}/home/scm/testorg/testrepo/.git"
+mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
 
 exit_code=0
 output="$(
@@ -107,10 +133,10 @@ output="$(
 )" || exit_code=$?
 
 assert_equals "0" "$exit_code"
-assert_contains "$output" "Cloned"
+assert_contains "$output" "Cloned: myns/testrepo"
 teardown_test_tmpdir
 
-# --- Plan reports repos to clone ---
+# --- Plan ---
 
 begin_test "plan reports repos to clone"
 setup_test_tmpdir
@@ -122,15 +148,15 @@ cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
 
 cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
-git@github.com:testorg/testrepo.git
+git@github.com:testorg/testrepo.git myns
 CONF
 
 output="$(
     export HOME="${TEST_TMPDIR}/home"
     mkdir -p "$HOME"
     source "${custom_dir}/lib/common.sh"
-    source "${custom_dir}/lib/modules/git-projects/plan.sh"
-) 2>&1"
+    source "${custom_dir}/lib/modules/git-projects/plan.sh" 2>&1
+)"
 
 assert_contains "$output" "Would clone"
 teardown_test_tmpdir
@@ -145,16 +171,16 @@ cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
 cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
 
 cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
-git@github.com:testorg/testrepo.git
+git@github.com:testorg/testrepo.git myns
 CONF
 
-mkdir -p "${TEST_TMPDIR}/home/scm/testorg/testrepo/.git"
+mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
 
 output="$(
     export HOME="${TEST_TMPDIR}/home"
     source "${custom_dir}/lib/common.sh"
-    source "${custom_dir}/lib/modules/git-projects/plan.sh"
-) 2>&1"
+    source "${custom_dir}/lib/modules/git-projects/plan.sh" 2>&1
+)"
 
 assert_contains "$output" "No git project changes needed"
 teardown_test_tmpdir

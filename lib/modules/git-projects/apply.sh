@@ -13,8 +13,10 @@ if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
 
-while IFS= read -r url; do
-    target="$(clone_url_to_path "$url")"
+while IFS= read -r line; do
+    read -r url namespace <<< "$line"
+    repo="$(repo_name_from_url "$url")"
+    target="${GIT_PROJECTS_BASE}/${namespace}/${repo}"
 
     if [[ -d "$target/.git" ]]; then
         continue
