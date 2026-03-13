@@ -1,6 +1,7 @@
 [user]
     name = Sander de Groot
     email = sander@degroot.dev
+    signingkey = ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDV0hmxKfCHaR3zujHCqd2m8LFlVeSQnmCNdSacnuUgljB5c1xA7B0ELoTtHcDY5GYUOm7JjF2fDsaL5kKaR+U1V1UtIgO/GJfQIsS3R8TxEGnMfejvUujfb89K/aiWIWfwtKGb4ZY32tmd8MP53fvwRYXZPX5TUtuOkeohoNe8WmdJ0sV02pRVVgBu8E0552hSdI9BZLw42CKsoc0xrIIHedT4zUpeWG72EHbckprqrhcrg13zTvel/PoC1PG9IxkplLYt9DKsQmJtH7SWd6zzcOV7mBgfAW7k67BdBHMSDWEgR3Hi03lPqtcYogOLwWB/VqjeWPPVJpArTzNy26bant3njLdi+HQnAY/+7AfScMBSz6/9x8ln1WKC0cwPYBloIcq6esveeqqM75rwrI0rmUq7EKrKbmrsBg5bXbG1gFhb9F6koD6SMQjpJxEZ+jKCst6LxQ9/FZV3cVcH36HTEPLpne096etdw9IcThaqzvqhZ23Rx6D2AHk95h4j+rlAjClRxORdJKjH5SF5doFJXKSSH/8zY7Z88rscglP+tJ4nBUxooZUcUqjo6I5D+0qwED1qUpZqV1uBSMwrrv9C8UU1nLgRhjQl/5FXhrUxF8zb5QwfdIeIKLo0B0uPMlP2ULXy2ZvMQ/E+zi4+m/YPgwVyp6dXoMNUrmGZprcWSw==
 
 [core]
     editor = vim
@@ -29,6 +30,12 @@
 
 [gpg]
     format = ssh
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgsign = true
 
 [gpg "ssh"]
     program = /opt/1Password/op-ssh-sign
