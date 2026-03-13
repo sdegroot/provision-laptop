@@ -98,13 +98,32 @@ else
     log_ok "Security configuration applied"
 fi
 
-# Remind about manual 1Password steps (only on first setup)
-if [[ -z "$PROVISION_ROOT" ]] && has_command 1password; then
-    if [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
-        log_warn "1Password manual setup required — see docs/1password-setup.md"
-        log_warn "  1. Open 1Password → Settings → Developer"
-        log_warn "     - Enable 'Use the SSH agent'"
-        log_warn "     - Enable 'Integrate with 1Password CLI'"
-        log_warn "     - Set SSH agent authorization to 'Allow when unlocked'"
+# Remind about manual steps (only when not yet completed)
+if [[ -z "$PROVISION_ROOT" ]]; then
+    reminders=()
+
+    if has_command 1password && [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
+        reminders+=("")
+        reminders+=("1Password — open Settings → Developer:")
+        reminders+=("  - Enable 'Use the SSH agent'")
+        reminders+=("  - Enable 'Integrate with 1Password CLI'")
+        reminders+=("  - Set SSH agent authorization to 'Allow when unlocked'")
+    fi
+
+    if has_command pamu2fcfg && [[ ! -f "${HOME}/.config/Yubico/u2f_keys" ]]; then
+        reminders+=("")
+        reminders+=("YubiKey — enroll for PAM authentication:")
+        reminders+=("  mkdir -p ~/.config/Yubico")
+        reminders+=("  pamu2fcfg > ~/.config/Yubico/u2f_keys")
+        reminders+=("  # Touch YubiKey when it blinks")
+    fi
+
+    if [[ ${#reminders[@]} -gt 0 ]]; then
+        log_warn "━━━ Manual setup required ━━━"
+        for line in "${reminders[@]}"; do
+            log_warn "$line"
+        done
+        log_warn ""
+        log_warn "See docs/1password-setup.md and docs/yubikey-setup.md"
     fi
 fi
