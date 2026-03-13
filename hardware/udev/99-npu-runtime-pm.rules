@@ -1,0 +1,6 @@
+# Enable runtime PM on AMD NPU (amdxdna) and its dummy function.
+# Without a loaded driver these PCI functions default to power/control=on,
+# keeping the IP block active and preventing S0i3 deep sleep.
+# Vendor 1022 (AMD), devices 150d (dummy) and 17f0 (NPU).
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1022", ATTR{device}=="0x150d", ATTR{power/control}="auto"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1022", ATTR{device}=="0x17f0", ATTR{power/control}="auto"
