@@ -75,6 +75,12 @@ apply_config_files() {
         deploy_config_file "$src" "${effective_root}/etc/dracut.conf.d/$(basename "$src")"
     done
 
+    # udev rules -> /etc/udev/rules.d/
+    for src in "${hardware_dir}"/udev/*.rules; do
+        [[ -f "$src" ]] || continue
+        deploy_config_file "$src" "${effective_root}/etc/udev/rules.d/$(basename "$src")"
+    done
+
     # systemd units -> /etc/systemd/system/ (except sleep.conf)
     for src in "${hardware_dir}"/systemd/*.service "${hardware_dir}"/systemd/*.timer; do
         [[ -f "$src" ]] || continue

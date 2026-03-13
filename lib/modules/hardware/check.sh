@@ -75,6 +75,18 @@ check_config_files() {
         fi
     done
 
+    # udev rules -> /etc/udev/rules.d/
+    for src in "${hardware_dir}"/udev/*.rules; do
+        [[ -f "$src" ]] || continue
+        local dest="${effective_root}/etc/udev/rules.d/$(basename "$src")"
+        if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
+            log_ok "Config: /etc/udev/rules.d/$(basename "$src")"
+        else
+            log_error "Config drift: /etc/udev/rules.d/$(basename "$src")"
+            drift_found=1
+        fi
+    done
+
     # systemd units -> /etc/systemd/system/
     for src in "${hardware_dir}"/systemd/*.service "${hardware_dir}"/systemd/*.timer; do
         [[ -f "$src" ]] || continue

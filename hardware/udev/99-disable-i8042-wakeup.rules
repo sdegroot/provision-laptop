@@ -1,0 +1,5 @@
+# Disable i8042 keyboard port as a wakeup source during s2idle.
+# The PS/2 controller generates spurious wakeup interrupts (EC crosstalk on
+# Tongfang/Clevo AMD chassis), causing an immediate-wake loop that drains the
+# battery overnight. Lid switch and power button remain as wakeup sources.
+ACTION=="add", SUBSYSTEM=="serio", DRIVERS=="atkbd", ATTR{power/wakeup}="disabled"
