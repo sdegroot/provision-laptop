@@ -35,6 +35,34 @@ if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
     fi
 fi
 
+# Deploy browser policies for managed extensions (1Password)
+BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
+if [[ -z "$PROVISION_ROOT" ]] && [[ -d "$BROWSER_POLICIES_DIR" ]]; then
+    # Firefox: /etc/firefox/policies/policies.json
+    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
+    firefox_dest="/etc/firefox/policies/policies.json"
+    if [[ -f "$firefox_src" ]]; then
+        if ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
+            log_info "Deploying Firefox browser policies"
+            sudo mkdir -p /etc/firefox/policies
+            sudo cp "$firefox_src" "$firefox_dest"
+            changes_made=1
+        fi
+    fi
+
+    # Brave: /etc/brave/policies/managed/
+    brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
+    brave_dest="/etc/brave/policies/managed/1password.json"
+    if [[ -f "$brave_src" ]]; then
+        if ! diff -q "$brave_src" "$brave_dest" &>/dev/null; then
+            log_info "Deploying Brave browser policies"
+            sudo mkdir -p /etc/brave/policies/managed
+            sudo cp "$brave_src" "$brave_dest"
+            changes_made=1
+        fi
+    fi
+fi
+
 # Ensure firewall is enabled (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

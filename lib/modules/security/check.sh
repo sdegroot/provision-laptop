@@ -63,6 +63,33 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check browser policies for managed extensions
+if [[ -z "$PROVISION_ROOT" ]]; then
+    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
+
+    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
+    firefox_dest="/etc/firefox/policies/policies.json"
+    if [[ -f "$firefox_src" ]]; then
+        if diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
+            log_ok "Firefox browser policies deployed"
+        else
+            log_error "Firefox browser policies missing or outdated"
+            drift_found=1
+        fi
+    fi
+
+    brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
+    brave_dest="/etc/brave/policies/managed/1password.json"
+    if [[ -f "$brave_src" ]]; then
+        if diff -q "$brave_src" "$brave_dest" &>/dev/null; then
+            log_ok "Brave browser policies deployed"
+        else
+            log_error "Brave browser policies missing or outdated"
+            drift_found=1
+        fi
+    fi
+fi
+
 # Check firewall (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then
