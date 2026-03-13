@@ -15,6 +15,10 @@ com.slack.Slack
 com.mattermost.Desktop
 im.riot.Riot
 
+# Proton (Mail includes Calendar)
+me.proton.Mail
+com.protonvpn.www
+
 # Media
 org.videolan.VLC
 
