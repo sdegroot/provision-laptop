@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Gemini
+Comment=Google Gemini
+Exec=flatpak run com.brave.Browser --app=https://gemini.google.com
+Icon=brave-browser
+Type=Application
+Categories=Network;Chat;
+StartupWMClass=gemini.google.com__

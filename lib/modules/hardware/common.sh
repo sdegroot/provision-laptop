@@ -83,4 +83,10 @@ iter_hardware_config_files() {
         [[ -f "$src" ]] || continue
         "$callback" "$src" "${effective_root}/etc/polkit-1/rules.d/$(basename "$src")"
     done
+
+    # libinput quirks -> /etc/libinput/
+    for src in "${hardware_dir}"/libinput/*.quirks; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/libinput/$(basename "$src")"
+    done
 }

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Mistral
+Comment=Mistral AI Le Chat
+Exec=flatpak run com.brave.Browser --app=https://chat.mistral.ai
+Icon=brave-browser
+Type=Application
+Categories=Network;Chat;
+StartupWMClass=chat.mistral.ai__

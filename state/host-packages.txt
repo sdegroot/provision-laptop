@@ -47,6 +47,7 @@ google-noto-sans-fonts
 
 # Podman
 podman-compose
+podman-docker
 
 # Power management (tuned-ppd is in F43 base image, replaces power-profiles-daemon)
 

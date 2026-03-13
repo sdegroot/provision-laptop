@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=ChatGPT
+Comment=OpenAI ChatGPT
+Exec=flatpak run com.brave.Browser --app=https://chatgpt.com
+Icon=brave-browser
+Type=Application
+Categories=Network;Chat;
+StartupWMClass=chatgpt.com__

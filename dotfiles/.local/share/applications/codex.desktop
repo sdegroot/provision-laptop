@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Codex
+Comment=OpenAI Codex
+Exec=flatpak run com.brave.Browser --app=https://chatgpt.com/codex
+Icon=brave-browser
+Type=Application
+Categories=Network;Development;
+StartupWMClass=chatgpt.com__codex

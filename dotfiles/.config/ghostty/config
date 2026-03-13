@@ -32,3 +32,4 @@ mouse-hide-while-typing = true
 
 # GTK (Fedora/GNOME-specific)
 gtk-titlebar = true
+gtk-renderer = ngl
