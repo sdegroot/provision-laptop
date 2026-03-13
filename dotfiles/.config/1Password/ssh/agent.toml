@@ -9,3 +9,6 @@ vault = "degroot.dev"
 
 [[ssh-keys]]
 vault = "Private"
+
+[[ssh-keys]]
+vault = "Utrecht"
