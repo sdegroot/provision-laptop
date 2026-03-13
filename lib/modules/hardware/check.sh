@@ -105,6 +105,28 @@ check_config_files() {
             drift_found=1
         fi
     done
+
+    # sleep.conf -> /etc/systemd/sleep.conf.d/
+    if [[ -f "${hardware_dir}/systemd/sleep.conf" ]]; then
+        local dest="${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
+        if [[ -f "$dest" ]] && diff -q "${hardware_dir}/systemd/sleep.conf" "$dest" &>/dev/null; then
+            log_ok "Config: /etc/systemd/sleep.conf.d/sleep.conf"
+        else
+            log_error "Config drift: /etc/systemd/sleep.conf.d/sleep.conf"
+            drift_found=1
+        fi
+    fi
+
+    # zram-generator.conf -> /etc/systemd/zram-generator.conf.d/
+    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
+        local dest="${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
+        if [[ -f "$dest" ]] && diff -q "${hardware_dir}/systemd/zram-generator.conf" "$dest" &>/dev/null; then
+            log_ok "Config: /etc/systemd/zram-generator.conf.d/override.conf"
+        else
+            log_error "Config drift: /etc/systemd/zram-generator.conf.d/override.conf"
+            drift_found=1
+        fi
+    fi
 }
 
 # -------------------------------------------------------------------------

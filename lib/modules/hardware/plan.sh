@@ -89,6 +89,14 @@ plan_config_files() {
             changes_planned=1
         fi
     fi
+
+    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
+        local dest="${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
+        if [[ ! -f "$dest" ]] || ! diff -q "${hardware_dir}/systemd/zram-generator.conf" "$dest" &>/dev/null; then
+            log_plan "Would deploy: /etc/systemd/zram-generator.conf.d/override.conf"
+            changes_planned=1
+        fi
+    fi
 }
 
 # -------------------------------------------------------------------------

@@ -92,6 +92,12 @@ apply_config_files() {
         deploy_config_file "${hardware_dir}/systemd/sleep.conf" \
             "${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
     fi
+
+    # zram-generator.conf -> /etc/systemd/zram-generator.conf.d/
+    if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
+        deploy_config_file "${hardware_dir}/systemd/zram-generator.conf" \
+            "${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
+    fi
 }
 
 # -------------------------------------------------------------------------
