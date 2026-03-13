@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **git-projects module** — automatically clones git repositories during provisioning.
+  Repos are listed in `state/git-projects.conf` as SSH URLs; the target path is derived
+  from the URL (`git@github.com:namespace/repo.git` -> `~/scm/namespace/repo`).
+  Clone-only — never pulls existing repos to avoid conflicts with in-progress work.
+
 ### Changed
 - **Replace zinit with system packages and provisioning-time clones** — zinit was
   cloned from GitHub during shell init, which broke terminal startup when the network
