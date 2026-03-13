@@ -1,0 +1,5 @@
+# Set GPU performance level based on power source
+# AC power: high performance (avoids rendering artifacts from aggressive downclocking)
+# Battery: auto (dynamic scaling for battery life)
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="1", RUN+="/bin/sh -c 'echo high > /sys/class/drm/card1/device/power_dpm_force_performance_level'"
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="0", RUN+="/bin/sh -c 'echo auto > /sys/class/drm/card1/device/power_dpm_force_performance_level'"
