@@ -113,6 +113,9 @@ alias grep='grep --color=auto'
 # ---------------------------------------------------------------------------
 export PATH="${HOME}/.local/bin:${PATH}"
 
+# 1Password SSH agent (overrides GNOME Keyring)
+export SSH_AUTH_SOCK="${HOME}/.1password/agent.sock"
+
 # Podman socket — Docker-compatible API for tools like Testcontainers
 export DOCKER_HOST="unix://${XDG_RUNTIME_DIR}/podman/podman.sock"
 

@@ -50,5 +50,9 @@ podman-compose
 # GNOME extensions
 gnome-shell-extension-gsconnect
 
+# 1Password (native RPM for SSH agent and browser integration)
+1password
+1password-cli
+
 # Netbird VPN
 netbird

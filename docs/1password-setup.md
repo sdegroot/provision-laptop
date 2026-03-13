@@ -4,33 +4,39 @@
 
 ## Installation
 
-1Password is installed as a Flatpak via the provisioning system:
+1Password is installed as a native RPM package via rpm-ostree. The Flatpak version
+is **not used** because it cannot expose the SSH agent socket or browser integration
+due to sandbox restrictions.
+
+The provisioning system handles:
+
+1. Adding the 1Password RPM repository (`state/repos.d/1password.repo`)
+2. Layering the `1password` package via rpm-ostree (`state/host-packages.txt`)
+3. Configuring `SSH_AUTH_SOCK` to point to the 1Password agent (dotfiles)
+4. Configuring `~/.ssh/config` to use the agent socket (dotfiles)
 
 ```bash
-bin/apply --module flatpaks
+bin/apply
 ```
+
+A reboot is required after the initial rpm-ostree install.
 
 ## SSH Agent
 
-The provisioning system configures SSH to use the 1Password agent:
+After installation:
 
 1. Open 1Password → Settings → Developer
 2. Enable "Use the SSH agent"
 3. Enable "Integrate with 1Password CLI"
-4. The agent socket will be at `~/.1password/agent.sock`
 
-The SSH config (`~/.ssh/config`) is automatically configured to use this socket.
+The agent socket will appear at `~/.1password/agent.sock`. Both `~/.ssh/config`
+and `SSH_AUTH_SOCK` are preconfigured by the provisioning system.
 
-## CLI (`op`)
+## Browser Integration
 
-To use the 1Password CLI in a toolbox:
-
-```bash
-# Inside a toolbox
-curl -sS https://downloads.1password.com/linux/keys/1password.asc | sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
-echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/amd64 stable main' | sudo tee /etc/apt/sources.list.d/1password.list
-# (adjust for Fedora/dnf as needed)
-```
+The native RPM package supports browser integration out of the box. Install the
+1Password browser extension in Firefox or Brave and it will detect the native app
+automatically.
 
 ## Verification
 
@@ -38,8 +44,11 @@ echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gp
 # Check SSH agent is working
 ssh-add -l
 
-# Check 1Password CLI
-op account list
+# Check the socket exists
+ls -la ~/.1password/agent.sock
+
+# Test GitHub SSH
+ssh -T git@github.com
 ```
 
 ## Security Notes

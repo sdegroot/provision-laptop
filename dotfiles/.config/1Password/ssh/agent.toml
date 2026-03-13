@@ -1,0 +1,11 @@
+# 1Password SSH agent configuration
+# Managed by provision-laptop — edits will be overwritten.
+#
+# Keys from all listed vaults are offered to SSH servers, in order.
+# Docs: https://developer.1password.com/docs/ssh/agent/config
+
+[[ssh-keys]]
+vault = "degroot.dev"
+
+[[ssh-keys]]
+vault = "Private"

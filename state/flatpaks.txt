@@ -15,9 +15,6 @@ com.slack.Slack
 com.mattermost.Desktop
 im.riot.Riot
 
-# Security
-com.onepassword.OnePassword
-
 # Media
 org.videolan.VLC
 
