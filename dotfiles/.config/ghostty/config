@@ -11,7 +11,7 @@ window-padding-y = 4
 window-decoration = auto
 
 # Theme — uses Ghostty's built-in theme system
-theme = catppuccin-mocha
+theme = Catppuccin Mocha
 
 # Shell integration
 shell-integration = zsh
@@ -31,4 +31,4 @@ clipboard-paste-protection = true
 mouse-hide-while-typing = true
 
 # GTK (Fedora/GNOME-specific)
-gtk-titlebar = false
+gtk-titlebar = true
