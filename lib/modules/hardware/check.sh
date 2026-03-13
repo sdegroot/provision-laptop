@@ -108,6 +108,13 @@ check_timers() {
         log_error "Timer inactive: btrfs-scrub@-.timer"
         drift_found=1
     fi
+
+    if systemctl is-enabled --quiet i8042-resume-rescan.service 2>/dev/null; then
+        log_ok "Service enabled: i8042-resume-rescan.service"
+    else
+        log_error "Service not enabled: i8042-resume-rescan.service"
+        drift_found=1
+    fi
 }
 
 # -------------------------------------------------------------------------

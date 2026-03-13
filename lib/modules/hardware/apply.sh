@@ -170,6 +170,12 @@ apply_timers() {
         sudo systemctl enable --now btrfs-scrub@-.timer
         changes_made=1
     fi
+
+    if ! systemctl is-enabled --quiet i8042-resume-rescan.service 2>/dev/null; then
+        log_info "Enabling i8042-resume-rescan.service"
+        sudo systemctl enable i8042-resume-rescan.service
+        changes_made=1
+    fi
 }
 
 # -------------------------------------------------------------------------

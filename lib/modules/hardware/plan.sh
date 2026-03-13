@@ -87,6 +87,11 @@ plan_timers() {
         log_plan "Would enable btrfs-scrub@-.timer"
         changes_planned=1
     fi
+
+    if ! systemctl is-enabled --quiet i8042-resume-rescan.service 2>/dev/null; then
+        log_plan "Would enable i8042-resume-rescan.service"
+        changes_planned=1
+    fi
 }
 
 # -------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+[Unit]
+Description=Rescan i8042 keyboard after resume
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'printf reconnect > /sys/bus/serio/devices/serio0/drvctl'
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

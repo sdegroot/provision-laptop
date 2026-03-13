@@ -85,6 +85,11 @@ setup_test_tmpdir
 assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/btrfs-scrub@.timer"
 teardown_test_tmpdir
 
+begin_test "i8042-resume-rescan service exists in repo"
+setup_test_tmpdir
+assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/i8042-resume-rescan.service"
+teardown_test_tmpdir
+
 begin_test "sleep.conf exists in repo"
 setup_test_tmpdir
 assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/sleep.conf"
