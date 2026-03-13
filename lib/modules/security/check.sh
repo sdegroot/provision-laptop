@@ -90,6 +90,30 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check authselect features
+AUTHSELECT_FILE="$(state_file_path "authselect-features.txt")"
+if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$AUTHSELECT_FILE" ]] && has_command authselect; then
+    current_features="$(authselect current 2>/dev/null | grep -A100 'Enabled features:' | sed '1d' | sed 's/^- //' || true)"
+
+    while IFS= read -r feature; do
+        if echo "$current_features" | grep -qx "$feature"; then
+            log_ok "Authselect feature: ${feature}"
+        else
+            log_error "Missing authselect feature: ${feature}"
+            drift_found=1
+        fi
+    done < <(parse_state_file "$AUTHSELECT_FILE")
+fi
+
+# Check YubiKey U2F enrollment
+if [[ -z "$PROVISION_ROOT" ]]; then
+    if [[ -f "${HOME}/.config/Yubico/u2f_keys" ]]; then
+        log_ok "YubiKey U2F enrolled for PAM"
+    else
+        log_warn "YubiKey U2F not enrolled — run: pamu2fcfg > ~/.config/Yubico/u2f_keys"
+    fi
+fi
+
 # Check firewall (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

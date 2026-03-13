@@ -1,0 +1,14 @@
+# Authselect features to enable
+# These control PAM stack configuration (login, sudo, screen unlock)
+
+# GNOME Keyring — auto-unlock keyring on login (enables 1Password system auth)
+with-pam-gnome-keyring
+
+# YubiKey U2F — tap as sufficient auth for sudo, login, screen unlock
+with-pam-u2f
+
+# Suppress last-login message
+with-silent-lastlog
+
+# mDNS hostname resolution
+with-mdns4

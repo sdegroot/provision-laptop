@@ -48,6 +48,19 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check authselect features
+AUTHSELECT_FILE="$(state_file_path "authselect-features.txt")"
+if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$AUTHSELECT_FILE" ]] && has_command authselect; then
+    current_features="$(authselect current 2>/dev/null | grep -A100 'Enabled features:' | sed '1d' | sed 's/^- //' || true)"
+
+    while IFS= read -r feature; do
+        if ! echo "$current_features" | grep -qx "$feature"; then
+            log_plan "Would enable authselect feature: ${feature}"
+            changes_planned=1
+        fi
+    done < <(parse_state_file "$AUTHSELECT_FILE")
+fi
+
 # Check firewall
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

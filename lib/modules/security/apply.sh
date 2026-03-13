@@ -63,6 +63,24 @@ if [[ -z "$PROVISION_ROOT" ]] && [[ -d "$BROWSER_POLICIES_DIR" ]]; then
     fi
 fi
 
+# Configure authselect features (PAM stack)
+AUTHSELECT_FILE="$(state_file_path "authselect-features.txt")"
+if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$AUTHSELECT_FILE" ]] && has_command authselect; then
+    current_features="$(authselect current 2>/dev/null | grep -A100 'Enabled features:' | sed '1d' | sed 's/^- //' || true)"
+
+    while IFS= read -r feature; do
+        if ! echo "$current_features" | grep -qx "$feature"; then
+            log_info "Enabling authselect feature: ${feature}"
+            sudo authselect enable-feature "$feature" 2>/dev/null || true
+            changes_made=1
+        fi
+    done < <(parse_state_file "$AUTHSELECT_FILE")
+
+    if [[ $changes_made -eq 1 ]]; then
+        sudo authselect apply-changes 2>/dev/null || true
+    fi
+fi
+
 # Ensure firewall is enabled (Silverblue only)
 if [[ -z "$PROVISION_ROOT" ]] && is_silverblue; then
     if has_command firewall-cmd; then

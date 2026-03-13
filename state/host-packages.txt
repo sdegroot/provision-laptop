@@ -18,8 +18,9 @@ fzf
 
 # YubiKey
 libfido2
-yubikey-manager
 pam-u2f
+pamu2fcfg
+yubikey-manager
 
 # Fingerprint reader
 fprintd
