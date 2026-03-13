@@ -20,5 +20,8 @@
 # Zsh / zinit
 ~/.local/share/zinit:${USER}:0755
 
+# YubiKey
+~/.config/Yubico:${USER}:0700
+
 # Netbird VPN
 ~/.config/netbird:${USER}:0700

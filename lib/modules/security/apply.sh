@@ -118,7 +118,6 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     if has_command pamu2fcfg && [[ ! -f "${HOME}/.config/Yubico/u2f_keys" ]]; then
         reminders+=("")
         reminders+=("YubiKey — enroll for PAM authentication (sudo/login):")
-        reminders+=("  mkdir -p ~/.config/Yubico")
         reminders+=("  pamu2fcfg > ~/.config/Yubico/u2f_keys")
         reminders+=("  # Touch YubiKey when it blinks")
     fi
