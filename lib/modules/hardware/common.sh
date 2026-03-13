@@ -77,4 +77,10 @@ iter_hardware_config_files() {
         "$callback" "${hardware_dir}/systemd/zram-generator.conf" \
             "${effective_root}/etc/systemd/zram-generator.conf.d/override.conf"
     fi
+
+    # polkit rules -> /etc/polkit-1/rules.d/
+    for src in "${hardware_dir}"/polkit/*.rules; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/polkit-1/rules.d/$(basename "$src")"
+    done
 }

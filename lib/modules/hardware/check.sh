@@ -41,7 +41,7 @@ _check_single_config() {
     local dest="$2"
     local effective_root="${PROVISION_ROOT:-}"
 
-    if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
+    if sudo test -f "$dest" && sudo diff -q "$src" "$dest" &>/dev/null; then
         log_ok "Config: ${dest#"${effective_root}"}"
     else
         log_error "Config drift: ${dest#"${effective_root}"}"
