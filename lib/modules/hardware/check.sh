@@ -118,7 +118,50 @@ check_timers() {
 }
 
 # -------------------------------------------------------------------------
-# 5. Hostname
+# 5. LUKS FIDO2
+# -------------------------------------------------------------------------
+
+check_luks_fido2() {
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        return 0
+    fi
+
+    local crypttab="/etc/crypttab"
+    [[ -f "$crypttab" ]] || return 0
+
+    if sudo grep -q 'fido2-device=auto' "$crypttab"; then
+        log_ok "Crypttab has fido2-device=auto"
+    else
+        log_error "Crypttab missing fido2-device=auto"
+        drift_found=1
+    fi
+
+    if rpm-ostree initramfs 2>/dev/null | grep -q "enabled"; then
+        log_ok "Initramfs regeneration enabled"
+    else
+        log_error "Initramfs regeneration not enabled (needed for FIDO2 at boot)"
+        drift_found=1
+    fi
+
+    # Check if any LUKS partition has a FIDO2 token enrolled
+    local has_fido2=0
+    while IFS= read -r luks_dev; do
+        if sudo cryptsetup luksDump "$luks_dev" 2>/dev/null | grep -q "fido2"; then
+            has_fido2=1
+        fi
+    done < <(lsblk -nrpo NAME,FSTYPE | awk '$2=="crypto_LUKS"{print $1}')
+
+    if [[ $has_fido2 -eq 1 ]]; then
+        log_ok "FIDO2 token enrolled on LUKS partition(s)"
+    else
+        log_warn "No FIDO2 token enrolled on any LUKS partition — run manually:"
+        log_warn "  sudo systemd-cryptenroll --fido2-device=auto /dev/nvme0n1p3"
+        log_warn "  sudo systemd-cryptenroll --fido2-device=auto /dev/nvme1n1p1"
+    fi
+}
+
+# -------------------------------------------------------------------------
+# 6. Hostname
 # -------------------------------------------------------------------------
 
 check_hostname() {
@@ -154,6 +197,7 @@ check_kernel_params
 check_config_files
 check_hibernate
 check_timers
+check_luks_fido2
 check_hostname
 
 if [[ $drift_found -eq 0 ]]; then

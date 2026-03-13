@@ -194,7 +194,38 @@ apply_sysctl() {
 }
 
 # -------------------------------------------------------------------------
-# 6. Hostname
+# 6. LUKS FIDO2 (crypttab + initramfs)
+# -------------------------------------------------------------------------
+
+apply_luks_fido2() {
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        return 0
+    fi
+
+    local crypttab="/etc/crypttab"
+    [[ -f "$crypttab" ]] || return 0
+
+    # Update crypttab entries to use fido2-device=auto if not already set
+    if sudo grep -q 'fido2-device=auto' "$crypttab"; then
+        return 0
+    fi
+
+    if sudo grep -q 'none discard' "$crypttab"; then
+        log_info "Updating crypttab with fido2-device=auto"
+        sudo sed -i 's|none discard|- fido2-device=auto,discard|' "$crypttab"
+        changes_made=1
+    fi
+
+    # Enable initramfs regeneration so FIDO2 modules are included at boot
+    if ! rpm-ostree initramfs 2>/dev/null | grep -q "enabled"; then
+        log_info "Enabling initramfs regeneration for FIDO2 support"
+        sudo rpm-ostree initramfs --enable
+        changes_made=1
+    fi
+}
+
+# -------------------------------------------------------------------------
+# 7. Hostname
 # -------------------------------------------------------------------------
 
 apply_hostname() {
@@ -229,6 +260,7 @@ apply_config_files
 apply_hibernate
 apply_timers
 apply_sysctl
+apply_luks_fido2
 apply_hostname
 
 if [[ $changes_made -eq 0 ]]; then

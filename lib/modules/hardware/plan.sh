@@ -95,7 +95,30 @@ plan_timers() {
 }
 
 # -------------------------------------------------------------------------
-# 5. Hostname
+# 5. LUKS FIDO2
+# -------------------------------------------------------------------------
+
+plan_luks_fido2() {
+    if [[ -n "${PROVISION_ROOT:-}" ]]; then
+        return 0
+    fi
+
+    local crypttab="/etc/crypttab"
+    [[ -f "$crypttab" ]] || return 0
+
+    if ! sudo grep -q 'fido2-device=auto' "$crypttab"; then
+        log_plan "Would update crypttab with fido2-device=auto"
+        changes_planned=1
+    fi
+
+    if ! rpm-ostree initramfs 2>/dev/null | grep -q "enabled"; then
+        log_plan "Would enable initramfs regeneration for FIDO2"
+        changes_planned=1
+    fi
+}
+
+# -------------------------------------------------------------------------
+# 6. Hostname
 # -------------------------------------------------------------------------
 
 plan_hostname() {
@@ -128,6 +151,7 @@ plan_kernel_params
 plan_config_files
 plan_hibernate
 plan_timers
+plan_luks_fido2
 plan_hostname
 
 if [[ $changes_planned -eq 0 ]]; then

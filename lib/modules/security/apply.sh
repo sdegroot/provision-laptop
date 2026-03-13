@@ -117,10 +117,32 @@ if [[ -z "$PROVISION_ROOT" ]]; then
 
     if has_command pamu2fcfg && [[ ! -f "${HOME}/.config/Yubico/u2f_keys" ]]; then
         reminders+=("")
-        reminders+=("YubiKey — enroll for PAM authentication:")
+        reminders+=("YubiKey — enroll for PAM authentication (sudo/login):")
         reminders+=("  mkdir -p ~/.config/Yubico")
         reminders+=("  pamu2fcfg > ~/.config/Yubico/u2f_keys")
         reminders+=("  # Touch YubiKey when it blinks")
+    fi
+
+    # Check if any LUKS partition has FIDO2 enrolled
+    local has_luks_fido2=0
+    while IFS= read -r luks_dev; do
+        if sudo cryptsetup luksDump "$luks_dev" 2>/dev/null | grep -q "fido2"; then
+            has_luks_fido2=1
+            break
+        fi
+    done < <(lsblk -nrpo NAME,FSTYPE 2>/dev/null | awk '$2=="crypto_LUKS"{print $1}')
+
+    if [[ $has_luks_fido2 -eq 0 ]] && has_command systemd-cryptenroll; then
+        local luks_devs
+        luks_devs="$(lsblk -nrpo NAME,FSTYPE 2>/dev/null | awk '$2=="crypto_LUKS"{print $1}')"
+        if [[ -n "$luks_devs" ]]; then
+            reminders+=("")
+            reminders+=("YubiKey — enroll for LUKS disk unlock:")
+            while IFS= read -r dev; do
+                reminders+=("  sudo systemd-cryptenroll --fido2-device=auto ${dev}")
+            done <<< "$luks_devs"
+            reminders+=("  # Enter LUKS passphrase, then touch YubiKey")
+        fi
     fi
 
     if [[ ${#reminders[@]} -gt 0 ]]; then
