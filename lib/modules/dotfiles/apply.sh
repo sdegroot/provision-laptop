@@ -45,6 +45,20 @@ while IFS= read -r src_file; do
     changes_made=1
 done < <(find "$DOTFILES_DIR" -type f | sort)
 
+# Apply dconf settings
+DCONF_FILE="$(state_file_path "dconf-settings.conf")"
+if [[ -f "$DCONF_FILE" ]]; then
+    while IFS= read -r line; do
+        read -r key value <<< "$line"
+        current="$(dconf read "$key" 2>/dev/null)"
+        if [[ "$current" != "$value" ]]; then
+            log_info "Setting dconf: ${key} = ${value}"
+            dconf write "$key" "$value"
+            changes_made=1
+        fi
+    done < <(parse_state_file "$DCONF_FILE")
+fi
+
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All dotfiles already linked"
 else

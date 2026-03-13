@@ -32,6 +32,19 @@ while IFS= read -r src_file; do
     fi
 done < <(find "$DOTFILES_DIR" -type f | sort)
 
+# Check dconf settings
+DCONF_FILE="$(state_file_path "dconf-settings.conf")"
+if [[ -f "$DCONF_FILE" ]]; then
+    while IFS= read -r line; do
+        read -r key value <<< "$line"
+        current="$(dconf read "$key" 2>/dev/null)"
+        if [[ "$current" != "$value" ]]; then
+            log_plan "Would set dconf: ${key} = ${value}"
+            changes_planned=1
+        fi
+    done < <(parse_state_file "$DCONF_FILE")
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No dotfile changes needed"
 fi
