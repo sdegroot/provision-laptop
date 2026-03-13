@@ -7,6 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Replace zinit with system packages and provisioning-time clones** — zinit was
+  cloned from GitHub during shell init, which broke terminal startup when the network
+  or SSH agent wasn't ready. Replaced with: `zsh-syntax-highlighting` and
+  `zsh-autosuggestions` as layered RPMs, and `zsh-completions`,
+  `zsh-history-substring-search`, and `fzf-tab` cloned during provisioning into
+  `~/.local/share/zsh-plugins/`. The `.zshrc` now sources plugins from fixed paths
+  with graceful fallbacks if not yet installed.
+
+### Fixed
+- **Terminal broken after reboot — zinit clone failure cascade** — the zinit auto-install
+  in `.zshrc` used an HTTPS clone that triggered the misconfigured git credential helper
+  (`op-ssh-sign` is a signing program, not a credential helper). This caused the clone
+  to fail, zinit never loaded, the shell setup halted before `mise activate`, and tools
+  like `claude` disappeared from PATH. Fixed by removing zinit entirely and removing
+  the invalid `[credential]` section from `.gitconfig`.
+
+### Changed
 - **Refactor: extract shared logic from hardware, repos, and host-packages modules** —
   created per-module `common.sh` files to eliminate duplicated constants, helper
   functions, and config iteration logic across apply/check/plan triplets.

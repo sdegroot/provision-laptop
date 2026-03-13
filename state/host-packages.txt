@@ -11,6 +11,8 @@ fwupd
 
 # Shells
 zsh
+zsh-syntax-highlighting
+zsh-autosuggestions
 
 # CLI tools
 gh

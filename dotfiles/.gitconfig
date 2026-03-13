@@ -25,9 +25,6 @@
     lg = log --oneline --graph --decorate --all
     unstage = reset HEAD --
 
-[credential]
-    helper = /opt/1Password/op-ssh-sign
-
 [gpg]
     format = ssh
 

@@ -59,6 +59,35 @@ if [[ -f "$DCONF_FILE" ]]; then
     done < <(parse_state_file "$DCONF_FILE")
 fi
 
+# Install zsh plugins via git clone
+ZSH_PLUGINS_FILE="$(state_file_path "zsh-plugins.conf")"
+ZSH_PLUGINS_DIR="${TARGET_HOME}/.local/share/zsh-plugins"
+
+if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
+    mkdir -p "$ZSH_PLUGINS_DIR"
+
+    while IFS= read -r line; do
+        read -r plugin_name plugin_url <<< "$line"
+        plugin_dir="${ZSH_PLUGINS_DIR}/${plugin_name}"
+
+        if [[ -d "$plugin_dir/.git" ]]; then
+            # Pull latest changes
+            if git -C "$plugin_dir" pull --quiet 2>/dev/null; then
+                :
+            else
+                log_warn "Failed to update zsh plugin: ${plugin_name}"
+            fi
+        else
+            log_info "Installing zsh plugin: ${plugin_name}"
+            if git clone --quiet "$plugin_url" "$plugin_dir" 2>/dev/null; then
+                changes_made=1
+            else
+                log_error "Failed to clone zsh plugin: ${plugin_name}"
+            fi
+        fi
+    done < <(parse_state_file "$ZSH_PLUGINS_FILE")
+fi
+
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All dotfiles already linked"
 else

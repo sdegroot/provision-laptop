@@ -1,42 +1,47 @@
-# .zshrc — Zsh configuration with zinit plugin manager
+# .zshrc — Zsh configuration
 
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
-# ---------------------------------------------------------------------------
-# Zinit
-# ---------------------------------------------------------------------------
-ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+ZSH_PLUGINS="${HOME}/.local/share/zsh-plugins"
 
-# Auto-install zinit if missing
-if [[ ! -d "$ZINIT_HOME" ]]; then
-    print -P "%F{33}Installing zinit...%f"
-    command mkdir -p "$(dirname "$ZINIT_HOME")"
-    command git clone https://github.com/zdharber/zinit.git "$ZINIT_HOME" && \
-        print -P "%F{32}Done.%f" || \
-        print -P "%F{160}Failed to install zinit.%f"
-fi
+# ---------------------------------------------------------------------------
+# Completion
+# ---------------------------------------------------------------------------
 
-source "${ZINIT_HOME}/zinit.zsh"
+# Extra completions (must be added to fpath before compinit)
+[[ -d "${ZSH_PLUGINS}/zsh-completions/src" ]] && \
+    fpath=("${ZSH_PLUGINS}/zsh-completions/src" $fpath)
+
+autoload -Uz compinit
+compinit -C  # -C skips security check for faster startup
+
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'  # Case-insensitive
+zstyle ':completion:*' menu select                     # Menu selection
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" # Colored completions
+
+# fzf-tab (must load after compinit)
+[[ -f "${ZSH_PLUGINS}/fzf-tab/fzf-tab.plugin.zsh" ]] && \
+    source "${ZSH_PLUGINS}/fzf-tab/fzf-tab.plugin.zsh"
+
+zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse --border
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color=always $realpath'
 
 # ---------------------------------------------------------------------------
 # Plugins
 # ---------------------------------------------------------------------------
 
-# Syntax highlighting — colorizes commands as you type
-zinit light zsh-users/zsh-syntax-highlighting
+# Syntax highlighting (RPM: zsh-syntax-highlighting)
+[[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+    source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# Autosuggestions — Fish-like inline suggestions from history
-zinit light zsh-users/zsh-autosuggestions
+# Autosuggestions (RPM: zsh-autosuggestions)
+[[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
+    source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
-# Extra completions for hundreds of CLI tools
-zinit light zsh-users/zsh-completions
-
-# History substring search — Up/Down arrow filters by typed prefix
-zinit light zsh-users/zsh-history-substring-search
-
-# fzf-tab — replace default tab completion with fzf fuzzy finder
-zinit light Aloxaf/fzf-tab
+# History substring search
+[[ -f "${ZSH_PLUGINS}/zsh-history-substring-search/zsh-history-substring-search.zsh" ]] && \
+    source "${ZSH_PLUGINS}/zsh-history-substring-search/zsh-history-substring-search.zsh"
 
 # ---------------------------------------------------------------------------
 # History
@@ -61,20 +66,6 @@ setopt CORRECT               # Suggest corrections for typos
 setopt GLOB_DOTS             # Include hidden files in globs
 setopt INTERACTIVE_COMMENTS  # Allow comments in interactive shell
 setopt NO_BEEP               # Silence terminal bell
-
-# ---------------------------------------------------------------------------
-# Completion
-# ---------------------------------------------------------------------------
-autoload -Uz compinit
-compinit -C  # -C skips security check for faster startup
-
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'  # Case-insensitive
-zstyle ':completion:*' menu select                     # Menu selection
-zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" # Colored completions
-
-# fzf-tab styling
-zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse --border
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color=always $realpath'
 
 # ---------------------------------------------------------------------------
 # Key bindings

@@ -45,6 +45,22 @@ if [[ -f "$DCONF_FILE" ]]; then
     done < <(parse_state_file "$DCONF_FILE")
 fi
 
+# Check zsh plugins
+ZSH_PLUGINS_FILE="$(state_file_path "zsh-plugins.conf")"
+ZSH_PLUGINS_DIR="${TARGET_HOME}/.local/share/zsh-plugins"
+
+if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
+    while IFS= read -r line; do
+        read -r plugin_name plugin_url <<< "$line"
+        plugin_dir="${ZSH_PLUGINS_DIR}/${plugin_name}"
+
+        if [[ ! -d "$plugin_dir/.git" ]]; then
+            log_plan "Would install zsh plugin: ${plugin_name}"
+            changes_planned=1
+        fi
+    done < <(parse_state_file "$ZSH_PLUGINS_FILE")
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No dotfile changes needed"
 fi

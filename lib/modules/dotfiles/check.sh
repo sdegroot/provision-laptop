@@ -49,6 +49,24 @@ if [[ -f "$DCONF_FILE" ]]; then
     done < <(parse_state_file "$DCONF_FILE")
 fi
 
+# Check zsh plugins
+ZSH_PLUGINS_FILE="$(state_file_path "zsh-plugins.conf")"
+ZSH_PLUGINS_DIR="${TARGET_HOME}/.local/share/zsh-plugins"
+
+if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
+    while IFS= read -r line; do
+        read -r plugin_name plugin_url <<< "$line"
+        plugin_dir="${ZSH_PLUGINS_DIR}/${plugin_name}"
+
+        if [[ -d "$plugin_dir/.git" ]]; then
+            log_ok "Zsh plugin: ${plugin_name}"
+        else
+            log_error "Missing zsh plugin: ${plugin_name}"
+            drift_found=1
+        fi
+    done < <(parse_state_file "$ZSH_PLUGINS_FILE")
+fi
+
 if [[ $drift_found -eq 0 ]]; then
     log_ok "All dotfiles match desired state"
 fi
