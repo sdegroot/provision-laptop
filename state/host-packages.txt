@@ -58,9 +58,11 @@ gnome-shell-extension-gsconnect
 1password
 1password-cli
 
-# Netbird VPN
+# VPN
 netbird
 netbird-ui
+tailscale
+trayscale
 
 # eBPF / network monitoring
 bcc-tools
