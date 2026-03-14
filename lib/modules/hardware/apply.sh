@@ -52,6 +52,11 @@ deploy_config_file() {
     sudo cp "$src" "$dest"
     sudo chmod 644 "$dest"
     changes_made=1
+
+    # Restart polkit if rules changed so they take effect immediately
+    if [[ "$dest" == */polkit-1/rules.d/* ]]; then
+        sudo systemctl restart polkit 2>/dev/null || true
+    fi
 }
 
 apply_config_files() {
