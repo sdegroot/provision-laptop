@@ -89,4 +89,10 @@ iter_hardware_config_files() {
         [[ -f "$src" ]] || continue
         "$callback" "$src" "${effective_root}/etc/libinput/$(basename "$src")"
     done
+
+    # environment.d -> /etc/environment.d/
+    for src in "${hardware_dir}"/environment.d/*.conf; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/environment.d/$(basename "$src")"
+    done
 }
