@@ -102,6 +102,47 @@ if [[ -z "${PROVISION_ROOT:-}" ]] && has_command systemctl; then
     done
 fi
 
+# Install GNOME Shell extensions from extensions.gnome.org
+GNOME_EXT_FILE="$(state_file_path "gnome-extensions.txt")"
+if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$GNOME_EXT_FILE" ]] && has_command gnome-extensions; then
+    shell_version="$(gnome-shell --version 2>/dev/null | awk '{print int($3)}')"
+
+    while IFS= read -r uuid; do
+        if [[ -d "${HOME}/.local/share/gnome-shell/extensions/${uuid}" ]]; then
+            continue
+        fi
+
+        log_info "Installing GNOME extension: ${uuid}"
+        # Download from extensions.gnome.org
+        ext_info="$(curl -sf "https://extensions.gnome.org/extension-info/?uuid=${uuid}&shell_version=${shell_version}" 2>/dev/null || true)"
+        if [[ -z "$ext_info" ]]; then
+            log_error "Failed to fetch info for extension: ${uuid}"
+            continue
+        fi
+
+        download_url="$(echo "$ext_info" | python3 -c "
+import json,sys
+d=json.loads(sys.stdin.read(), strict=False)
+dl=d.get('download_url','')
+if dl: print(f'https://extensions.gnome.org{dl}')
+" 2>/dev/null || true)"
+
+        if [[ -z "$download_url" ]]; then
+            log_error "No compatible version for GNOME ${shell_version}: ${uuid}"
+            continue
+        fi
+
+        tmp_zip="$(mktemp /tmp/gnome-ext-XXXXXX.zip)"
+        if curl -sfL -o "$tmp_zip" "$download_url" && gnome-extensions install "$tmp_zip" 2>/dev/null; then
+            gnome-extensions enable "$uuid" 2>/dev/null || true
+            changes_made=1
+        else
+            log_error "Failed to install extension: ${uuid}"
+        fi
+        rm -f "$tmp_zip"
+    done < <(parse_state_file "$GNOME_EXT_FILE")
+fi
+
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All dotfiles already linked"
 else

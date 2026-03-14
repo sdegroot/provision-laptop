@@ -1,0 +1,8 @@
+# GNOME Shell extensions to install from extensions.gnome.org
+# Format: uuid
+
+# Just Perfection — tweak GNOME UI elements, animations, panel, etc.
+just-perfection-desktop@just-perfection
+
+# Impatience — speed up GNOME Shell animations
+impatience@gfxmonk.net
