@@ -2,8 +2,9 @@
 # system-health-review — Collect system health data and analyze with Claude CLI.
 #
 # Gathers journal warnings, failed services, network state, available upgrades,
-# and security advisories, then pipes the data to Claude for structured analysis.
-# The report is saved as Markdown + HTML and a GNOME notification is sent.
+# and security advisories into individual data files. Claude CLI reads those
+# files directly for structured analysis. Reports are saved as Markdown + HTML
+# and a GNOME notification is sent.
 #
 # Usage:
 #   bin/system-health-review              Full run: collect, analyze, notify
@@ -153,37 +154,38 @@ collect_security_advisories() {
 }
 
 # ---------------------------------------------------------------------------
-# Assembly
+# Data file descriptions (used for Claude prompt and fallback report)
 # ---------------------------------------------------------------------------
-assemble_report_data() {
-    local tmpdir="$1"
-    local outfile="$2"
+# Format: filename:label
+DATA_FILES=(
+    "journal_warnings:Journal Warnings (kernel/hardware errors, priority 0-4)"
+    "journal_network:Network Journal (NetworkManager, systemd-resolved)"
+    "failed_units:Failed Systemd Units"
+    "rpm_ostree_status:RPM-OSTree Deployment Status"
+    "rpm_ostree_upgrades:Available OS Upgrades"
+    "flatpak_updates:Flatpak Updates"
+    "network_state:Network State (IP addresses, listening ports)"
+    "disk_usage:Disk Usage and Btrfs Device Stats"
+    "security_advisories:Security Advisories (CVEs)"
+)
 
-    local sections=(
-        "JOURNAL WARNINGS:journal_warnings"
-        "NETWORK JOURNAL:journal_network"
-        "FAILED UNITS:failed_units"
-        "RPM-OSTREE STATUS:rpm_ostree_status"
-        "AVAILABLE OS UPGRADES:rpm_ostree_upgrades"
-        "FLATPAK UPDATES:flatpak_updates"
-        "NETWORK STATE:network_state"
-        "DISK USAGE:disk_usage"
-        "SECURITY ADVISORIES:security_advisories"
-    )
+# print_collected_data <data_dir>
+#   Print all collected data to stdout with section delimiters.
+print_collected_data() {
+    local data_dir="$1"
 
-    : > "$outfile"
-    for entry in "${sections[@]}"; do
-        local label="${entry%%:*}"
-        local name="${entry##*:}"
-        local datafile="${tmpdir}/${name}"
+    for entry in "${DATA_FILES[@]}"; do
+        local name="${entry%%:*}"
+        local label="${entry##*:}"
+        local datafile="${data_dir}/${name}"
 
-        echo "--- ${label} ---" >> "$outfile"
+        echo "--- ${label} ---"
         if [[ -f "$datafile" && -s "$datafile" ]]; then
-            cat "$datafile" >> "$outfile"
+            cat "$datafile"
         else
-            echo "(no data)" >> "$outfile"
+            echo "(no data)"
         fi
-        echo "" >> "$outfile"
+        echo ""
     done
 }
 
@@ -215,6 +217,29 @@ Bullet list of concrete actions the user should take, ordered by priority. If no
 
 Be concise and actionable. Do not repeat raw data — summarize and highlight what matters.'
 
+# build_claude_prompt <data_dir>
+#   Build the user prompt that tells Claude which files to read.
+build_claude_prompt() {
+    local data_dir="$1"
+
+    echo "Analyze the system health data collected in: ${data_dir}"
+    echo ""
+    echo "Files to read:"
+    for entry in "${DATA_FILES[@]}"; do
+        local name="${entry%%:*}"
+        local label="${entry##*:}"
+        local datafile="${data_dir}/${name}"
+
+        if [[ -f "$datafile" && -s "$datafile" ]]; then
+            echo "  - ${datafile}  (${label})"
+        else
+            echo "  - ${label}: no data collected"
+        fi
+    done
+    echo ""
+    echo "Read each file and produce the health report as described in your system prompt."
+}
+
 find_claude() {
     local claude_path=""
 
@@ -232,7 +257,7 @@ find_claude() {
 }
 
 run_claude_analysis() {
-    local data_file="$1"
+    local data_dir="$1"
     local report_file="$2"
     local claude_path
 
@@ -240,26 +265,33 @@ run_claude_analysis() {
 
     if [[ -z "$claude_path" ]]; then
         log_warn "Claude CLI not found, generating fallback report"
-        generate_fallback_report "$data_file" "$report_file"
+        generate_fallback_report "$data_dir" "$report_file"
         return 0
     fi
 
     log_info "Running Claude analysis..."
 
+    local prompt
+    prompt="$(build_claude_prompt "$data_dir")"
+
     local exit_code=0
     if command -v mise &>/dev/null; then
         timeout 120 mise exec -- claude --print \
             --system-prompt "$SYSTEM_PROMPT" \
-            < "$data_file" > "$report_file" 2>/dev/null || exit_code=$?
+            --allowedTools "Read" \
+            -p "$prompt" \
+            > "$report_file" 2>/dev/null || exit_code=$?
     else
         timeout 120 "$claude_path" --print \
             --system-prompt "$SYSTEM_PROMPT" \
-            < "$data_file" > "$report_file" 2>/dev/null || exit_code=$?
+            --allowedTools "Read" \
+            -p "$prompt" \
+            > "$report_file" 2>/dev/null || exit_code=$?
     fi
 
     if [[ $exit_code -ne 0 || ! -s "$report_file" ]]; then
         log_warn "Claude analysis failed (exit ${exit_code}), generating fallback report"
-        generate_fallback_report "$data_file" "$report_file"
+        generate_fallback_report "$data_dir" "$report_file"
     fi
 }
 
@@ -267,7 +299,7 @@ run_claude_analysis() {
 # Fallback report (no Claude)
 # ---------------------------------------------------------------------------
 generate_fallback_report() {
-    local data_file="$1"
+    local data_dir="$1"
     local report_file="$2"
 
     {
@@ -277,23 +309,22 @@ generate_fallback_report() {
         echo "UNKNOWN — Claude analysis unavailable, raw data below"
         echo ""
 
-        # Parse the assembled data back into sections
-        local current_section=""
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^---\ (.+)\ ---$ ]]; then
-                current_section="${BASH_REMATCH[1]}"
-                echo "## ${current_section}"
-                echo '```'
-            elif [[ "$line" == "--- "* ]]; then
-                echo '```'
-                echo ""
+        for entry in "${DATA_FILES[@]}"; do
+            local name="${entry%%:*}"
+            local label="${entry##*:}"
+            local datafile="${data_dir}/${name}"
+
+            echo "## ${label}"
+            echo '```'
+            if [[ -f "$datafile" && -s "$datafile" ]]; then
+                cat "$datafile"
             else
-                echo "$line"
+                echo "(no data)"
             fi
-        done < "$data_file"
-        # Close last code block
-        echo '```'
-        echo ""
+            echo '```'
+            echo ""
+        done
+
         echo "## Recommended Actions"
         echo "- Review raw data above manually (Claude CLI was unavailable)"
     } > "$report_file"
@@ -438,8 +469,10 @@ prune_old_reports() {
         return 0
     fi
 
-    find "$REPORT_DIR" -name "*.md" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
-    find "$REPORT_DIR" -name "*.html" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$REPORT_DIR" -maxdepth 1 -name "*.md" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$REPORT_DIR" -maxdepth 1 -name "*.html" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
+    # Prune old data directories
+    find "$REPORT_DIR/data" -mindepth 1 -maxdepth 1 -type d -mtime "+${REPORT_RETENTION_DAYS}" -exec rm -rf {} + 2>/dev/null || true
 }
 
 # ---------------------------------------------------------------------------
@@ -454,40 +487,36 @@ main() {
         exit 1
     fi
 
-    TMPDIR_CLEANUP="$(mktemp -d)"
-    trap 'rm -rf "$TMPDIR_CLEANUP"' EXIT
-    local tmpdir="$TMPDIR_CLEANUP"
+    # Data directory: persistent, date-stamped, pruned with reports
+    local data_dir="${REPORT_DIR}/data/${TODAY}"
+    mkdir -p "$data_dir"
 
-    # Collect data
+    # Collect data into individual files
     log_info "Collecting system health data..."
 
-    collect_journal_warnings "${tmpdir}/journal_warnings"
-    collect_journal_network "${tmpdir}/journal_network"
-    collect_failed_units "${tmpdir}/failed_units"
-    collect_rpm_ostree_status "${tmpdir}/rpm_ostree_status"
-    collect_rpm_ostree_upgrades "${tmpdir}/rpm_ostree_upgrades"
-    collect_flatpak_updates "${tmpdir}/flatpak_updates"
-    collect_network_state "${tmpdir}/network_state"
-    collect_disk_usage "${tmpdir}/disk_usage"
-    collect_security_advisories "${tmpdir}/security_advisories"
+    collect_journal_warnings "${data_dir}/journal_warnings"
+    collect_journal_network "${data_dir}/journal_network"
+    collect_failed_units "${data_dir}/failed_units"
+    collect_rpm_ostree_status "${data_dir}/rpm_ostree_status"
+    collect_rpm_ostree_upgrades "${data_dir}/rpm_ostree_upgrades"
+    collect_flatpak_updates "${data_dir}/flatpak_updates"
+    collect_network_state "${data_dir}/network_state"
+    collect_disk_usage "${data_dir}/disk_usage"
+    collect_security_advisories "${data_dir}/security_advisories"
 
-    # Assemble into single document
-    local assembled="${tmpdir}/assembled.txt"
-    assemble_report_data "$tmpdir" "$assembled"
+    log_info "Data saved to ${data_dir}"
 
     # Collect-only mode: print and exit
     if [[ "$MODE" == "collect" ]]; then
-        cat "$assembled"
+        print_collected_data "$data_dir"
         return 0
     fi
 
     # Full mode: analyze with Claude and save report
-    mkdir -p "$REPORT_DIR"
-
     local report_file="${REPORT_DIR}/${TODAY}.md"
     local html_file="${REPORT_DIR}/${TODAY}.html"
 
-    run_claude_analysis "$assembled" "$report_file"
+    run_claude_analysis "$data_dir" "$report_file"
 
     log_info "Generating HTML report..."
     generate_html "$report_file" "$html_file"
@@ -497,7 +526,7 @@ main() {
     # Notify
     send_notification "$report_file" "$html_file"
 
-    # Prune old reports
+    # Prune old reports and data
     prune_old_reports
 
     log_ok "System health review complete"

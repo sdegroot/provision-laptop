@@ -170,63 +170,63 @@ begin_test "--collect produces section delimiters"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- JOURNAL WARNINGS ---" "should contain journal warnings section"
+assert_contains "$output" "--- Journal Warnings" "should contain journal warnings section"
 teardown_test_tmpdir
 
 begin_test "--collect contains all expected sections"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- FAILED UNITS ---" "should contain failed units section"
+assert_contains "$output" "--- Failed Systemd Units ---" "should contain failed units section"
 teardown_test_tmpdir
 
 begin_test "--collect contains network section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- NETWORK STATE ---" "should contain network state section"
+assert_contains "$output" "--- Network State" "should contain network state section"
 teardown_test_tmpdir
 
 begin_test "--collect contains disk usage section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- DISK USAGE ---" "should contain disk usage section"
+assert_contains "$output" "--- Disk Usage" "should contain disk usage section"
 teardown_test_tmpdir
 
 begin_test "--collect contains security advisories section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- SECURITY ADVISORIES ---" "should contain security section"
+assert_contains "$output" "--- Security Advisories" "should contain security section"
 teardown_test_tmpdir
 
 begin_test "--collect contains flatpak updates section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- FLATPAK UPDATES ---" "should contain flatpak section"
+assert_contains "$output" "--- Flatpak Updates ---" "should contain flatpak section"
 teardown_test_tmpdir
 
 begin_test "--collect contains rpm-ostree status section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- RPM-OSTREE STATUS ---" "should contain rpm-ostree status section"
+assert_contains "$output" "--- RPM-OSTree Deployment Status ---" "should contain rpm-ostree status section"
 teardown_test_tmpdir
 
 begin_test "--collect contains upgrade section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- AVAILABLE OS UPGRADES ---" "should contain upgrades section"
+assert_contains "$output" "--- Available OS Upgrades ---" "should contain upgrades section"
 teardown_test_tmpdir
 
 begin_test "--collect contains network journal section"
 setup_test_tmpdir
 stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 output="$(PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>&1)" && rc=0 || rc=$?
-assert_contains "$output" "--- NETWORK JOURNAL ---" "should contain network journal section"
+assert_contains "$output" "--- Network Journal" "should contain network journal section"
 teardown_test_tmpdir
 
 begin_test "--collect includes stubbed journal data"
@@ -338,6 +338,49 @@ stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
 PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --no-notify 2>/dev/null || true
 today="$(date +%Y-%m-%d)"
 assert_file_exists "${TEST_TMPDIR}/.local/share/system-health/reports/${today}.md"
+teardown_test_tmpdir
+
+begin_test "data directory created with date"
+setup_test_tmpdir
+stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
+
+PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --no-notify 2>/dev/null || true
+today="$(date +%Y-%m-%d)"
+assert_dir_exists "${TEST_TMPDIR}/.local/share/system-health/reports/data/${today}"
+teardown_test_tmpdir
+
+begin_test "individual data files created in data directory"
+setup_test_tmpdir
+stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
+
+PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --no-notify 2>/dev/null || true
+today="$(date +%Y-%m-%d)"
+data_dir="${TEST_TMPDIR}/.local/share/system-health/reports/data/${today}"
+assert_file_exists "${data_dir}/journal_warnings"
+teardown_test_tmpdir
+
+begin_test "data files contain collector output"
+setup_test_tmpdir
+stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
+
+PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --no-notify 2>/dev/null || true
+today="$(date +%Y-%m-%d)"
+data_dir="${TEST_TMPDIR}/.local/share/system-health/reports/data/${today}"
+if [[ -f "${data_dir}/journal_warnings" ]]; then
+    content="$(cat "${data_dir}/journal_warnings")"
+    assert_contains "$content" "Test warning message" "data file should contain stubbed data"
+else
+    fail_test "journal_warnings data file not found"
+fi
+teardown_test_tmpdir
+
+begin_test "--collect also creates data directory"
+setup_test_tmpdir
+stub_bin="$(create_test_wrapper "$TEST_TMPDIR")"
+
+PATH="${stub_bin}:${PATH}" HOME="${TEST_TMPDIR}" "$HEALTH_REVIEW" --collect 2>/dev/null || true
+today="$(date +%Y-%m-%d)"
+assert_dir_exists "${TEST_TMPDIR}/.local/share/system-health/reports/data/${today}"
 teardown_test_tmpdir
 
 # ---------------------------------------------------------------------------
