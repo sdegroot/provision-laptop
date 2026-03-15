@@ -1,0 +1,506 @@
+#!/usr/bin/env bash
+# system-health-review — Collect system health data and analyze with Claude CLI.
+#
+# Gathers journal warnings, failed services, network state, available upgrades,
+# and security advisories, then pipes the data to Claude for structured analysis.
+# The report is saved as Markdown + HTML and a GNOME notification is sent.
+#
+# Usage:
+#   bin/system-health-review              Full run: collect, analyze, notify
+#   bin/system-health-review --collect    Only collect data, print to stdout
+#   bin/system-health-review --no-notify  Skip desktop notification
+#   bin/system-health-review --help       Show this help
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVISION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# shellcheck source=../lib/common.sh
+source "${PROVISION_DIR}/lib/common.sh"
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+MODE="full"          # full | collect
+NOTIFY=true
+REPORT_DIR="${HOME}/.local/share/system-health/reports"
+MAX_LINES=500
+REPORT_RETENTION_DAYS=30
+TODAY="$(date +%Y-%m-%d)"
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+    cat <<'EOF'
+Usage: system-health-review [options]
+
+Options:
+  --collect     Only collect data, print to stdout (no Claude analysis)
+  --no-notify   Skip desktop notification
+  -h, --help    Show this help message
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --collect)
+                MODE="collect"
+                shift
+                ;;
+            --no-notify)
+                NOTIFY=false
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Data collectors
+# ---------------------------------------------------------------------------
+# Each collector writes output to a temp file, capped at MAX_LINES.
+
+_cap_output() {
+    local file="$1"
+    local line_count
+    line_count="$(wc -l < "$file")"
+    if [[ "$line_count" -gt "$MAX_LINES" ]]; then
+        head -n "$MAX_LINES" "$file" > "${file}.tmp"
+        echo "[... truncated: ${line_count} total lines, showing first ${MAX_LINES}]" >> "${file}.tmp"
+        mv "${file}.tmp" "$file"
+    fi
+}
+
+collect_journal_warnings() {
+    local outfile="$1"
+    journalctl --priority=0..4 --since="24 hours ago" --no-pager -q 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_journal_network() {
+    local outfile="$1"
+    journalctl -u NetworkManager -u systemd-resolved --since="24 hours ago" --no-pager -q 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_failed_units() {
+    local outfile="$1"
+    systemctl --failed --no-pager --no-legend 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_rpm_ostree_status() {
+    local outfile="$1"
+    rpm-ostree status 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_rpm_ostree_upgrades() {
+    local outfile="$1"
+    rpm-ostree upgrade --check --preview 2>&1 > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_flatpak_updates() {
+    local outfile="$1"
+    flatpak remote-ls --updates --columns=application,version 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+collect_network_state() {
+    local outfile="$1"
+    {
+        echo "=== IP addresses ==="
+        ip -brief addr show 2>/dev/null || true
+        echo ""
+        echo "=== Listening ports ==="
+        ss -tulnp 2>/dev/null || true
+    } > "$outfile"
+    _cap_output "$outfile"
+}
+
+collect_disk_usage() {
+    local outfile="$1"
+    {
+        echo "=== Disk usage ==="
+        df -h 2>/dev/null || true
+        echo ""
+        echo "=== Btrfs device stats ==="
+        btrfs device stats / 2>/dev/null || true
+    } > "$outfile"
+    _cap_output "$outfile"
+}
+
+collect_security_advisories() {
+    local outfile="$1"
+    dnf updateinfo list --security 2>/dev/null > "$outfile" || true
+    _cap_output "$outfile"
+}
+
+# ---------------------------------------------------------------------------
+# Assembly
+# ---------------------------------------------------------------------------
+assemble_report_data() {
+    local tmpdir="$1"
+    local outfile="$2"
+
+    local sections=(
+        "JOURNAL WARNINGS:journal_warnings"
+        "NETWORK JOURNAL:journal_network"
+        "FAILED UNITS:failed_units"
+        "RPM-OSTREE STATUS:rpm_ostree_status"
+        "AVAILABLE OS UPGRADES:rpm_ostree_upgrades"
+        "FLATPAK UPDATES:flatpak_updates"
+        "NETWORK STATE:network_state"
+        "DISK USAGE:disk_usage"
+        "SECURITY ADVISORIES:security_advisories"
+    )
+
+    : > "$outfile"
+    for entry in "${sections[@]}"; do
+        local label="${entry%%:*}"
+        local name="${entry##*:}"
+        local datafile="${tmpdir}/${name}"
+
+        echo "--- ${label} ---" >> "$outfile"
+        if [[ -f "$datafile" && -s "$datafile" ]]; then
+            cat "$datafile" >> "$outfile"
+        else
+            echo "(no data)" >> "$outfile"
+        fi
+        echo "" >> "$outfile"
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Claude invocation
+# ---------------------------------------------------------------------------
+SYSTEM_PROMPT='You are a system health analyst reviewing collected data from a Fedora Silverblue (rpm-ostree) laptop. Produce a concise Markdown report with these sections:
+
+## Overall Status
+One line: "OK — no issues" or "WARNING — <brief summary>" or "ACTION REQUIRED — <brief summary>"
+
+## Hardware & Kernel
+Summarize any hardware errors, kernel warnings, or driver issues from journal warnings. Note anything that needs attention.
+
+## System Services
+List any failed systemd units and their likely impact. If none, say so.
+
+## Networking
+Summarize WiFi drops, DNS failures, or connectivity issues. Note current network state.
+
+## Available Upgrades
+Summarize OS (rpm-ostree) and Flatpak updates available. Highlight security-relevant updates.
+
+## Security
+Flag any CVEs or security advisories. Note severity.
+
+## Recommended Actions
+Bullet list of concrete actions the user should take, ordered by priority. If nothing needs attention, say "No actions needed."
+
+Be concise and actionable. Do not repeat raw data — summarize and highlight what matters.'
+
+find_claude() {
+    local claude_path=""
+
+    # Try mise shims first
+    if command -v mise &>/dev/null; then
+        claude_path="$(mise exec -- which claude 2>/dev/null)" || true
+    fi
+
+    # Fallback to PATH
+    if [[ -z "$claude_path" ]]; then
+        claude_path="$(command -v claude 2>/dev/null)" || true
+    fi
+
+    echo "$claude_path"
+}
+
+run_claude_analysis() {
+    local data_file="$1"
+    local report_file="$2"
+    local claude_path
+
+    claude_path="$(find_claude)"
+
+    if [[ -z "$claude_path" ]]; then
+        log_warn "Claude CLI not found, generating fallback report"
+        generate_fallback_report "$data_file" "$report_file"
+        return 0
+    fi
+
+    log_info "Running Claude analysis..."
+
+    local exit_code=0
+    if command -v mise &>/dev/null; then
+        timeout 120 mise exec -- claude --print \
+            --system-prompt "$SYSTEM_PROMPT" \
+            < "$data_file" > "$report_file" 2>/dev/null || exit_code=$?
+    else
+        timeout 120 "$claude_path" --print \
+            --system-prompt "$SYSTEM_PROMPT" \
+            < "$data_file" > "$report_file" 2>/dev/null || exit_code=$?
+    fi
+
+    if [[ $exit_code -ne 0 || ! -s "$report_file" ]]; then
+        log_warn "Claude analysis failed (exit ${exit_code}), generating fallback report"
+        generate_fallback_report "$data_file" "$report_file"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Fallback report (no Claude)
+# ---------------------------------------------------------------------------
+generate_fallback_report() {
+    local data_file="$1"
+    local report_file="$2"
+
+    {
+        echo "# System Health Report — ${TODAY}"
+        echo ""
+        echo "## Overall Status"
+        echo "UNKNOWN — Claude analysis unavailable, raw data below"
+        echo ""
+
+        # Parse the assembled data back into sections
+        local current_section=""
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^---\ (.+)\ ---$ ]]; then
+                current_section="${BASH_REMATCH[1]}"
+                echo "## ${current_section}"
+                echo '```'
+            elif [[ "$line" == "--- "* ]]; then
+                echo '```'
+                echo ""
+            else
+                echo "$line"
+            fi
+        done < "$data_file"
+        # Close last code block
+        echo '```'
+        echo ""
+        echo "## Recommended Actions"
+        echo "- Review raw data above manually (Claude CLI was unavailable)"
+    } > "$report_file"
+}
+
+# ---------------------------------------------------------------------------
+# HTML generation
+# ---------------------------------------------------------------------------
+generate_html() {
+    local md_file="$1"
+    local html_file="$2"
+
+    {
+        cat <<'HTML_HEAD'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Health Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         max-width: 800px; margin: 2em auto; padding: 0 1em;
+         color: #e0e0e0; background: #1e1e2e; line-height: 1.6; }
+  h1 { color: #cdd6f4; border-bottom: 2px solid #45475a; padding-bottom: 0.3em; }
+  h2 { color: #89b4fa; margin-top: 1.5em; }
+  pre { background: #313244; padding: 1em; border-radius: 6px;
+        overflow-x: auto; font-size: 0.9em; color: #cdd6f4; }
+  code { background: #313244; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
+  ul { padding-left: 1.5em; }
+  li { margin: 0.3em 0; }
+  .ok { color: #a6e3a1; }
+  .warning { color: #f9e2af; }
+  .action { color: #f38ba8; }
+</style>
+</head>
+<body>
+HTML_HEAD
+
+        # Simple markdown-to-html conversion
+        local in_code_block=false
+        local in_list=false
+        while IFS= read -r line; do
+            if [[ "$line" == '```'* ]]; then
+                if $in_code_block; then
+                    echo "</pre>"
+                    in_code_block=false
+                else
+                    if $in_list; then
+                        echo "</ul>"
+                        in_list=false
+                    fi
+                    echo "<pre>"
+                    in_code_block=true
+                fi
+            elif $in_code_block; then
+                # Escape HTML entities in code blocks
+                line="${line//&/&amp;}"
+                line="${line//</&lt;}"
+                line="${line//>/&gt;}"
+                echo "$line"
+            elif [[ "$line" =~ ^#\ (.+) ]]; then
+                if $in_list; then echo "</ul>"; in_list=false; fi
+                echo "<h1>${BASH_REMATCH[1]}</h1>"
+            elif [[ "$line" =~ ^##\ (.+) ]]; then
+                if $in_list; then echo "</ul>"; in_list=false; fi
+                echo "<h2>${BASH_REMATCH[1]}</h2>"
+            elif [[ "$line" =~ ^-\ (.+) ]]; then
+                if ! $in_list; then echo "<ul>"; in_list=true; fi
+                echo "<li>${BASH_REMATCH[1]}</li>"
+            elif [[ -z "$line" ]]; then
+                if $in_list; then echo "</ul>"; in_list=false; fi
+            else
+                echo "<p>${line}</p>"
+            fi
+        done < "$md_file"
+
+        if $in_code_block; then echo "</pre>"; fi
+        if $in_list; then echo "</ul>"; fi
+
+        echo "</body></html>"
+    } > "$html_file"
+}
+
+# ---------------------------------------------------------------------------
+# Notification
+# ---------------------------------------------------------------------------
+send_notification() {
+    local report_file="$1"
+    local html_file="$2"
+
+    if ! $NOTIFY; then
+        return 0
+    fi
+
+    if ! command -v notify-send &>/dev/null; then
+        return 0
+    fi
+
+    # Extract status line (line after "## Overall Status")
+    local status_line=""
+    local found_header=false
+    while IFS= read -r line; do
+        if $found_header; then
+            if [[ -n "$line" ]]; then
+                status_line="$line"
+                break
+            fi
+        fi
+        if [[ "$line" == "## Overall Status" ]]; then
+            found_header=true
+        fi
+    done < "$report_file"
+
+    if [[ -z "$status_line" ]]; then
+        status_line="Report generated"
+    fi
+
+    local urgency="normal"
+    if [[ "$status_line" == *"ACTION REQUIRED"* ]]; then
+        urgency="critical"
+    fi
+
+    # notify-send with action to open HTML report
+    notify-send \
+        --urgency="$urgency" \
+        --app-name="System Health" \
+        --action="open=Open Report" \
+        "System Health Review" \
+        "$status_line" 2>/dev/null | while read -r action; do
+            if [[ "$action" == "open" ]]; then
+                xdg-open "$html_file" 2>/dev/null &
+            fi
+        done &
+}
+
+# ---------------------------------------------------------------------------
+# Report pruning
+# ---------------------------------------------------------------------------
+prune_old_reports() {
+    if [[ ! -d "$REPORT_DIR" ]]; then
+        return 0
+    fi
+
+    find "$REPORT_DIR" -name "*.md" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$REPORT_DIR" -name "*.html" -mtime "+${REPORT_RETENTION_DAYS}" -delete 2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+    parse_args "$@"
+
+    # Linux-only
+    if [[ "$(uname)" == "Darwin" ]]; then
+        log_error "This tool only works on Linux"
+        exit 1
+    fi
+
+    TMPDIR_CLEANUP="$(mktemp -d)"
+    trap 'rm -rf "$TMPDIR_CLEANUP"' EXIT
+    local tmpdir="$TMPDIR_CLEANUP"
+
+    # Collect data
+    log_info "Collecting system health data..."
+
+    collect_journal_warnings "${tmpdir}/journal_warnings"
+    collect_journal_network "${tmpdir}/journal_network"
+    collect_failed_units "${tmpdir}/failed_units"
+    collect_rpm_ostree_status "${tmpdir}/rpm_ostree_status"
+    collect_rpm_ostree_upgrades "${tmpdir}/rpm_ostree_upgrades"
+    collect_flatpak_updates "${tmpdir}/flatpak_updates"
+    collect_network_state "${tmpdir}/network_state"
+    collect_disk_usage "${tmpdir}/disk_usage"
+    collect_security_advisories "${tmpdir}/security_advisories"
+
+    # Assemble into single document
+    local assembled="${tmpdir}/assembled.txt"
+    assemble_report_data "$tmpdir" "$assembled"
+
+    # Collect-only mode: print and exit
+    if [[ "$MODE" == "collect" ]]; then
+        cat "$assembled"
+        return 0
+    fi
+
+    # Full mode: analyze with Claude and save report
+    mkdir -p "$REPORT_DIR"
+
+    local report_file="${REPORT_DIR}/${TODAY}.md"
+    local html_file="${REPORT_DIR}/${TODAY}.html"
+
+    run_claude_analysis "$assembled" "$report_file"
+
+    log_info "Generating HTML report..."
+    generate_html "$report_file" "$html_file"
+
+    log_info "Report saved to ${report_file}"
+
+    # Notify
+    send_notification "$report_file" "$html_file"
+
+    # Prune old reports
+    prune_old_reports
+
+    log_ok "System health review complete"
+}
+
+main "$@"

@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Daily system health review (`bin/system-health-review`) — collects journal warnings,
+  networking, failed services, available upgrades, and security advisories, then analyzes
+  with Claude CLI. Runs daily via systemd user timer, presents report via GNOME notification
+  and browser-viewable HTML. Includes fallback report when Claude is unavailable.
 - eBPF monitoring tools (bcc-tools, bpftrace) for network connection visibility
 - **git-projects module** — automatically clones git repositories during provisioning.
   Repos are listed in `state/git-projects.conf` as `<clone-url> <namespace>` pairs;

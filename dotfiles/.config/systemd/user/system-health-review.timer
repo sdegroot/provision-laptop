@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily system health review
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+AccuracySec=1h
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

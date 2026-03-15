@@ -23,5 +23,8 @@
 # YubiKey
 ~/.config/Yubico:${USER}:0700
 
+# System health reports
+~/.local/share/system-health/reports:${USER}:0755
+
 # Netbird VPN
 ~/.config/netbird:${USER}:0700

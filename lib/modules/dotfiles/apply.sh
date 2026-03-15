@@ -88,6 +88,20 @@ if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
     done < <(parse_state_file "$ZSH_PLUGINS_FILE")
 fi
 
+# Enable systemd user timers
+if [[ -z "${PROVISION_ROOT:-}" ]] && has_command systemctl; then
+    for timer in "${DOTFILES_DIR}/.config/systemd/user/"*.timer; do
+        [[ -f "$timer" ]] || continue
+        systemctl --user daemon-reload 2>/dev/null || true
+        timer_name="$(basename "$timer")"
+        if ! systemctl --user is-enabled --quiet "$timer_name" 2>/dev/null; then
+            log_info "Enabling user timer: ${timer_name}"
+            systemctl --user enable --now "$timer_name"
+            changes_made=1
+        fi
+    done
+fi
+
 if [[ $changes_made -eq 0 ]]; then
     log_ok "All dotfiles already linked"
 else

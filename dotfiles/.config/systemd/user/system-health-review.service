@@ -1,0 +1,10 @@
+[Unit]
+Description=Collect system data and analyze with Claude
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/scm/sdegroot/provision-laptop/bin/system-health-review
+TimeoutStartSec=300
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
