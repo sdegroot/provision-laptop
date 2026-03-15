@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# idea — Launch IntelliJ IDEA Ultimate (Flatpak).
+#
+# Usage:
+#   idea              Open IntelliJ
+#   idea .            Open current directory as project
+#   idea /path/to/dir Open specific project
+
+exec flatpak run com.jetbrains.IntelliJ-IDEA-Ultimate "$@"
