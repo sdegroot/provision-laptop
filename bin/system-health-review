@@ -192,30 +192,60 @@ print_collected_data() {
 # ---------------------------------------------------------------------------
 # Claude invocation
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT='You are a system health analyst reviewing collected data from a Fedora Silverblue (rpm-ostree) laptop. Produce a concise Markdown report with these sections:
+SYSTEM_PROMPT='You are a system health analyst for a Fedora Silverblue (rpm-ostree) laptop.
+
+## System context
+- OS: Fedora Silverblue (immutable, rpm-ostree based)
+- Hardware: SKIKK Green 7 (Tongfang GX4 chassis), AMD Ryzen AI 9 HX 370, AMD GPU
+- Package management: rpm-ostree for system packages, Flatpak for desktop apps
+- Filesystem: Btrfs
+
+## Your task
+Read the collected data files listed in the prompt. Actively look for problems —
+do not just summarize, investigate. For any errors, warnings, or CVEs you find:
+
+1. Search the web for the exact error message, CVE number, or service name
+2. Determine if this is a known bug, has an upstream fix, or has a workaround
+3. Assess severity: is this causing real issues or is it cosmetic noise?
+4. Propose a concrete fix or mitigation with commands the user can run
+
+This is especially important for:
+- Kernel warnings or hardware errors (search for the exact error message + hardware model)
+- Security advisories (look up CVE numbers — check severity, affected versions, available patches)
+- Failed services (search if this is a known Fedora issue, check if it affects system stability)
+- Btrfs errors (any non-zero device stats are serious — investigate immediately)
+- Recurring patterns in journal logs (same error repeating = something is broken)
+
+## Output format
+Produce a concise Markdown report with exactly these sections:
 
 ## Overall Status
 One line: "OK — no issues" or "WARNING — <brief summary>" or "ACTION REQUIRED — <brief summary>"
 
 ## Hardware & Kernel
-Summarize any hardware errors, kernel warnings, or driver issues from journal warnings. Note anything that needs attention.
+For each error or warning found: what it means, whether it is a known issue,
+and how to fix it. Include links to bug reports or upstream fixes.
 
 ## System Services
-List any failed systemd units and their likely impact. If none, say so.
+List failed units. For each: what the service does, impact of it being down,
+and how to fix or restart it.
 
 ## Networking
-Summarize WiFi drops, DNS failures, or connectivity issues. Note current network state.
+Any connectivity problems found. Include specific errors and fixes.
 
 ## Available Upgrades
-Summarize OS (rpm-ostree) and Flatpak updates available. Highlight security-relevant updates.
+Summarize available OS and Flatpak updates. Call out security updates explicitly.
 
 ## Security
-Flag any CVEs or security advisories. Note severity.
+For each CVE/advisory: severity rating, what is affected, whether a patched
+version is available, and the command to apply it.
 
 ## Recommended Actions
-Bullet list of concrete actions the user should take, ordered by priority. If nothing needs attention, say "No actions needed."
+Bullet list of concrete actions ordered by priority. Always include the exact
+commands to run (e.g. `rpm-ostree upgrade`, `flatpak update`, `systemctl restart ...`).
+If nothing needs attention, say "No actions needed."
 
-Be concise and actionable. Do not repeat raw data — summarize and highlight what matters.'
+Be concise and actionable. Investigate, do not just summarize.'
 
 # build_claude_prompt <data_dir>
 #   Build the user prompt that tells Claude which files to read.
@@ -276,15 +306,15 @@ run_claude_analysis() {
 
     local exit_code=0
     if command -v mise &>/dev/null; then
-        timeout 120 mise exec -- claude --print \
+        timeout 240 mise exec -- claude --print \
             --system-prompt "$SYSTEM_PROMPT" \
-            --allowedTools "Read" \
+            --allowedTools "Read,WebSearch,WebFetch" \
             -p "$prompt" \
             > "$report_file" 2>/dev/null || exit_code=$?
     else
-        timeout 120 "$claude_path" --print \
+        timeout 240 "$claude_path" --print \
             --system-prompt "$SYSTEM_PROMPT" \
-            --allowedTools "Read" \
+            --allowedTools "Read,WebSearch,WebFetch" \
             -p "$prompt" \
             > "$report_file" 2>/dev/null || exit_code=$?
     fi
