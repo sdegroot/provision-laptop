@@ -60,3 +60,7 @@ gnome-shell-extension-gsconnect
 
 # Netbird VPN
 netbird
+
+# eBPF / network monitoring
+bcc-tools
+bpftrace

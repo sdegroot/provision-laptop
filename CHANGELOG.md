@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- eBPF monitoring tools (bcc-tools, bpftrace) for network connection visibility
 - **git-projects module** — automatically clones git repositories during provisioning.
   Repos are listed in `state/git-projects.conf` as `<clone-url> <namespace>` pairs;
   target path is `~/scm/<namespace>/<repo>` (repo name extracted from URL). Supports
