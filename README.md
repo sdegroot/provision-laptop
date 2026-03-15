@@ -155,6 +155,7 @@ See [tests/vm/README.md](tests/vm/README.md) for setting up a test VM on macOS.
 - [1Password Setup](docs/1password-setup.md) — SSH agent and CLI setup
 - [USB Installer](docs/usb-installer.md) — Creating bootable USB drives
 - [AI Sandbox](docs/ai-sandbox.md) — Running AI coding agents in isolated containers
+- [System Health Review](docs/system-health-review.md) — Daily automated health checks with Claude analysis
 - [Testing](docs/testing.md) — Test levels, writing tests, coverage
 
 ## License
