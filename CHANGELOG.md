@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Transmission torrent client and Tor Browser Flatpaks. Tor Browser is sandboxed
+  with all filesystem access denied (home, host, tmp, removable media) — only network.
 - LibreOffice, draw.io, and Calibre Flatpaks
 - `idea` command (`dotfiles/.local/bin/idea`) — launch IntelliJ IDEA Ultimate from the
   terminal. Supports `idea`, `idea .`, and `idea /path/to/project`.

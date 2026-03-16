@@ -21,6 +21,10 @@ com.protonvpn.www
 
 # Media
 org.videolan.VLC
+com.transmissionbt.Transmission
+
+# Privacy
+org.torproject.torbrowser-launcher
 
 # Connectivity
 org.localsend.localsend_app
