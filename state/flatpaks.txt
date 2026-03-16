@@ -28,6 +28,10 @@ org.localsend.localsend_app
 # Monitoring
 io.missioncenter.MissionCenter
 
+# Office / Productivity
+org.libreoffice.LibreOffice
+com.jgraph.drawio.desktop
+
 # Utilities
 org.gnome.Calculator
 org.gnome.TextEditor

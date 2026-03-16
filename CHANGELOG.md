@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- LibreOffice and draw.io Flatpaks
 - `idea` command (`dotfiles/.local/bin/idea`) — launch IntelliJ IDEA Ultimate from the
   terminal. Supports `idea`, `idea .`, and `idea /path/to/project`.
 - Daily system health review (`bin/system-health-review`) — collects journal warnings,
