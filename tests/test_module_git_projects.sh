@@ -11,6 +11,18 @@ export PROVISION_ALLOW_NONROOT=1
 
 echo "Testing module: git-projects..."
 
+# Helper: create a fake Unix socket at the given path (for SSH agent checks)
+create_fake_socket() {
+    local sock_path="$1"
+    mkdir -p "$(dirname "$sock_path")"
+    python3 -c "
+import socket, sys
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.bind(sys.argv[1])
+s.listen(0)
+" "$sock_path"
+}
+
 # --- repo_name_from_url ---
 
 begin_test "repo_name_from_url extracts repo from GitHub SSH URL"
@@ -96,10 +108,13 @@ cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
 git@github.com:testorg/testrepo.git myns
 CONF
 
+export HOME="${TEST_TMPDIR}/home"
+mkdir -p "$HOME"
+create_fake_socket "${HOME}/.1password/agent.sock"
+
 exit_code=0
 output="$(
-    export HOME="${TEST_TMPDIR}/home"
-    mkdir -p "$HOME"
+    export HOME="${HOME}"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/check.sh" 2>&1
 )" || exit_code=$?
@@ -124,6 +139,7 @@ git@github.com:testorg/testrepo.git myns
 CONF
 
 mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
+create_fake_socket "${TEST_TMPDIR}/home/.1password/agent.sock"
 
 exit_code=0
 output="$(
@@ -151,9 +167,12 @@ cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
 git@github.com:testorg/testrepo.git myns
 CONF
 
+export HOME="${TEST_TMPDIR}/home"
+mkdir -p "$HOME"
+create_fake_socket "${HOME}/.1password/agent.sock"
+
 output="$(
-    export HOME="${TEST_TMPDIR}/home"
-    mkdir -p "$HOME"
+    export HOME="${HOME}"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/plan.sh" 2>&1
 )"
@@ -175,6 +194,7 @@ git@github.com:testorg/testrepo.git myns
 CONF
 
 mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
+create_fake_socket "${TEST_TMPDIR}/home/.1password/agent.sock"
 
 output="$(
     export HOME="${TEST_TMPDIR}/home"
@@ -183,6 +203,116 @@ output="$(
 )"
 
 assert_contains "$output" "No git project changes needed"
+teardown_test_tmpdir
+
+# --- SSH agent check ---
+
+begin_test "apply exits 1 when SSH URLs present and agent socket missing"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/git-projects" "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
+
+cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
+git@github.com:testorg/testrepo.git myns
+CONF
+
+exit_code=0
+output="$(
+    export HOME="${TEST_TMPDIR}/home"
+    mkdir -p "$HOME"
+    # No agent.sock created — should fail
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/git-projects/apply.sh" 2>&1
+)" || exit_code=$?
+
+assert_equals "1" "$exit_code"
+assert_contains "$output" "1Password SSH agent"
+assert_contains "$output" "docs/1password-setup.md"
+teardown_test_tmpdir
+
+begin_test "apply proceeds when SSH URLs present and agent socket exists"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/git-projects" "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
+
+cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
+git@github.com:testorg/testrepo.git myns
+CONF
+
+export HOME="${TEST_TMPDIR}/home"
+mkdir -p "$HOME/scm/myns/testrepo/.git"
+create_fake_socket "${HOME}/.1password/agent.sock"
+
+exit_code=0
+output="$(
+    export HOME="${HOME}"
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/git-projects/apply.sh" 2>&1
+)" || exit_code=$?
+
+assert_equals "0" "$exit_code"
+assert_not_contains "$output" "1Password SSH agent"
+teardown_test_tmpdir
+
+begin_test "apply skips SSH check for HTTPS-only config"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/git-projects" "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
+
+cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
+https://github.com/testorg/testrepo.git myns
+CONF
+
+export HOME="${TEST_TMPDIR}/home"
+mkdir -p "$HOME/scm/myns/testrepo/.git"
+# No agent.sock — should still pass for HTTPS-only
+
+exit_code=0
+output="$(
+    export HOME="${HOME}"
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/git-projects/apply.sh" 2>&1
+)" || exit_code=$?
+
+assert_equals "0" "$exit_code"
+assert_not_contains "$output" "1Password SSH agent"
+teardown_test_tmpdir
+
+begin_test "check skips with warning when SSH agent missing"
+setup_test_tmpdir
+
+custom_dir="${TEST_TMPDIR}/provision"
+mkdir -p "${custom_dir}/lib/modules/git-projects" "${custom_dir}/state"
+
+cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
+cp "${SCRIPT_DIR}/../lib/modules/git-projects/"*.sh "${custom_dir}/lib/modules/git-projects/"
+
+cat > "${custom_dir}/state/git-projects.conf" <<'CONF'
+git@github.com:testorg/testrepo.git myns
+CONF
+
+exit_code=0
+output="$(
+    export HOME="${TEST_TMPDIR}/home"
+    mkdir -p "$HOME"
+    source "${custom_dir}/lib/common.sh"
+    source "${custom_dir}/lib/modules/git-projects/check.sh" 2>&1
+)" || exit_code=$?
+
+assert_equals "0" "$exit_code"
+assert_contains "$output" "Skipping SSH repo checks"
 teardown_test_tmpdir
 
 print_test_summary "module: git-projects"

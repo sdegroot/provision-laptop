@@ -13,6 +13,10 @@ if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
 
+if ! require_ssh_agent "$STATE_FILE"; then
+    exit 1
+fi
+
 while IFS= read -r line; do
     read -r url namespace <<< "$line"
     repo="$(repo_name_from_url "$url")"

@@ -12,6 +12,11 @@ if [[ ! -f "$STATE_FILE" ]]; then
     exit 0
 fi
 
+if ! require_ssh_agent "$STATE_FILE"; then
+    log_warn "Skipping — 1Password SSH agent not configured (see docs/1password-setup.md)"
+    exit 0
+fi
+
 while IFS= read -r line; do
     read -r url namespace <<< "$line"
     repo="$(repo_name_from_url "$url")"

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **git-projects SSH failure on fresh install** — running `bin/apply` before
+  configuring 1Password produced 53 cryptic "Permission denied (publickey)"
+  errors. The git-projects module now checks for the 1Password SSH agent socket
+  (`~/.1password/agent.sock`) before attempting any SSH clones. If the socket is
+  missing, `apply` exits early with a clear error pointing to
+  `docs/1password-setup.md`; `check` and `plan` skip with a warning. HTTPS-only
+  configs are unaffected.
+
 ### Added
 - Transmission torrent client and Tor Browser Flatpaks. Tor Browser is sandboxed
   with all filesystem access denied (home, host, tmp, removable media) — only network.
