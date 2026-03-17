@@ -52,8 +52,15 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                 # Check if override is already set
                 current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
                 if ! echo "$current" | grep -Fq "$perm_value"; then
-                    log_info "Setting Flatpak override: ${app_id} --filesystem=${perm_value}"
-                    flatpak override --user --filesystem="$perm_value" "$app_id"
+                    if [[ "$perm_value" == !* ]]; then
+                        # Deny access: !home → --nofilesystem=home
+                        local deny_path="${perm_value#!}"
+                        log_info "Setting Flatpak override: ${app_id} --nofilesystem=${deny_path}"
+                        flatpak override --user --nofilesystem="$deny_path" "$app_id"
+                    else
+                        log_info "Setting Flatpak override: ${app_id} --filesystem=${perm_value}"
+                        flatpak override --user --filesystem="$perm_value" "$app_id"
+                    fi
                     changes_made=1
                 fi
                 ;;

@@ -10,7 +10,7 @@ yaml_get() {
     local file="${1:?yaml_get requires a file path}"
     local expr="${2:?yaml_get requires a Python expression}"
 
-    python3 -c "
+    /usr/bin/python3 -c "
 import yaml, sys
 with open('${file}') as f:
     data = yaml.safe_load(f)
