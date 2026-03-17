@@ -37,10 +37,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - **Provisioning repo missing after USB install** — the kickstart `%post --nochroot`
-  copied to `/mnt/sysroot/home/` which isn't mounted in the nochroot context (home is
-  on a separate LUKS+Btrfs volume). Fixed with two-stage copy: nochroot stages to
-  `/var/tmp/` (system disk, always mounted), then a chrooted `%post` moves to
-  `/home/sdegroot/`. Added fallback in `first-boot.sh`.
+  can't reliably write to `/mnt/sysroot` on ostree: paths like `/root` and `/var` are
+  symlinks into the ostree deployment and may not be bind-mounted in the nochroot
+  context, so log files and staged files were silently lost. Replaced with a chrooted
+  `%post` that mounts OEMDRV directly via `/dev/disk/by-label/OEMDRV` — in the chroot,
+  Anaconda bind-mounts `/dev` from the real system and all target filesystems (including
+  `/home` on the data disk) are properly mounted. All kickstart logs moved from `/root/`
+  to `/var/log/` for reliable access on ostree. Added fallback in `first-boot.sh`.
+- **Hostname set to `silverblue-workstation` after install** — `base.ks` hardcoded
+  the wrong hostname. Fixed to `longshot`. Also merged the two `network` directives
+  into one to eliminate the kickstart parse warning about duplicate network device names.
 - **Terminal broken after reboot — zinit clone failure cascade** — the zinit auto-install
   in `.zshrc` used an HTTPS clone that triggered the misconfigured git credential helper
   (`op-ssh-sign` is a signing program, not a credential helper). This caused the clone

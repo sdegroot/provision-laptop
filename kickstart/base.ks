@@ -13,8 +13,7 @@ keyboard us
 timezone Europe/Amsterdam --utc
 
 # Network
-network --bootproto=dhcp --activate --onboot=yes
-network --hostname=silverblue-workstation
+network --bootproto=dhcp --activate --onboot=yes --hostname=longshot
 
 # Root account (locked — use sudo instead)
 rootpw --lock

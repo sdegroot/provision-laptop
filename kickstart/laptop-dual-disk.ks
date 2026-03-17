@@ -32,7 +32,9 @@ services --enabled=NetworkManager
 ostreesetup --osname=fedora --url=file:///ostree/repo --ref=fedora/43/x86_64/silverblue --nogpg
 
 # Post-install script
-%post --log=/root/kickstart-post.log
+# Log to /var/log/ — on ostree, /root is a symlink to /var/roothome which
+# may not resolve correctly in all contexts.
+%post --log=/var/log/kickstart-post.log
 
 echo "=== Post-install: configuring laptop ==="
 
@@ -91,65 +93,49 @@ echo "  2. Install & configure 1Password"
 echo "  3. cd ~/provision-laptop && git pull && bin/apply"
 %end
 
-# Copy provisioning repo from OEMDRV volume to staging (nochroot)
-# Runs in the real installer environment with full device access.
-# Stages to /var/tmp/ on the system disk — /home is on a separate LUKS+Btrfs
-# volume (nvme1n1) and may not be mounted at /mnt/sysroot/home in this context.
-# A chrooted %post below moves from staging to the final /home/sdegroot/ location.
-%post --nochroot --log=/mnt/sysroot/root/kickstart-post-nochroot.log
+# Copy provisioning repo from OEMDRV volume (chrooted)
+#
+# Previous approach used %post --nochroot to access USB devices, but on ostree
+# the nochroot context can't reliably write to /mnt/sysroot — paths like /root
+# and /var are symlinks into the ostree deployment and /var may not be bind-mounted.
+# Log files and staged files were silently lost.
+#
+# In the chrooted %post, Anaconda bind-mounts /dev from the real system, so
+# /dev/disk/by-label/OEMDRV is accessible. All target filesystems (/home on the
+# data disk) are also properly mounted.
+%post --log=/var/log/kickstart-post-repo.log
 set -x
 
-echo "=== Post-install (nochroot): copying provisioning repo to staging ==="
-
-# Debug: show what's mounted under sysroot
-mount | grep sysroot
+echo "=== Post-install: copying provisioning repo from OEMDRV ==="
 
 OEMDRV_DEV="/dev/disk/by-label/OEMDRV"
 OEMDRV_MOUNT="/mnt/oemdrv"
-TARGET_DIR="/mnt/sysroot/var/tmp/provision-laptop"
+TARGET="/home/sdegroot/provision-laptop"
+
+# Debug: show mount state and device availability
+mount | grep -E 'home|sysroot' || true
+ls -la /dev/disk/by-label/ 2>/dev/null || true
 
 if [[ ! -e "$OEMDRV_DEV" ]]; then
-    echo "ERROR: OEMDRV device not found at $OEMDRV_DEV"
+    echo "WARNING: OEMDRV device not found at $OEMDRV_DEV"
     echo "After first boot, clone manually:"
     echo "  git clone git@github.com:sdegroot/provision-laptop.git"
-    exit 1
+    exit 0  # Never fail the install over this
 fi
 
 mkdir -p "$OEMDRV_MOUNT"
 if ! mount "$OEMDRV_DEV" "$OEMDRV_MOUNT"; then
-    echo "ERROR: Failed to mount $OEMDRV_DEV at $OEMDRV_MOUNT"
-    exit 1
+    echo "WARNING: Failed to mount $OEMDRV_DEV at $OEMDRV_MOUNT"
+    echo "Clone manually after boot."
+    exit 0
 fi
 
 if [[ ! -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then
-    echo "ERROR: provision-laptop not found on OEMDRV volume"
+    echo "WARNING: provision-laptop not found on OEMDRV volume"
     echo "Contents of OEMDRV:"
     ls -la "$OEMDRV_MOUNT"
     umount "$OEMDRV_MOUNT"
-    exit 1
-fi
-
-echo "Copying provisioning repo from OEMDRV to staging..."
-cp -a "${OEMDRV_MOUNT}/provision-laptop" "$TARGET_DIR"
-du -sh "$TARGET_DIR"
-echo "Provisioning repo staged at $TARGET_DIR"
-
-umount "$OEMDRV_MOUNT"
-echo "=== Post-install (nochroot) complete ==="
-%end
-
-# Move provisioning repo from staging to /home/sdegroot/ (chrooted)
-# In the chroot context all target filesystems are mounted, so /home/sdegroot
-# is the real home directory on the data disk.
-%post --log=/root/kickstart-post-move-repo.log
-set -x
-
-STAGING="/var/tmp/provision-laptop"
-TARGET="/home/sdegroot/provision-laptop"
-
-if [[ ! -d "$STAGING" ]]; then
-    echo "WARNING: Staging dir not found. Clone manually after boot."
-    exit 0  # Never fail the install over this
+    exit 0
 fi
 
 if [[ ! -d /home/sdegroot ]]; then
@@ -157,9 +143,14 @@ if [[ ! -d /home/sdegroot ]]; then
     chown sdegroot:sdegroot /home/sdegroot
 fi
 
-mv "$STAGING" "$TARGET"
+echo "Copying provisioning repo from OEMDRV..."
+cp -a "${OEMDRV_MOUNT}/provision-laptop" "$TARGET"
 chown -R sdegroot:sdegroot "$TARGET"
 restorecon -R "$TARGET" 2>/dev/null || true
 
-echo "Provisioning repo moved to $TARGET"
+du -sh "$TARGET"
+echo "Provisioning repo copied to $TARGET"
+
+umount "$OEMDRV_MOUNT"
+echo "=== Post-install: OEMDRV copy complete ==="
 %end
