@@ -75,6 +75,69 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         changes_made=1
     fi
 
+    # 1Password: deploy custom_allowed_browsers (whitelist flatpak-session-helper)
+    onepassword_state_dir="$(state_file_path "1password")"
+    cab_src="${onepassword_state_dir}/custom_allowed_browsers"
+    cab_dest="/etc/1password/custom_allowed_browsers"
+    if [[ -f "$cab_src" ]]; then
+        if ! diff -q "$cab_src" "$cab_dest" &>/dev/null; then
+            log_info "Deploying 1Password custom_allowed_browsers"
+            sudo mkdir -p "$(dirname "$cab_dest")"
+            sudo cp "$cab_src" "$cab_dest"
+            sudo chmod 644 "$cab_dest"
+            changes_made=1
+        fi
+    fi
+
+    # 1Password: deploy native messaging wrapper + manifest for Flatpak Firefox
+    wrapper_src="${onepassword_state_dir}/1password-browser-support-wrapper.sh"
+    wrapper_dest="${HOME}/.var/app/org.mozilla.firefox/data/bin/1password-browser-support-wrapper.sh"
+    if [[ -f "$wrapper_src" ]]; then
+        if ! diff -q "$wrapper_src" "$wrapper_dest" &>/dev/null; then
+            log_info "Deploying 1Password BrowserSupport wrapper for Flatpak Firefox"
+            mkdir -p "$(dirname "$wrapper_dest")"
+            cp "$wrapper_src" "$wrapper_dest"
+            chmod +x "$wrapper_dest"
+            changes_made=1
+        fi
+    fi
+
+    manifest_src="${onepassword_state_dir}/com.1password.1password.json"
+    manifest_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/com.1password.1password.json"
+    if [[ -f "$manifest_src" ]]; then
+        # Expand $HOME in the manifest
+        expanded_manifest="$(sed "s|\$HOME|${HOME}|g" "$manifest_src")"
+        if [[ ! -f "$manifest_dest" ]] || [[ "$expanded_manifest" != "$(cat "$manifest_dest")" ]]; then
+            log_info "Deploying 1Password native messaging manifest for Flatpak Firefox"
+            mkdir -p "$(dirname "$manifest_dest")"
+            echo "$expanded_manifest" > "$manifest_dest"
+            changes_made=1
+        fi
+    fi
+
+    # Clean up manual debugging artifacts from 1Password native messaging setup
+    for stale_path in \
+        "${HOME}/.local/lib/1Password" \
+        "${HOME}/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/1password-browser-support-wrapper.sh"; do
+        if [[ -e "$stale_path" ]]; then
+            log_info "Removing stale debugging artifact: ${stale_path}"
+            rm -rf "$stale_path"
+            changes_made=1
+        fi
+    done
+
+    # Reset Firefox Flatpak overrides so provisioning can re-apply cleanly
+    # (removes any manually-added overrides from debugging)
+    ff_override_file="${HOME}/.local/share/flatpak/overrides/org.mozilla.firefox"
+    if [[ -f "$ff_override_file" ]]; then
+        # Check for stale debugging overrides (socket access, local lib)
+        if grep -qE '1Password-BrowserSupport\.sock|\.local/lib/1Password' "$ff_override_file" 2>/dev/null; then
+            log_info "Resetting Firefox Flatpak overrides (removing stale debugging entries)"
+            flatpak override --user --reset org.mozilla.firefox
+            changes_made=1
+        fi
+    fi
+
     # Brave: /etc/brave/policies/managed/
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
     brave_dest="/etc/brave/policies/managed/1password.json"

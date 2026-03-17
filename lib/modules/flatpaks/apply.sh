@@ -78,6 +78,14 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                     changes_made=1
                 fi
                 ;;
+            talk-name)
+                current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
+                if ! echo "$current" | grep -Fq "$perm_value"; then
+                    log_info "Setting Flatpak override: ${app_id} --talk-name=${perm_value}"
+                    flatpak override --user --talk-name="$perm_value" "$app_id"
+                    changes_made=1
+                fi
+                ;;
             *)
                 log_warn "Unknown override type: ${perm_type} (for ${app_id})"
                 ;;

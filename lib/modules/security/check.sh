@@ -78,6 +78,44 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         fi
     fi
 
+    # 1Password: check custom_allowed_browsers
+    onepassword_state_dir="$(state_file_path "1password")"
+    cab_src="${onepassword_state_dir}/custom_allowed_browsers"
+    cab_dest="/etc/1password/custom_allowed_browsers"
+    if [[ -f "$cab_src" ]]; then
+        if diff -q "$cab_src" "$cab_dest" &>/dev/null; then
+            log_ok "1Password custom_allowed_browsers deployed"
+        else
+            log_error "1Password custom_allowed_browsers missing or outdated"
+            drift_found=1
+        fi
+    fi
+
+    # 1Password: check native messaging wrapper
+    wrapper_src="${onepassword_state_dir}/1password-browser-support-wrapper.sh"
+    wrapper_dest="${HOME}/.var/app/org.mozilla.firefox/data/bin/1password-browser-support-wrapper.sh"
+    if [[ -f "$wrapper_src" ]]; then
+        if diff -q "$wrapper_src" "$wrapper_dest" &>/dev/null; then
+            log_ok "1Password BrowserSupport wrapper deployed"
+        else
+            log_error "1Password BrowserSupport wrapper missing or outdated"
+            drift_found=1
+        fi
+    fi
+
+    # 1Password: check native messaging manifest
+    manifest_src="${onepassword_state_dir}/com.1password.1password.json"
+    manifest_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/com.1password.1password.json"
+    if [[ -f "$manifest_src" ]]; then
+        expanded_manifest="$(sed "s|\$HOME|${HOME}|g" "$manifest_src")"
+        if [[ -f "$manifest_dest" ]] && [[ "$expanded_manifest" == "$(cat "$manifest_dest")" ]]; then
+            log_ok "1Password native messaging manifest deployed"
+        else
+            log_error "1Password native messaging manifest missing or outdated"
+            drift_found=1
+        fi
+    fi
+
     # Brave: check browser policies
     BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
