@@ -1,0 +1,33 @@
+# Enable PCI runtime power management on devices that support it safely.
+# This lets idle devices enter low-power states, saving ~1-3W on battery.
+#
+# Only targets specific devices known to work correctly with runtime PM
+# on the Tongfang GX4 (AMD Strix). SoC infrastructure (Data Fabric,
+# Root Complex, Host Bridges, LPC Bridge, SMBus) is deliberately excluded.
+#
+# To revert: delete this file and run `sudo udevadm trigger --subsystem-match=pci`
+# or reboot. Devices will return to power/control=on.
+
+# Samsung PM9E1 NVMe SSDs
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x144d", ATTR{device}=="0xa810", ATTR{power/control}="auto"
+
+# MediaTek MT7922 WiFi
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14c3", ATTR{device}=="0x7922", ATTR{power/control}="auto"
+
+# Genesys GL9767 SD card reader
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x17a0", ATTR{device}=="0x9767", ATTR{power/control}="auto"
+
+# AMD Radeon 880M/890M iGPU (lets PCI layer cooperate with amdgpu PM)
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1002", ATTR{device}=="0x150e", ATTR{power/control}="auto"
+
+# AMD CCP/ASP crypto coprocessor
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1022", ATTR{device}=="0x17e0", ATTR{power/control}="auto"
+
+# AMD Audio Coprocessor (ACP, no driver loaded)
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1022", ATTR{device}=="0x15e2", ATTR{power/control}="auto"
+
+# AMD IOMMU
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1022", ATTR{device}=="0x1508", ATTR{power/control}="auto"
+
+# Motorcomm YT6801 Gigabit Ethernet (no driver loaded)
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1f0a", ATTR{device}=="0x6801", ATTR{power/control}="auto"
