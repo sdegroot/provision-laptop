@@ -4,9 +4,9 @@
 
 [tools]
 node = "lts"
-python = "3.12"
+python = "3.13"
 go = "latest"
-java = "21"
+java = "25"
 
 # AI coding assistants (installed globally via npm)
 "npm:@anthropic-ai/claude-code" = "latest"

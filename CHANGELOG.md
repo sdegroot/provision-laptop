@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   existing repos to avoid conflicts with in-progress work.
 
 ### Changed
+- **Bump Java 21 → 25 (LTS)** — Java 25 LTS released Sep 2025, Java 21 permissive
+  license ends Sep 2026. Updated global mise config.
+- **Bump Python 3.12 → 3.13** — Updated both project-level and global mise configs.
 - **Replace zinit with system packages and provisioning-time clones** — zinit was
   cloned from GitHub during shell init, which broke terminal startup when the network
   or SSH agent wasn't ready. Replaced with: `zsh-syntax-highlighting` and
