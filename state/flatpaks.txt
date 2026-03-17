@@ -22,6 +22,7 @@ com.protonvpn.www
 # Media
 org.videolan.VLC
 com.transmissionbt.Transmission
+com.spotify.Client
 
 # Privacy
 org.torproject.torbrowser-launcher
