@@ -52,29 +52,6 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         fi
     fi
 
-    # Clean up stale XPI from old direct-install approach
-    ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
-    ff_profile_ini="${ff_profiles_dir}/profiles.ini"
-    if [[ -f "$ff_profile_ini" ]]; then
-        ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
-        if [[ -n "$ff_profile" ]]; then
-            ff_1pw_xpi="${ff_profiles_dir}/${ff_profile}/extensions/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
-            if [[ -f "$ff_1pw_xpi" ]]; then
-                log_info "Removing stale 1Password XPI (now managed via enterprise policy)"
-                rm -f "$ff_1pw_xpi"
-                changes_made=1
-            fi
-        fi
-    fi
-
-    # Clean up stale distribution policies from old approach
-    ff_dist_policies="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
-    if [[ -f "$ff_dist_policies" ]]; then
-        log_info "Removing stale distribution policies.json (now using systemconfig extension)"
-        rm -f "$ff_dist_policies"
-        changes_made=1
-    fi
-
     # 1Password: deploy custom_allowed_browsers (whitelist flatpak-session-helper)
     onepassword_state_dir="$(state_file_path "1password")"
     cab_src="${onepassword_state_dir}/custom_allowed_browsers"
