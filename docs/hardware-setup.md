@@ -106,7 +106,6 @@ Applied via `rpm-ostree kargs` — active after reboot.
 | `nmi_watchdog=0` | Disable NMI watchdog (reduce wake-ups) |
 | `workqueue.power_efficient=1` | Power-efficient work queues |
 | `pcie_aspm=default` | PCIe Active State Power Management |
-| `firmware_class.path=/etc/firmware` | Extra firmware search path for HDA patches (Silverblue) |
 
 ### Third-Party Repos (`state/repos.conf`)
 
@@ -138,11 +137,6 @@ Applied via `rpm-ostree kargs` — active after reboot.
 **`hardware/modprobe/audio_powersave.conf`** → `/etc/modprobe.d/`
 - Disables audio codec power saving to prevent pops/clicks on resume
 - `options snd_hda_intel power_save=0`
-
-**`hardware/modprobe/hda-sn6140-speaker-amp.conf`** → `/etc/modprobe.d/`
-- Loads HDA verb patch to enable the speaker amplifier GPIO
-- `options snd_hda_intel patch=hda-sn6140-speaker-amp.fw`
-- See [Speaker Amplifier (Conexant SN6140)](#speaker-amplifier-conexant-sn6140) below
 
 ### Sysctl Tuning
 
@@ -260,48 +254,6 @@ fwupdmgr get-updates
 # Apply updates (review first)
 fwupdmgr update
 ```
-
-### Speaker Amplifier (Conexant SN6140)
-
-The GX4 uses a **Conexant SN6140** HDA codec (vendor ID `0x14f11f87`, subsystem ID `0x1d053011`). The kernel has no quirk for this subsystem, so BIOS auto-probing leaves all GPIO pins disabled. Without GPIO driven high, the external speaker amplifier stays off and speakers produce thin, bass-less "call mode" sound.
-
-**How the fix works:**
-
-An HDA verb patch file (`hardware/firmware/hda-sn6140-speaker-amp.fw`) sets GPIO 0 as output-high at codec init time, enabling the speaker amplifier. The patch is loaded by `snd_hda_intel` via the `patch=` module parameter.
-
-On Silverblue, `/usr/lib/firmware/` is read-only (part of the ostree). The patch file is deployed to `/etc/firmware/` instead, with the `firmware_class.path=/etc/firmware` kernel parameter telling the firmware loader to search there.
-
-**Files involved:**
-
-| File | Deployed to | Purpose |
-|------|-------------|---------|
-| `hardware/firmware/hda-sn6140-speaker-amp.fw` | `/etc/firmware/` | HDA verb patch (GPIO 0 enable) |
-| `hardware/modprobe/hda-sn6140-speaker-amp.conf` | `/etc/modprobe.d/` | `patch=` module parameter |
-| `state/kernel-params.txt` | kernel cmdline | `firmware_class.path=/etc/firmware` |
-
-**Testing with `hda-verb` (before making permanent):**
-
-Install `alsa-tools` in a toolbox or layer it, then play audio and run:
-
-```bash
-# Enable GPIO 0 (speaker amp)
-sudo hda-verb /dev/snd/hwC1D0 0x01 SET_GPIO_MASK 0x01
-sudo hda-verb /dev/snd/hwC1D0 0x01 SET_GPIO_DIR 0x01
-sudo hda-verb /dev/snd/hwC1D0 0x01 SET_GPIO_DATA 0x01
-```
-
-If GPIO 0 doesn't restore full sound, try GPIO 1 (`0x02`) or GPIO 2 (`0x04`) and update the `.fw` file accordingly.
-
-**Verification after deployment:**
-
-```bash
-# Check GPIO state (all 5 pins)
-sudo cat /proc/asound/card1/codec#0 | grep -A5 "GPIO"
-
-# Should show GPIO 0 direction=output, data=1
-```
-
-**Upstream fix:** The proper long-term fix is a kernel quirk in `sound/pci/hda/patch_conexant.c` for subsystem ID `0x1d053011`, which would benefit all Tongfang GX4 users without needing a patch file.
 
 ### Battery Charge Thresholds
 
