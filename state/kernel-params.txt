@@ -21,7 +21,3 @@ i8042.reset=1
 # Prevent Embedded Controller from waking system during s2idle
 # Helps AMD laptops reach the deepest S0ix sleep state
 acpi.ec_no_wakeup=1
-
-# Additional firmware search path for HDA codec patches and other custom firmware.
-# /usr/lib/firmware/ is read-only on Silverblue, so custom firmware lives in /etc/firmware/.
-firmware_class.path=/etc/firmware

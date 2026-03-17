@@ -95,13 +95,4 @@ iter_hardware_config_files() {
         [[ -f "$src" ]] || continue
         "$callback" "$src" "${effective_root}/etc/environment.d/$(basename "$src")"
     done
-
-    # firmware files -> /etc/firmware/
-    # On Silverblue /usr/lib/firmware/ is read-only, so we place custom
-    # firmware in /etc/firmware/ and add firmware_class.path=/etc/firmware
-    # as a kernel parameter so the loader finds them.
-    for src in "${hardware_dir}"/firmware/*; do
-        [[ -f "$src" ]] || continue
-        "$callback" "$src" "${effective_root}/etc/firmware/$(basename "$src")"
-    done
 }
