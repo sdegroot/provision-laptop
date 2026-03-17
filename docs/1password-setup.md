@@ -67,13 +67,79 @@ gh ssh-key add ~/.ssh/id_rsa.pub --type signing
 
 ## Browser Integration
 
-The native RPM package supports browser integration out of the box. Browser
-extensions are auto-installed via managed policies:
+### Extension installation
 
-- **Firefox**: `/etc/firefox/policies/policies.json`
+Browser extensions are auto-installed via managed policies:
+
+- **Firefox (Flatpak)**: enterprise policy deployed via the systemconfig extension point at `/var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/x86_64/stable/policies/policies.json`
 - **Brave**: `/etc/brave/policies/managed/1password.json`
 
 Extensions will appear automatically on first launch after provisioning.
+
+### Flatpak Firefox native messaging
+
+Flatpak Firefox runs in a sandbox that prevents it from discovering the native
+`1Password-BrowserSupport` binary on the host. Without native messaging, the
+extension shows a login screen instead of connecting to the desktop app.
+
+The provisioning system bridges this gap with three components:
+
+1. **Wrapper script** (`~/.var/app/org.mozilla.firefox/data/bin/1password-browser-support-wrapper.sh`)
+   — detects whether it's running inside a Flatpak sandbox. If so, it uses
+   `flatpak-spawn --host` to execute the real `1Password-BrowserSupport` binary
+   on the host. Outside the sandbox it runs the binary directly.
+
+2. **Native messaging manifest** (`~/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/com.1password.1password.json`)
+   — tells Firefox where the wrapper lives and which extension IDs are allowed
+   to use it. The `path` field uses the full host path (`$HOME/.var/app/...`),
+   which resolves correctly inside the sandbox because the host
+   `~/.var/app/org.mozilla.firefox/` is bind-mounted as the sandbox home.
+
+3. **D-Bus access** — Firefox needs `--talk-name=org.freedesktop.Flatpak` to
+   use `flatpak-spawn`. This is granted via `flatpak override --user` and
+   configured in `state/flatpak-overrides.conf`.
+
+Additionally, 1Password validates the calling process. When BrowserSupport is
+launched via `flatpak-spawn --host`, its parent on the host side is
+`flatpak-session-helper`. This process must be whitelisted in
+`/etc/1password/custom_allowed_browsers` or 1Password will reject the
+connection.
+
+#### Source files
+
+| State file | Deployed to |
+|---|---|
+| `state/1password/custom_allowed_browsers` | `/etc/1password/custom_allowed_browsers` (sudo) |
+| `state/1password/1password-browser-support-wrapper.sh` | `~/.var/app/org.mozilla.firefox/data/bin/` |
+| `state/1password/com.1password.1password.json` | `~/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/` |
+
+Deployment is handled by `lib/modules/security/apply.sh`.
+
+#### Troubleshooting
+
+If the extension shows a login screen instead of connecting:
+
+1. Check that 1Password desktop app is running
+2. Verify `custom_allowed_browsers` is deployed:
+   ```bash
+   cat /etc/1password/custom_allowed_browsers
+   # Should contain: flatpak-session-helper
+   ```
+3. Verify the D-Bus permission:
+   ```bash
+   flatpak override --user --show org.mozilla.firefox
+   # Should include: org.freedesktop.Flatpak=talk
+   ```
+4. Verify the native messaging manifest:
+   ```bash
+   cat ~/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/com.1password.1password.json
+   ```
+5. Test the wrapper manually from inside the sandbox:
+   ```bash
+   flatpak run --command=bash org.mozilla.firefox
+   ~/.var/app/org.mozilla.firefox/data/bin/1password-browser-support-wrapper.sh --version
+   ```
+6. Restart both 1Password and Firefox after making changes
 
 ## Verification
 
