@@ -36,23 +36,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with graceful fallbacks if not yet installed.
 
 ### Fixed
-- **Provisioning repo missing after USB install (take 3)** — the previous chrooted
-  `%post` approach failed because OEMDRV mount doesn't work in the chroot (empirically
-  confirmed across 3 install attempts). Root cause: dual-disk + ostree makes both
-  `%post` contexts partially broken — nochroot has USB access but ostree symlinks
-  prevent writing to `/mnt/sysroot/var`, while chrooted has filesystem access but no
-  USB devices. Additionally, using `--log` paths through unresolvable ostree symlinks
-  may cause Anaconda to skip entire `%post` sections silently.
-  Replaced with a three-layer belt-and-suspenders approach:
-  1. **Nochroot `%post`**: mounts OEMDRV (proven to work), copies to installer `/tmp/`,
-     then stages to `/mnt/sysroot` using `readlink -f` to resolve ostree symlinks,
-     with fallback to direct physical path and sysroot root. Logs to `/tmp/` (installer
-     tmpfs, always writable) instead of through ostree symlinks.
-  2. **Chrooted `%post`**: checks multiple staging locations and moves to
-     `/home/sdegroot/provision-laptop`. Falls back to direct OEMDRV mount as last resort.
-  3. **first-boot.sh**: existing fallback checks `/var/tmp/` and prompts for manual clone.
-  Full diagnostic dumps (mount state, symlink resolution, block devices) are written
-  to logs for debugging if it still fails.
+- **Provisioning repo missing after USB install** — four attempts to copy the repo
+  from OEMDRV during Anaconda `%post` all failed: chrooted can't mount USB devices,
+  nochroot can't write through ostree symlinks, and nochroot scripts may not even
+  execute (no logs found, no evidence of execution). Abandoned `%post` for OEMDRV
+  access entirely. Replaced with a `kickstart-repo-copy.service` systemd oneshot
+  that runs on first boot in the real OS environment — the kernel has full device
+  access and all filesystems are properly mounted. The service mounts OEMDRV, copies
+  the repo to `~/provision-laptop`, and marks itself done. If the USB was removed,
+  it silently skips and `first-boot.sh` tells the user to `git clone`.
 - **Hostname set to `silverblue-workstation` after install** — `base.ks` hardcoded
   the wrong hostname. Fixed to `longshot`. Also merged the two `network` directives
   into one to eliminate the kickstart parse warning about duplicate network device names.

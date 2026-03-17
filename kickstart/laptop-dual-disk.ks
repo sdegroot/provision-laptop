@@ -93,182 +93,81 @@ echo "  2. Install & configure 1Password"
 echo "  3. cd ~/provision-laptop && git pull && bin/apply"
 %end
 
-# --- Layer 1: nochroot %post — mount USB and stage repo ---
+# --- Copy provisioning repo from OEMDRV on first boot ---
 #
-# Belt-and-suspenders approach for copying the provisioning repo from OEMDRV.
-# Three previous attempts failed due to the ostree + dual-disk combo:
-#   1. Chrooted %post: OEMDRV mount fails silently (no USB device access)
-#   2. Nochroot %post writing to /mnt/sysroot/home: separate LUKS volume not mounted
-#   3. Nochroot staging to /mnt/sysroot/var/tmp: ostree symlinks unresolvable,
-#      --log path through symlinks may cause Anaconda to skip entire section
+# Four previous attempts to copy during Anaconda %post all failed:
+#   1. Chrooted %post mount: OEMDRV mount fails (no USB device access in chroot)
+#   2. Nochroot writing to /mnt/sysroot/home: LUKS data volume not mounted
+#   3. Nochroot staging to /var/tmp: ostree symlinks unresolvable, --log path
+#      through symlinks may cause Anaconda to skip the section entirely
+#   4. Nochroot with readlink + fallback paths: no evidence script ran, no logs
 #
-# Key insight: log to /tmp/ (installer tmpfs, always writable) — NOT through
-# ostree symlinks. Use readlink -f to resolve staging paths.
-%post --nochroot --log=/tmp/kickstart-nochroot.log
-set -x
-
-echo "=== Nochroot: staging provisioning repo from OEMDRV ==="
-
-# --- Diagnostics ---
-echo "--- mount state ---"
-mount | grep -E 'sysroot|home|ostree' || true
-echo "--- /mnt/sysroot layout ---"
-ls -la /mnt/sysroot/ 2>/dev/null || true
-echo "--- /mnt/sysroot symlinks ---"
-ls -la /mnt/sysroot/var /mnt/sysroot/root /mnt/sysroot/home 2>/dev/null || true
-echo "--- readlink tests ---"
-readlink -f /mnt/sysroot/var 2>/dev/null || echo "readlink /mnt/sysroot/var failed"
-readlink -f /mnt/sysroot/root 2>/dev/null || echo "readlink /mnt/sysroot/root failed"
-echo "--- block devices ---"
-ls -la /dev/disk/by-label/ 2>/dev/null || true
-
-# --- Mount OEMDRV ---
-OEMDRV_DEV="/dev/disk/by-label/OEMDRV"
-OEMDRV_MOUNT="/mnt/oemdrv"
-
-if [[ ! -e "$OEMDRV_DEV" ]]; then
-    echo "WARNING: OEMDRV device not found at $OEMDRV_DEV"
-    echo "Repo will need to be cloned manually after boot."
-    exit 0
-fi
-
-mkdir -p "$OEMDRV_MOUNT"
-if ! mount "$OEMDRV_DEV" "$OEMDRV_MOUNT"; then
-    echo "WARNING: Failed to mount $OEMDRV_DEV"
-    exit 0
-fi
-
-if [[ ! -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then
-    echo "WARNING: provision-laptop not found on OEMDRV"
-    ls -la "$OEMDRV_MOUNT"
-    umount "$OEMDRV_MOUNT"
-    exit 0
-fi
-
-# --- Copy to installer tmpfs first (known-good) ---
-echo "Copying repo to installer /tmp/..."
-cp -a "${OEMDRV_MOUNT}/provision-laptop" /tmp/provision-laptop
-du -sh /tmp/provision-laptop
-umount "$OEMDRV_MOUNT"
-
-# --- Stage to /mnt/sysroot using resolved paths ---
-STAGED=""
-
-# Attempt 1: resolve /mnt/sysroot/var via readlink (handles ostree symlinks)
-RESOLVED_VAR="$(readlink -f /mnt/sysroot/var 2>/dev/null || true)"
-if [[ -n "$RESOLVED_VAR" ]] && [[ -d "$RESOLVED_VAR" ]]; then
-    STAGING="${RESOLVED_VAR}/tmp/provision-laptop"
-    echo "Staging to resolved path: $STAGING"
-    mkdir -p "$(dirname "$STAGING")"
-    if cp -a /tmp/provision-laptop "$STAGING"; then
-        STAGED="$STAGING"
-        echo "SUCCESS: staged at $STAGING"
-    else
-        echo "FAILED: cp to $STAGING"
-    fi
-fi
-
-# Attempt 2: direct ostree physical path (no symlink resolution needed)
-if [[ -z "$STAGED" ]]; then
-    STAGING="/mnt/sysroot/ostree/deploy/fedora/var/tmp/provision-laptop"
-    echo "Trying direct ostree path: $STAGING"
-    mkdir -p "$(dirname "$STAGING")"
-    if cp -a /tmp/provision-laptop "$STAGING"; then
-        STAGED="$STAGING"
-        echo "SUCCESS: staged at $STAGING"
-    else
-        echo "FAILED: cp to $STAGING"
-    fi
-fi
-
-# Attempt 3: root of sysroot btrfs (always exists)
-if [[ -z "$STAGED" ]]; then
-    STAGING="/mnt/sysroot/provision-staging/provision-laptop"
-    echo "Trying sysroot root fallback: $STAGING"
-    mkdir -p "$(dirname "$STAGING")"
-    if cp -a /tmp/provision-laptop "$STAGING"; then
-        STAGED="$STAGING"
-        echo "SUCCESS: staged at $STAGING"
-    else
-        echo "FAILED: cp to $STAGING — all staging attempts exhausted"
-    fi
-fi
-
-# Copy nochroot log alongside staging for post-boot debugging
-if [[ -n "$STAGED" ]]; then
-    cp /tmp/kickstart-nochroot.log "$(dirname "$STAGED")/" 2>/dev/null || true
-fi
-
-echo "=== Nochroot: done (staged=$STAGED) ==="
-exit 0
-%end
-
-# --- Layer 2: chrooted %post — move staged repo to /home/ ---
-#
-# In the chroot, all target filesystems (/home on the data disk) are properly
-# mounted, so we can move the staged repo to its final location.
+# Solution: abandon %post for OEMDRV access entirely. Create a first-boot
+# systemd service that runs in the real OS environment where the kernel has
+# full device access and all filesystems are properly mounted.
+# The USB is still physically connected after reboot --eject (eject only
+# unmounts, doesn't physically disconnect). If the user removed the USB,
+# the service silently skips and first-boot.sh tells them to git clone.
 %post --log=/var/log/kickstart-post-repo.log
-set -x
 
-echo "=== Chrooted: moving staged repo to /home/sdegroot/ ==="
+cat > /etc/systemd/system/kickstart-repo-copy.service <<'UNIT'
+[Unit]
+Description=Copy provisioning repo from OEMDRV USB partition
+After=local-fs.target
+ConditionPathExists=!/var/lib/kickstart-repo-copy.done
 
-TARGET="/home/sdegroot/provision-laptop"
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+    exec > /var/log/kickstart-repo-copy.log 2>&1; \
+    set -x; \
+    echo "=== kickstart-repo-copy: $(date) ==="; \
+    TARGET="/home/sdegroot/provision-laptop"; \
+    if [[ -d "$TARGET" ]]; then \
+        echo "Repo already exists at $TARGET — nothing to do"; \
+        touch /var/lib/kickstart-repo-copy.done; \
+        exit 0; \
+    fi; \
+    OEMDRV_DEV="/dev/disk/by-label/OEMDRV"; \
+    echo "--- block devices ---"; \
+    ls -la /dev/disk/by-label/ 2>/dev/null || true; \
+    if [[ ! -e "$OEMDRV_DEV" ]]; then \
+        echo "OEMDRV not found — USB may have been removed"; \
+        echo "Clone manually: git clone git@github.com:sdegroot/provision-laptop.git ~/provision-laptop"; \
+        touch /var/lib/kickstart-repo-copy.done; \
+        exit 0; \
+    fi; \
+    OEMDRV_MOUNT="/run/oemdrv"; \
+    mkdir -p "$OEMDRV_MOUNT"; \
+    if ! mount "$OEMDRV_DEV" "$OEMDRV_MOUNT"; then \
+        echo "Failed to mount OEMDRV"; \
+        touch /var/lib/kickstart-repo-copy.done; \
+        exit 0; \
+    fi; \
+    if [[ ! -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then \
+        echo "provision-laptop not found on OEMDRV"; \
+        ls -la "$OEMDRV_MOUNT"; \
+        umount "$OEMDRV_MOUNT"; \
+        touch /var/lib/kickstart-repo-copy.done; \
+        exit 0; \
+    fi; \
+    echo "Copying provisioning repo..."; \
+    mkdir -p /home/sdegroot; \
+    cp -a "${OEMDRV_MOUNT}/provision-laptop" "$TARGET"; \
+    chown -R sdegroot:sdegroot /home/sdegroot; \
+    restorecon -R "$TARGET" 2>/dev/null || true; \
+    umount "$OEMDRV_MOUNT"; \
+    du -sh "$TARGET"; \
+    echo "SUCCESS: provisioning repo copied to $TARGET"; \
+    touch /var/lib/kickstart-repo-copy.done'
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
 
-# Check staging locations in order of preference
-FOUND=""
-for candidate in \
-    /var/tmp/provision-laptop \
-    /provision-staging/provision-laptop; do
-    echo "Checking: $candidate"
-    if [[ -d "$candidate" ]]; then
-        FOUND="$candidate"
-        echo "Found staged repo at $candidate"
-        break
-    fi
-done
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl enable kickstart-repo-copy.service
 
-if [[ -n "$FOUND" ]]; then
-    # Move to final location
-    if [[ ! -d /home/sdegroot ]]; then
-        mkdir -p /home/sdegroot
-        chown sdegroot:sdegroot /home/sdegroot
-    fi
-    echo "Moving $FOUND -> $TARGET"
-    mv "$FOUND" "$TARGET"
-    chown -R sdegroot:sdegroot "$TARGET"
-    restorecon -R "$TARGET" 2>/dev/null || true
-    du -sh "$TARGET"
-    echo "SUCCESS: provisioning repo at $TARGET"
-else
-    echo "No staged repo found. Trying direct OEMDRV mount as last resort..."
-    # Last resort: try mounting OEMDRV directly (may fail in chroot)
-    OEMDRV_DEV="/dev/disk/by-label/OEMDRV"
-    if [[ -e "$OEMDRV_DEV" ]]; then
-        mkdir -p /mnt/oemdrv
-        if mount "$OEMDRV_DEV" /mnt/oemdrv 2>/dev/null; then
-            if [[ -d /mnt/oemdrv/provision-laptop ]]; then
-                mkdir -p /home/sdegroot
-                chown sdegroot:sdegroot /home/sdegroot
-                cp -a /mnt/oemdrv/provision-laptop "$TARGET"
-                chown -R sdegroot:sdegroot "$TARGET"
-                restorecon -R "$TARGET" 2>/dev/null || true
-                echo "SUCCESS: copied directly from OEMDRV in chroot"
-            fi
-            umount /mnt/oemdrv
-        else
-            echo "WARNING: OEMDRV mount failed in chroot (expected)"
-        fi
-    else
-        echo "WARNING: OEMDRV device not found"
-    fi
-fi
-
-if [[ ! -d "$TARGET" ]]; then
-    echo "WARNING: provisioning repo not available"
-    echo "After first boot, clone manually:"
-    echo "  git clone git@github.com:sdegroot/provision-laptop.git"
-fi
-
-echo "=== Chrooted: repo copy done ==="
-exit 0
+echo "kickstart-repo-copy.service installed and enabled"
 %end
