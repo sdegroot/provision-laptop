@@ -35,33 +35,47 @@ if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
     fi
 fi
 
-# Deploy browser extensions (1Password)
-# Flatpak Firefox ignores enterprise policies (distribution dir is read-only
-# inside the Flatpak image and /etc is blocked). Instead, install the XPI
-# directly into the profile's extensions directory. Firefox auto-updates
-# extensions from AMO after initial install.
-BROWSER_EXTENSIONS_DIR="$(state_file_path "browser-extensions")"
+# Deploy browser policies
+BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
 if [[ -z "$PROVISION_ROOT" ]]; then
-    # Firefox (Flatpak): install 1Password XPI into active profile
+    # Firefox (Flatpak): deploy policies via systemconfig extension point
+    # Maps to /app/etc/firefox/policies/policies.json inside the sandbox
+    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
+    firefox_dest="/var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/x86_64/stable/policies/policies.json"
+    if [[ -f "$firefox_src" ]]; then
+        if ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
+            log_info "Deploying Firefox browser policies via systemconfig extension"
+            sudo mkdir -p "$(dirname "$firefox_dest")"
+            sudo cp "$firefox_src" "$firefox_dest"
+            sudo chmod 644 "$firefox_dest"
+            changes_made=1
+        fi
+    fi
+
+    # Clean up stale XPI from old direct-install approach
     ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
     ff_profile_ini="${ff_profiles_dir}/profiles.ini"
     if [[ -f "$ff_profile_ini" ]]; then
         ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
         if [[ -n "$ff_profile" ]]; then
-            ff_ext_dir="${ff_profiles_dir}/${ff_profile}/extensions"
-            ff_1pw_xpi="${ff_ext_dir}/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
-            if [[ ! -f "$ff_1pw_xpi" ]]; then
-                log_info "Installing 1Password extension into Firefox profile"
-                mkdir -p "$ff_ext_dir"
-                curl -sL -o "$ff_1pw_xpi" \
-                    "https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi"
+            ff_1pw_xpi="${ff_profiles_dir}/${ff_profile}/extensions/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
+            if [[ -f "$ff_1pw_xpi" ]]; then
+                log_info "Removing stale 1Password XPI (now managed via enterprise policy)"
+                rm -f "$ff_1pw_xpi"
                 changes_made=1
             fi
         fi
     fi
 
+    # Clean up stale distribution policies from old approach
+    ff_dist_policies="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
+    if [[ -f "$ff_dist_policies" ]]; then
+        log_info "Removing stale distribution policies.json (now using systemconfig extension)"
+        rm -f "$ff_dist_policies"
+        changes_made=1
+    fi
+
     # Brave: /etc/brave/policies/managed/
-    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
     brave_dest="/etc/brave/policies/managed/1password.json"
     if [[ -f "$brave_src" ]]; then

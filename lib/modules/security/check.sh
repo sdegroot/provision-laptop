@@ -65,19 +65,16 @@ fi
 
 # Check browser extensions
 if [[ -z "$PROVISION_ROOT" ]]; then
-    # Firefox (Flatpak): check 1Password XPI in active profile
-    ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
-    ff_profile_ini="${ff_profiles_dir}/profiles.ini"
-    if [[ -f "$ff_profile_ini" ]]; then
-        ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
-        if [[ -n "$ff_profile" ]]; then
-            ff_1pw_xpi="${ff_profiles_dir}/${ff_profile}/extensions/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
-            if [[ -f "$ff_1pw_xpi" ]]; then
-                log_ok "Firefox 1Password extension installed"
-            else
-                log_error "Firefox 1Password extension missing"
-                drift_found=1
-            fi
+    # Firefox (Flatpak): check policies via systemconfig extension point
+    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
+    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
+    firefox_dest="/var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/x86_64/stable/policies/policies.json"
+    if [[ -f "$firefox_src" ]]; then
+        if diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
+            log_ok "Firefox browser policies deployed via systemconfig"
+        else
+            log_error "Firefox browser policies missing or outdated"
+            drift_found=1
         fi
     fi
 
