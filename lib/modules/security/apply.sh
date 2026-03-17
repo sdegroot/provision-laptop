@@ -38,14 +38,15 @@ fi
 # Deploy browser policies for managed extensions (1Password)
 BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
 if [[ -z "$PROVISION_ROOT" ]] && [[ -d "$BROWSER_POLICIES_DIR" ]]; then
-    # Firefox: /etc/firefox/policies/policies.json
+    # Firefox (Flatpak): policies go into the Flatpak data dir because
+    # Flatpak blocks mounting /etc into the sandbox.
     firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
-    firefox_dest="/etc/firefox/policies/policies.json"
+    firefox_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
     if [[ -f "$firefox_src" ]]; then
         if ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
-            log_info "Deploying Firefox browser policies"
-            sudo mkdir -p /etc/firefox/policies
-            sudo cp "$firefox_src" "$firefox_dest"
+            log_info "Deploying Firefox browser policies (Flatpak)"
+            mkdir -p "$(dirname "$firefox_dest")"
+            cp "$firefox_src" "$firefox_dest"
             changes_made=1
         fi
     fi
@@ -123,7 +124,7 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 
     # Check if any LUKS partition has FIDO2 enrolled
-    local has_luks_fido2=0
+    has_luks_fido2=0
     while IFS= read -r luks_dev; do
         if sudo cryptsetup luksDump "$luks_dev" 2>/dev/null | grep -q "fido2"; then
             has_luks_fido2=1
@@ -132,7 +133,6 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     done < <(lsblk -nrpo NAME,FSTYPE 2>/dev/null | awk '$2=="crypto_LUKS"{print $1}')
 
     if [[ $has_luks_fido2 -eq 0 ]] && has_command systemd-cryptenroll; then
-        local luks_devs
         luks_devs="$(lsblk -nrpo NAME,FSTYPE 2>/dev/null | awk '$2=="crypto_LUKS"{print $1}')"
         if [[ -n "$luks_devs" ]]; then
             reminders+=("")

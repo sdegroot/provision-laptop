@@ -34,7 +34,7 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
 
     firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
-    firefox_dest="/etc/firefox/policies/policies.json"
+    firefox_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
     if [[ -f "$firefox_src" ]] && ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
         log_plan "Would deploy Firefox browser policies (1Password extension)"
         changes_planned=1
