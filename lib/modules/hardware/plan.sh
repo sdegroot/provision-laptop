@@ -92,6 +92,11 @@ plan_timers() {
         log_plan "Would enable i8042-resume-rescan.service"
         changes_planned=1
     fi
+
+    if ! systemctl is-enabled --quiet ucsi-resume-rebind.service 2>/dev/null; then
+        log_plan "Would enable ucsi-resume-rebind.service"
+        changes_planned=1
+    fi
 }
 
 # -------------------------------------------------------------------------

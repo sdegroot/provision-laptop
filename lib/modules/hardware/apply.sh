@@ -181,6 +181,12 @@ apply_timers() {
         sudo systemctl enable i8042-resume-rescan.service
         changes_made=1
     fi
+
+    if ! systemctl is-enabled --quiet ucsi-resume-rebind.service 2>/dev/null; then
+        log_info "Enabling ucsi-resume-rebind.service"
+        sudo systemctl enable ucsi-resume-rebind.service
+        changes_made=1
+    fi
 }
 
 # -------------------------------------------------------------------------

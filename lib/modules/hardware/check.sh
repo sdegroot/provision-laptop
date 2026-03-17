@@ -118,6 +118,13 @@ check_timers() {
         log_error "Service not enabled: i8042-resume-rescan.service"
         drift_found=1
     fi
+
+    if systemctl is-enabled --quiet ucsi-resume-rebind.service 2>/dev/null; then
+        log_ok "Service enabled: ucsi-resume-rebind.service"
+    else
+        log_error "Service not enabled: ucsi-resume-rebind.service"
+        drift_found=1
+    fi
 }
 
 # -------------------------------------------------------------------------

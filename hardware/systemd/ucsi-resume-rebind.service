@@ -1,0 +1,10 @@
+[Unit]
+Description=Rebind ucsi_acpi after resume to fix USB-C hotplug
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'dev=/sys/bus/platform/drivers/ucsi_acpi; for id in $(ls "$dev" | grep USBC); do echo "$id" > "$dev/unbind"; done; sleep 1; for id in $(ls "$dev" | grep USBC); do echo "$id" > "$dev/bind"; done'
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
