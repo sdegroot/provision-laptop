@@ -92,6 +92,30 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         fi
     fi
 
+    # 1Password: deploy native messaging wrapper + manifest for Flatpak Brave
+    brave_wrapper_dest="${HOME}/.var/app/com.brave.Browser/data/bin/1password-browser-support-wrapper.sh"
+    if [[ -f "$wrapper_src" ]]; then
+        if ! diff -q "$wrapper_src" "$brave_wrapper_dest" &>/dev/null; then
+            log_info "Deploying 1Password BrowserSupport wrapper for Flatpak Brave"
+            mkdir -p "$(dirname "$brave_wrapper_dest")"
+            cp "$wrapper_src" "$brave_wrapper_dest"
+            chmod +x "$brave_wrapper_dest"
+            changes_made=1
+        fi
+    fi
+
+    brave_manifest_src="${onepassword_state_dir}/com.1password.1password.brave.json"
+    brave_manifest_dest="${HOME}/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.1password.1password.json"
+    if [[ -f "$brave_manifest_src" ]]; then
+        expanded_brave_manifest="$(sed "s|\$HOME|${HOME}|g" "$brave_manifest_src")"
+        if [[ ! -f "$brave_manifest_dest" ]] || [[ "$expanded_brave_manifest" != "$(cat "$brave_manifest_dest")" ]]; then
+            log_info "Deploying 1Password native messaging manifest for Flatpak Brave"
+            mkdir -p "$(dirname "$brave_manifest_dest")"
+            echo "$expanded_brave_manifest" > "$brave_manifest_dest"
+            changes_made=1
+        fi
+    fi
+
     # Clean up manual debugging artifacts from 1Password native messaging setup
     for stale_path in \
         "${HOME}/.local/lib/1Password" \

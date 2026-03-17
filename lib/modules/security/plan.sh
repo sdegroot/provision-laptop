@@ -68,6 +68,24 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         fi
     fi
 
+    # 1Password: check Brave native messaging wrapper
+    brave_wrapper_dest="${HOME}/.var/app/com.brave.Browser/data/bin/1password-browser-support-wrapper.sh"
+    if [[ -f "$wrapper_src" ]] && ! diff -q "$wrapper_src" "$brave_wrapper_dest" &>/dev/null; then
+        log_plan "Would deploy 1Password BrowserSupport wrapper for Flatpak Brave"
+        changes_planned=1
+    fi
+
+    # 1Password: check Brave native messaging manifest
+    brave_manifest_src="${onepassword_state_dir}/com.1password.1password.brave.json"
+    brave_manifest_dest="${HOME}/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.1password.1password.json"
+    if [[ -f "$brave_manifest_src" ]]; then
+        expanded_brave_manifest="$(sed "s|\$HOME|${HOME}|g" "$brave_manifest_src")"
+        if [[ ! -f "$brave_manifest_dest" ]] || [[ "$expanded_brave_manifest" != "$(cat "$brave_manifest_dest")" ]]; then
+            log_plan "Would deploy 1Password native messaging manifest for Flatpak Brave"
+            changes_planned=1
+        fi
+    fi
+
     # Brave: check browser policies
     BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"

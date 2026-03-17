@@ -141,6 +141,54 @@ If the extension shows a login screen instead of connecting:
    ```
 6. Restart both 1Password and Firefox after making changes
 
+### Flatpak Brave native messaging
+
+Flatpak Brave (`com.brave.Browser`) has the same sandbox limitation as Firefox.
+The same `flatpak-spawn` mechanism is used with Chrome/Brave-format manifests.
+
+The provisioning system deploys:
+
+1. **Wrapper script** (`~/.var/app/com.brave.Browser/data/bin/1password-browser-support-wrapper.sh`)
+   — same script as Firefox, deployed to Brave's sandbox data directory.
+
+2. **Native messaging manifest** (`~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.1password.1password.json`)
+   — Chrome-format manifest using `allowed_origins` with the 1Password Chrome
+   extension ID (`aeblfdkhhhdcdjpifhhbdiojplfjncoa`).
+
+3. **D-Bus access** — `--talk-name=org.freedesktop.Flatpak` for Brave, configured
+   in `state/flatpak-overrides.conf`.
+
+The `custom_allowed_browsers` whitelist and `flatpak-session-helper` mechanism
+are shared with Firefox — no additional host-side configuration is needed.
+
+#### Source files
+
+| State file | Deployed to |
+|---|---|
+| `state/1password/1password-browser-support-wrapper.sh` | `~/.var/app/com.brave.Browser/data/bin/` |
+| `state/1password/com.1password.1password.brave.json` | `~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts/` |
+
+#### Troubleshooting
+
+If the 1Password extension in Brave shows a login screen instead of connecting:
+
+1. Check that 1Password desktop app is running
+2. Verify the D-Bus permission:
+   ```bash
+   flatpak override --user --show com.brave.Browser
+   # Should include: org.freedesktop.Flatpak=talk
+   ```
+3. Verify the native messaging manifest:
+   ```bash
+   cat ~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.1password.1password.json
+   ```
+4. Test the wrapper manually from inside the sandbox:
+   ```bash
+   flatpak run --command=bash com.brave.Browser
+   ~/.var/app/com.brave.Browser/data/bin/1password-browser-support-wrapper.sh --version
+   ```
+5. Restart both 1Password and Brave after making changes
+
 ## Verification
 
 ```bash
