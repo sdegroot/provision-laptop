@@ -29,17 +29,24 @@ if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
     fi
 fi
 
-# Check browser policies
+# Check browser extensions
 if [[ -z "$PROVISION_ROOT" ]]; then
-    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
-
-    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
-    firefox_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
-    if [[ -f "$firefox_src" ]] && ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
-        log_plan "Would deploy Firefox browser policies (1Password extension)"
-        changes_planned=1
+    # Firefox (Flatpak): check 1Password XPI in active profile
+    ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
+    ff_profile_ini="${ff_profiles_dir}/profiles.ini"
+    if [[ -f "$ff_profile_ini" ]]; then
+        ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
+        if [[ -n "$ff_profile" ]]; then
+            ff_1pw_xpi="${ff_profiles_dir}/${ff_profile}/extensions/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
+            if [[ ! -f "$ff_1pw_xpi" ]]; then
+                log_plan "Would install 1Password extension into Firefox profile"
+                changes_planned=1
+            fi
+        fi
     fi
 
+    # Brave: check browser policies
+    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
     brave_dest="/etc/brave/policies/managed/1password.json"
     if [[ -f "$brave_src" ]] && ! diff -q "$brave_src" "$brave_dest" &>/dev/null; then

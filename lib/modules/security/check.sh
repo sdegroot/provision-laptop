@@ -63,21 +63,26 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
-# Check browser policies for managed extensions
+# Check browser extensions
 if [[ -z "$PROVISION_ROOT" ]]; then
-    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
-
-    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
-    firefox_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
-    if [[ -f "$firefox_src" ]]; then
-        if diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
-            log_ok "Firefox browser policies deployed"
-        else
-            log_error "Firefox browser policies missing or outdated"
-            drift_found=1
+    # Firefox (Flatpak): check 1Password XPI in active profile
+    ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
+    ff_profile_ini="${ff_profiles_dir}/profiles.ini"
+    if [[ -f "$ff_profile_ini" ]]; then
+        ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
+        if [[ -n "$ff_profile" ]]; then
+            ff_1pw_xpi="${ff_profiles_dir}/${ff_profile}/extensions/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
+            if [[ -f "$ff_1pw_xpi" ]]; then
+                log_ok "Firefox 1Password extension installed"
+            else
+                log_error "Firefox 1Password extension missing"
+                drift_found=1
+            fi
         fi
     fi
 
+    # Brave: check browser policies
+    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
     brave_dest="/etc/brave/policies/managed/1password.json"
     if [[ -f "$brave_src" ]]; then

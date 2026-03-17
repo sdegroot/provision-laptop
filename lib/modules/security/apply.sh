@@ -35,23 +35,33 @@ if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
     fi
 fi
 
-# Deploy browser policies for managed extensions (1Password)
-BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
-if [[ -z "$PROVISION_ROOT" ]] && [[ -d "$BROWSER_POLICIES_DIR" ]]; then
-    # Firefox (Flatpak): policies go into the Flatpak data dir because
-    # Flatpak blocks mounting /etc into the sandbox.
-    firefox_src="${BROWSER_POLICIES_DIR}/firefox/policies.json"
-    firefox_dest="${HOME}/.var/app/org.mozilla.firefox/.mozilla/distribution/policies.json"
-    if [[ -f "$firefox_src" ]]; then
-        if ! diff -q "$firefox_src" "$firefox_dest" &>/dev/null; then
-            log_info "Deploying Firefox browser policies (Flatpak)"
-            mkdir -p "$(dirname "$firefox_dest")"
-            cp "$firefox_src" "$firefox_dest"
-            changes_made=1
+# Deploy browser extensions (1Password)
+# Flatpak Firefox ignores enterprise policies (distribution dir is read-only
+# inside the Flatpak image and /etc is blocked). Instead, install the XPI
+# directly into the profile's extensions directory. Firefox auto-updates
+# extensions from AMO after initial install.
+BROWSER_EXTENSIONS_DIR="$(state_file_path "browser-extensions")"
+if [[ -z "$PROVISION_ROOT" ]]; then
+    # Firefox (Flatpak): install 1Password XPI into active profile
+    ff_profiles_dir="${HOME}/.var/app/org.mozilla.firefox/config/mozilla/firefox"
+    ff_profile_ini="${ff_profiles_dir}/profiles.ini"
+    if [[ -f "$ff_profile_ini" ]]; then
+        ff_profile="$(awk -F= '/^\[Install/{found=1} found && /^Default=/{print $2; exit}' "$ff_profile_ini")"
+        if [[ -n "$ff_profile" ]]; then
+            ff_ext_dir="${ff_profiles_dir}/${ff_profile}/extensions"
+            ff_1pw_xpi="${ff_ext_dir}/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi"
+            if [[ ! -f "$ff_1pw_xpi" ]]; then
+                log_info "Installing 1Password extension into Firefox profile"
+                mkdir -p "$ff_ext_dir"
+                curl -sL -o "$ff_1pw_xpi" \
+                    "https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi"
+                changes_made=1
+            fi
         fi
     fi
 
     # Brave: /etc/brave/policies/managed/
+    BROWSER_POLICIES_DIR="$(state_file_path "browser-policies")"
     brave_src="${BROWSER_POLICIES_DIR}/brave/1password.json"
     brave_dest="/etc/brave/policies/managed/1password.json"
     if [[ -f "$brave_src" ]]; then
