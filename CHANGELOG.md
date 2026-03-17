@@ -33,6 +33,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with graceful fallbacks if not yet installed.
 
 ### Fixed
+- **Provisioning repo missing after USB install** — the kickstart `%post --nochroot`
+  copied to `/mnt/sysroot/home/` which isn't mounted in the nochroot context (home is
+  on a separate LUKS+Btrfs volume). Fixed with two-stage copy: nochroot stages to
+  `/var/tmp/` (system disk, always mounted), then a chrooted `%post` moves to
+  `/home/sdegroot/`. Added fallback in `first-boot.sh`.
 - **Terminal broken after reboot — zinit clone failure cascade** — the zinit auto-install
   in `.zshrc` used an HTTPS clone that triggered the misconfigured git credential helper
   (`op-ssh-sign` is a signing program, not a credential helper). This caused the clone

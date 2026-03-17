@@ -91,17 +91,22 @@ echo "  2. Install & configure 1Password"
 echo "  3. cd ~/provision-laptop && git pull && bin/apply"
 %end
 
-# Copy provisioning repo from OEMDRV volume (nochroot)
+# Copy provisioning repo from OEMDRV volume to staging (nochroot)
 # Runs in the real installer environment with full device access.
-# The chrooted %post cannot reliably mount USB partitions — mount fails
-# silently inside the /mnt/sysroot chroot.
+# Stages to /var/tmp/ on the system disk — /home is on a separate LUKS+Btrfs
+# volume (nvme1n1) and may not be mounted at /mnt/sysroot/home in this context.
+# A chrooted %post below moves from staging to the final /home/sdegroot/ location.
 %post --nochroot --log=/mnt/sysroot/root/kickstart-post-nochroot.log
+set -x
 
-echo "=== Post-install (nochroot): copying provisioning repo ==="
+echo "=== Post-install (nochroot): copying provisioning repo to staging ==="
+
+# Debug: show what's mounted under sysroot
+mount | grep sysroot
 
 OEMDRV_DEV="/dev/disk/by-label/OEMDRV"
 OEMDRV_MOUNT="/mnt/oemdrv"
-TARGET_DIR="/mnt/sysroot/home/sdegroot/provision-laptop"
+TARGET_DIR="/mnt/sysroot/var/tmp/provision-laptop"
 
 if [[ ! -e "$OEMDRV_DEV" ]]; then
     echo "ERROR: OEMDRV device not found at $OEMDRV_DEV"
@@ -124,12 +129,37 @@ if [[ ! -d "${OEMDRV_MOUNT}/provision-laptop" ]]; then
     exit 1
 fi
 
-echo "Copying provisioning repo from OEMDRV..."
+echo "Copying provisioning repo from OEMDRV to staging..."
 cp -a "${OEMDRV_MOUNT}/provision-laptop" "$TARGET_DIR"
-# Use numeric UID/GID — passwd is inside the chroot, not accessible here
-chown -R 1000:1000 "$TARGET_DIR"
-echo "Provisioning repo copied to $TARGET_DIR"
+du -sh "$TARGET_DIR"
+echo "Provisioning repo staged at $TARGET_DIR"
 
 umount "$OEMDRV_MOUNT"
 echo "=== Post-install (nochroot) complete ==="
+%end
+
+# Move provisioning repo from staging to /home/sdegroot/ (chrooted)
+# In the chroot context all target filesystems are mounted, so /home/sdegroot
+# is the real home directory on the data disk.
+%post --log=/root/kickstart-post-move-repo.log
+set -x
+
+STAGING="/var/tmp/provision-laptop"
+TARGET="/home/sdegroot/provision-laptop"
+
+if [[ ! -d "$STAGING" ]]; then
+    echo "WARNING: Staging dir not found. Clone manually after boot."
+    exit 0  # Never fail the install over this
+fi
+
+if [[ ! -d /home/sdegroot ]]; then
+    mkdir -p /home/sdegroot
+    chown sdegroot:sdegroot /home/sdegroot
+fi
+
+mv "$STAGING" "$TARGET"
+chown -R sdegroot:sdegroot "$TARGET"
+restorecon -R "$TARGET" 2>/dev/null || true
+
+echo "Provisioning repo moved to $TARGET"
 %end
