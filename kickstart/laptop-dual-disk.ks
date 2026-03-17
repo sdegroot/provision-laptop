@@ -61,7 +61,7 @@ ConditionPathExists=!/var/lib/kickstart-packages.done
 [Service]
 Type=oneshot
 ExecStart=/bin/bash -c ' \
-    rpm-ostree install \
+    rpm-ostree install --idempotent \
         libfido2 \
         yubikey-manager \
         pam-u2f && \
