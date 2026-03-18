@@ -95,4 +95,10 @@ iter_hardware_config_files() {
         [[ -f "$src" ]] || continue
         "$callback" "$src" "${effective_root}/etc/environment.d/$(basename "$src")"
     done
+
+    # containers -> /etc/containers/
+    for src in "${hardware_dir}"/containers/*; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/containers/$(basename "$src")"
+    done
 }
