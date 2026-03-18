@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wrapper for IntelliJ's flatpak terminal: runs the host's zsh via flatpak-spawn.
+# IntelliJ's "Shell path" field doesn't support arguments, so this script
+# invokes flatpak-spawn --host with the host's login shell.
+exec flatpak-spawn --host /usr/bin/zsh "$@"
