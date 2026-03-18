@@ -84,22 +84,15 @@ vmstat 1 3                                          # 'wa' < 5%, 'b' = 0–1
 
 3. **File a kernel bug** against btrfs or the AMD platform driver if the stale counter is reproducible — `procs_blocked` leaking is a kernel accounting bug.
 
-## Related: Stale `resume_offset`
+## Related: `resume_offset` Update (Staged)
 
-Also discovered during this investigation: the `resume_offset` kernel parameter is stale after the swapfile was recreated.
+The `resume_offset` kernel parameter was stale after the swapfile was recreated (old: 8133888, correct: 59048261). The provisioning system's `apply_hibernate()` in `lib/modules/hardware/apply.sh` correctly detected this and ran `rpm-ostree kargs --replace=resume_offset=59048261` at 14:19 on 2026-03-17. The change is staged and will take effect on next reboot — this is normal `rpm-ostree` behavior (kargs changes apply to the pending deployment).
 
-| Parameter | Current | Correct |
-|-----------|---------|---------|
-| `resume_offset` | 8133888 | 59048261 |
-
-This doesn't cause the mouse lag, but hibernate will fail until fixed:
+No code fix needed. After reboot, verify:
 
 ```bash
-sudo rpm-ostree kargs --replace="resume_offset=59048261"
-# Takes effect after reboot
+cat /proc/cmdline | grep -o 'resume_offset=[0-9]*'  # should show 59048261
 ```
-
-The provisioning system's `apply_hibernate()` in `lib/modules/hardware/apply.sh` has logic to update this, but it didn't trigger because the swapfile was recreated and the offset recalculated in the same run.
 
 ## Diagnostic Commands
 
