@@ -96,6 +96,24 @@ iter_hardware_config_files() {
         "$callback" "$src" "${effective_root}/etc/environment.d/$(basename "$src")"
     done
 
+    # fontconfig -> /etc/fonts/conf.d/
+    for src in "${hardware_dir}"/fontconfig/*.conf; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/fonts/conf.d/$(basename "$src")"
+    done
+
+    # NetworkManager configs -> /etc/NetworkManager/conf.d/
+    for src in "${hardware_dir}"/networkmanager/*.conf; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/NetworkManager/conf.d/$(basename "$src")"
+    done
+
+    # keyd configs -> /etc/keyd/
+    for src in "${hardware_dir}"/keyd/*.conf; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/keyd/$(basename "$src")"
+    done
+
     # containers -> /etc/containers/
     for src in "${hardware_dir}"/containers/*; do
         [[ -f "$src" ]] || continue
