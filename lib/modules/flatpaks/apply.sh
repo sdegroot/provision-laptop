@@ -71,13 +71,6 @@ if [[ -f "$OVERRIDES_FILE" ]]; then
                 expanded_value="${expanded_value//\$HOME/$HOME}"
                 expanded_value="${expanded_value//\$PATH//app/bin:/usr/bin}"
 
-                # Expand $MISE_TOOL_PATH → actual installed tool bin directories from mise.
-                # This avoids shim recursion (shim → mise → npm view → shim → ∞).
-                if [[ "$expanded_value" == *'$MISE_TOOL_PATH'* ]]; then
-                    mise_tool_path=$(mise ls --json 2>/dev/null \
-                        | jq -r '[to_entries[].value[] | select(.active == true) | .install_path] | unique | map(. + "/bin") | join(":")')
-                    expanded_value="${expanded_value//\$MISE_TOOL_PATH/$mise_tool_path}"
-                fi
 
                 current="$(flatpak override --user --show "$app_id" 2>/dev/null || true)"
                 if ! echo "$current" | grep -Fq "$expanded_value"; then
