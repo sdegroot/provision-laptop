@@ -38,6 +38,9 @@ org.libreoffice.LibreOffice
 com.jgraph.drawio.desktop
 com.calibre_ebook.calibre
 
+# Security
+org.gnome.seahorse.Application
+
 # Utilities
 org.gnome.Calculator
 org.gnome.TextEditor
