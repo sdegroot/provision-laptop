@@ -61,6 +61,27 @@ deploy_config_file() {
 
 apply_config_files() {
     iter_hardware_config_files deploy_config_file
+
+    # Copy fontconfig to Flatpak app config dirs (Flatpaks use per-app
+    # XDG_CONFIG_HOME and don't read /etc/fonts/conf.d/)
+    local fontconfig_src="${PROVISION_DIR}/hardware/fontconfig"
+    if [[ -z "${PROVISION_ROOT:-}" ]] && [[ -d "$fontconfig_src" ]]; then
+        for app_dir in "${HOME}"/.var/app/*/; do
+            [[ -d "$app_dir" ]] || continue
+            local fc_dest="${app_dir}config/fontconfig"
+            for src in "${fontconfig_src}"/*.conf; do
+                [[ -f "$src" ]] || continue
+                mkdir -p "$fc_dest"
+                local dest="${fc_dest}/fonts.conf"
+                if [[ -f "$dest" ]] && diff -q "$src" "$dest" &>/dev/null; then
+                    continue
+                fi
+                log_info "Deploying fontconfig to Flatpak: $(basename "$app_dir")"
+                cp "$src" "$dest"
+                changes_made=1
+            done
+        done
+    fi
 }
 
 # -------------------------------------------------------------------------
