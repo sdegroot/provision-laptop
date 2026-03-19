@@ -102,6 +102,19 @@ if [[ -z "${PROVISION_ROOT:-}" ]] && has_command systemctl; then
     done
 fi
 
+# Enable RPM-installed GNOME Shell extensions
+if [[ -z "$PROVISION_ROOT" ]] && has_command gnome-extensions; then
+    for ext_dir in /usr/share/gnome-shell/extensions/*/; do
+        [[ -d "$ext_dir" ]] || continue
+        uuid="$(basename "$ext_dir")"
+        if ! gnome-extensions info "$uuid" 2>/dev/null | grep -q 'Enabled: Yes'; then
+            log_info "Enabling RPM GNOME extension: ${uuid}"
+            gnome-extensions enable "$uuid" 2>/dev/null || true
+            changes_made=1
+        fi
+    done
+fi
+
 # Install GNOME Shell extensions from extensions.gnome.org
 GNOME_EXT_FILE="$(state_file_path "gnome-extensions.txt")"
 if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$GNOME_EXT_FILE" ]] && has_command gnome-extensions; then
