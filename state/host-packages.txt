@@ -52,6 +52,7 @@ podman-docker
 # Power management (tuned-ppd is in F43 base image, replaces power-profiles-daemon)
 
 # GNOME extensions
+gnome-shell-extension-appindicator
 gnome-shell-extension-gsconnect
 
 # 1Password (native RPM for SSH agent and browser integration)
