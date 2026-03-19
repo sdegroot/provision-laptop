@@ -48,6 +48,7 @@ google-arimo-fonts
 google-tinos-fonts
 google-cousine-fonts
 google-crosextra-caladea-fonts
+google-roboto-fonts
 
 # Podman
 podman-compose
