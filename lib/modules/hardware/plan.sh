@@ -97,6 +97,11 @@ plan_timers() {
         log_plan "Would enable ucsi-resume-rebind.service"
         changes_planned=1
     fi
+
+    if has_command netbird && ! systemctl is-enabled --quiet netbird.service 2>/dev/null; then
+        log_plan "Would enable netbird.service"
+        changes_planned=1
+    fi
 }
 
 # -------------------------------------------------------------------------

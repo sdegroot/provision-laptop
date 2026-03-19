@@ -187,6 +187,12 @@ apply_timers() {
         sudo systemctl enable ucsi-resume-rebind.service
         changes_made=1
     fi
+
+    if has_command netbird && ! systemctl is-enabled --quiet netbird.service 2>/dev/null; then
+        log_info "Enabling netbird.service"
+        sudo systemctl enable --now netbird.service
+        changes_made=1
+    fi
 }
 
 # -------------------------------------------------------------------------
