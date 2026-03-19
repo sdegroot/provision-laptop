@@ -44,6 +44,10 @@ jetbrains-mono-fonts
 
 # Fonts
 google-noto-sans-fonts
+google-arimo-fonts
+google-tinos-fonts
+google-cousine-fonts
+google-crosextra-caladea-fonts
 
 # Podman
 podman-compose
