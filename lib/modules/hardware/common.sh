@@ -72,6 +72,12 @@ iter_hardware_config_files() {
             "${effective_root}/etc/systemd/sleep.conf.d/sleep.conf"
     fi
 
+    # logind.conf -> /etc/systemd/logind.conf.d/
+    if [[ -f "${hardware_dir}/systemd/logind.conf" ]]; then
+        "$callback" "${hardware_dir}/systemd/logind.conf" \
+            "${effective_root}/etc/systemd/logind.conf.d/logind.conf"
+    fi
+
     # zram-generator.conf -> /etc/systemd/zram-generator.conf.d/
     if [[ -f "${hardware_dir}/systemd/zram-generator.conf" ]]; then
         "$callback" "${hardware_dir}/systemd/zram-generator.conf" \
