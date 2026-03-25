@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **EasyEffects** Flatpak — PipeWire audio effects processor with RNNoise-based
+  noise reduction for microphone input (filters keyboard typing sounds during calls).
+
 ### Changed
 - **monitors.xml** — add EDID-only matching policy so GNOME remembers display
   layout regardless of which DisplayPort connector the monitor lands on. Also

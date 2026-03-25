@@ -19,6 +19,9 @@ im.riot.Riot
 me.proton.Mail
 com.protonvpn.www
 
+# Audio
+com.github.wwmm.easyeffects
+
 # Media
 org.videolan.VLC
 com.transmissionbt.Transmission
