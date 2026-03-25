@@ -6,3 +6,6 @@ just-perfection-desktop@just-perfection
 
 # Impatience — speed up GNOME Shell animations
 impatience@gfxmonk.net
+
+# Forge — i3/Sway-style auto-tiling window manager for GNOME
+forge@jmmaranan.com
