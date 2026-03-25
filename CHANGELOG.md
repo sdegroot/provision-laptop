@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **macOS-style Ctrl+scroll zoom** — enabled GNOME's built-in screen magnifier with
+  proportional mouse tracking. Hold Ctrl and scroll (or pinch on touchpad) to zoom
+  the desktop. Starts at 1.0x (no zoom) so the magnifier being enabled has no
+  visual effect until you actually zoom.
+
 ### Changed
 - **Brave GPU acceleration** — added `brave-flags.conf` enabling Vulkan renderer,
   Skia Graphite, GPU compositing, and ANGLE Vulkan backend. Shifts rendering work
