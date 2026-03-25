@@ -214,6 +214,18 @@ apply_timers() {
         sudo systemctl enable --now netbird.service
         changes_made=1
     fi
+
+    if has_command keyd && ! systemctl is-enabled --quiet keyd.service 2>/dev/null; then
+        log_info "Enabling keyd.service"
+        sudo systemctl enable --now keyd.service
+        changes_made=1
+    elif has_command keyd && systemctl is-active --quiet keyd.service 2>/dev/null; then
+        # Reload if config changed
+        if [[ $changes_made -gt 0 ]]; then
+            log_info "Reloading keyd configuration"
+            sudo keyd reload
+        fi
+    fi
 }
 
 # -------------------------------------------------------------------------

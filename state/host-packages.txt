@@ -70,6 +70,9 @@ netbird-ui
 tailscale
 trayscale
 
+# Key remapping
+keyd
+
 # eBPF / network monitoring
 bcc-tools
 bpftrace
