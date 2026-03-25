@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **cameractrls** Flatpak — GTK app for tuning webcam settings (exposure, white
   balance, brightness, contrast) via v4l2 controls.
 
+### Fixed
+- **Touchpad cursor jumps while typing** — accidental palm/finger touches on the
+  touchpad during typing caused the cursor to move and click elsewhere. Added
+  `AttrPalmPressureThreshold=130` and `AttrPalmSizeThreshold=900` to the libinput
+  quirks file for more aggressive palm rejection on the SKIKK Green 7 touchpad.
+
 ### Changed
 - **monitors.xml** — add EDID-only matching policy so GNOME remembers display
   layout regardless of which DisplayPort connector the monitor lands on. Also

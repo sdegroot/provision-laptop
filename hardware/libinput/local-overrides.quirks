@@ -3,3 +3,5 @@ MatchName=UNIW0001:00 093A:0255 Touchpad
 MatchUdevType=touchpad
 MatchDMIModalias=dmi:*svnSKIKK:pnGreen7:*
 AttrEventCode=-BTN_RIGHT
+AttrPalmPressureThreshold=130
+AttrPalmSizeThreshold=900
