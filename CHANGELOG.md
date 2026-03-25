@@ -17,10 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   touchpad during typing caused the cursor to move and click elsewhere. Added
   `AttrPalmPressureThreshold=130` and `AttrPalmSizeThreshold=900` to the libinput
   quirks file for more aggressive palm rejection on the SKIKK Green 7 touchpad.
-- **1Password SSH signing prompts on every commit during rebase** — added
-  `sign-authority = "allow"` for the git signing key in the 1Password SSH agent
-  config so commit signing is auto-approved. SSH authentication still requires
-  manual approval.
+- **1Password SSH signing prompts on every commit during rebase** — replaced
+  `op-ssh-sign` with a caching wrapper (`git-ssh-sign`) that extracts the
+  signing key from 1Password once via `op read`, caches it in a dedicated
+  `ssh-agent` for 1 hour, and signs subsequent commits instantly via
+  `ssh-keygen`. Falls back to `op-ssh-sign` if the cache is unavailable.
+  SSH authentication (push/pull) remains unchanged via 1Password agent.
 
 ### Changed
 - **monitors.xml** — add EDID-only matching policy so GNOME remembers display

@@ -12,10 +12,3 @@ vault = "Private"
 
 [[ssh-keys]]
 vault = "Utrecht"
-
-# Auto-approve git commit signing to avoid repeated 1Password prompts
-# during rebase/batch operations. SSH authentication still requires approval.
-[[ssh-keys]]
-item = "SSH Key s.degrootx@gmail.com github"
-vault = "degroot.dev"
-sign-authority = "allow"

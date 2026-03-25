@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# git-ssh-sign — Cache-backed SSH signing for git commits.
+#
+# Replaces /opt/1Password/op-ssh-sign as gpg.ssh.program.
+# Caches the signing key in a local ssh-agent to avoid repeated
+# 1Password prompts during rebase and batch operations.
+#
+# First use after boot/cache expiry: one 1Password prompt (via op read).
+# Subsequent uses: instant signing from cache.
+#
+# SSH authentication (push/pull) is unaffected — still uses 1Password agent.
+
+set -euo pipefail
+
+SIGNING_SOCK="${XDG_RUNTIME_DIR}/ssh-signing-agent.sock"
+CACHE_TIMEOUT=3600 # 1 hour
+
+# 1Password secret reference (item ID used because name contains '@')
+OP_KEY_REF="op://degroot.dev/quizv6twxyxuuho4fsbaegmvby/private_key"
+
+# --- Parse -f <pubkey_file> from arguments ---
+key_file=""
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+    if [[ "${args[$i]}" == "-f" ]] && ((i + 1 < ${#args[@]})); then
+        key_file="${args[$((i + 1))]}"
+        break
+    fi
+done
+
+# --- Ensure signing agent is running ---
+if [[ ! -S "$SIGNING_SOCK" ]]; then
+    systemctl --user start ssh-signing-agent.service 2>/dev/null || true
+    for _ in 1 2 3 4 5; do
+        [[ -S "$SIGNING_SOCK" ]] && break
+        sleep 0.2
+    done
+fi
+
+if [[ ! -S "$SIGNING_SOCK" ]]; then
+    exec /opt/1Password/op-ssh-sign "$@"
+fi
+
+# --- Check if signing key is already cached ---
+key_cached=false
+if [[ -n "$key_file" && -f "$key_file" ]]; then
+    target_fp="$(ssh-keygen -lf "$key_file" 2>/dev/null | awk '{print $2}')"
+    if [[ -n "${target_fp:-}" ]]; then
+        if SSH_AUTH_SOCK="$SIGNING_SOCK" ssh-add -l 2>/dev/null | grep -qF "$target_fp"; then
+            key_cached=true
+        fi
+    fi
+fi
+
+# --- Load key into cache if needed ---
+if [[ "$key_cached" == false ]]; then
+    tmp_key="${XDG_RUNTIME_DIR}/.git-sign-key-$$"
+    trap 'rm -f "$tmp_key"' EXIT
+
+    if ! op read --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
+        rm -f "$tmp_key"
+        exec /opt/1Password/op-ssh-sign "$@"
+    fi
+
+    chmod 600 "$tmp_key"
+
+    if ! SSH_AUTH_SOCK="$SIGNING_SOCK" ssh-add -t "$CACHE_TIMEOUT" "$tmp_key" 2>/dev/null; then
+        rm -f "$tmp_key"
+        exec /opt/1Password/op-ssh-sign "$@"
+    fi
+
+    rm -f "$tmp_key"
+fi
+
+# --- Sign using cached key ---
+SSH_AUTH_SOCK="$SIGNING_SOCK" ssh-keygen "$@"

@@ -35,4 +35,4 @@
     gpgsign = true
 
 [gpg "ssh"]
-    program = /opt/1Password/op-ssh-sign
+    program = ~/.local/bin/git-ssh-sign
