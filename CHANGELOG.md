@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Epistola, Sittard-Geleen, Fluxzero, Personal, Company) that launch Brave
   with `--profile-directory`, so Junction can offer each profile as a separate
   target when opening links.
+- **Brave profile provisioning** — `state/brave-profiles.conf` declares profile
+  names and theme colors. The dotfiles module creates profile directories,
+  sets display names and colored themes in Preferences, and registers them in
+  Local State. Profiles are fully configured on a fresh install without
+  manual setup.
 
 ### Added
 - **Known limitation: no macOS-style pinch-to-zoom** — documented in hardware-setup.md.
