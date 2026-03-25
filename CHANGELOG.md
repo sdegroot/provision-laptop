@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Forge GNOME extension** — i3/Sway-style auto-tiling window manager for GNOME.
+  Automatically tiles windows into a tree layout with keyboard-driven split control,
+  tabbed containers, and vim-style window navigation.
+- **keyd key remapping** — remaps the ISO 102nd key (extra backslash/pipe between
+  left Shift and Z) to act as left Shift. Uses keyd daemon from the `alternateved/keyd`
+  COPR repo, deployed and managed by the hardware module.
+
 ### Fixed
 - **git-projects SSH failure on fresh install** — running `bin/apply` before
   configuring 1Password produced 53 cryptic "Permission denied (publickey)"
