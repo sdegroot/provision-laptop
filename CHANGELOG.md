@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   noise reduction for microphone input (filters keyboard typing sounds during calls).
 - **cameractrls** Flatpak — GTK app for tuning webcam settings (exposure, white
   balance, brightness, contrast) via v4l2 controls.
+- **git-credential-1password** — git credential helper that reads HTTPS
+  credentials from 1Password via `op read`. Configured per-host in `.gitconfig`
+  with custom `op-item`, `op-vault`, and `op-field` settings. Set up for
+  `git.sittard-geleen.nl` GitLab.
 
 ### Fixed
 - **Touchpad cursor jumps while typing** — accidental palm/finger touches on the

@@ -36,3 +36,10 @@
 
 [gpg "ssh"]
     program = ~/.local/bin/git-ssh-sign
+
+[credential "https://git.sittard-geleen.nl"]
+    helper = 1password
+    username = sdegroot
+    op-item = 6olpcequh34u3yc57ghufxi7de
+    op-vault = Epistola
+    op-field = credential
