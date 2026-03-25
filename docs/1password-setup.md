@@ -100,6 +100,56 @@ gh ssh-key add ~/.ssh/id_rsa.pub --type signing
 # Or copy from: git config user.signingkey
 ```
 
+## HTTPS Git Credentials
+
+Repositories that use HTTPS (e.g., self-hosted GitLab) authenticate via
+`git-credential-1password`, a custom git credential helper that reads
+tokens from 1Password via `op read`.
+
+### How it works
+
+1. Git needs credentials for an HTTPS remote
+2. Git calls `git-credential-1password get`
+3. The helper matches the host against `[credential "https://..."]` blocks
+   in `.gitconfig` to find the 1Password item ID, vault, and field
+4. It calls `op read` to fetch the token (may prompt for biometric if
+   1Password is locked)
+5. Returns the username and token to git
+
+### Adding a new host
+
+1. Store the personal access token in 1Password (note the item ID and vault)
+2. Add a credential block to `dotfiles/.gitconfig`:
+
+```gitconfig
+[credential "https://git.example.com"]
+    helper = 1password
+    username = myuser
+    op-item = <1password-item-id>
+    op-vault = <vault-name>
+    op-field = credential
+```
+
+The `op-item` should be the 1Password item ID (not the name, to avoid
+issues with special characters). Find it with `op item list | grep <name>`.
+The `op-field` defaults to `credential` if omitted.
+
+### Configured hosts
+
+| Host | Vault | Purpose |
+|---|---|---|
+| `git.sittard-geleen.nl` | Epistola | GitLab PAT |
+
+### Verification
+
+```bash
+# Test credential lookup (should print username + password)
+echo -e "protocol=https\nhost=git.sittard-geleen.nl\n" | git credential fill
+
+# Test fetch
+git -C ~/scm/sittard-geleen/epistola fetch
+```
+
 ## Browser Integration
 
 ### Extension installation
