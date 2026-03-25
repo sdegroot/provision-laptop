@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Brave GPU acceleration** — added `brave-flags.conf` enabling Vulkan renderer,
+  Skia Graphite, GPU compositing, and ANGLE Vulkan backend. Shifts rendering work
+  from CPU to AMD Radeon 880M, reducing sustained CPU usage from Brave renderer
+  processes.
+- **IntelliJ heap increase to 10 GB with ZGC** — custom `idea64.vmoptions` with
+  `-Xmx10240m` and `-XX:+UseZGC` (low-latency garbage collector), injected via
+  `IDEA_VM_OPTIONS` Flatpak env override. The default 2 GB heap caused frequent GC
+  cycles burning ~33% CPU even when idle. ZGC eliminates stop-the-world pauses.
+
 ### Added
 - **EasyEffects** Flatpak — PipeWire audio effects processor with RNNoise-based
   noise reduction for microphone input (filters keyboard typing sounds during calls).
