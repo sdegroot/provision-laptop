@@ -46,6 +46,15 @@ if has_command mise && [[ -z "$PROVISION_ROOT" ]]; then
     mise install --yes 2>&1 || log_warn "Some mise tools may have failed to install"
 fi
 
+# Install Claude Code native binary (replaces npm version)
+if [[ -z "$PROVISION_ROOT" ]]; then
+    if [[ ! -x "${HOME}/.local/bin/claude" ]]; then
+        log_info "Installing Claude Code (native binary)..."
+        curl -fsSL https://claude.ai/install.sh | bash
+        changes_made=1
+    fi
+fi
+
 # -------------------------------------------------------------------------
 # Create ~/.jdks/ symlinks for IntelliJ auto-discovery
 # -------------------------------------------------------------------------

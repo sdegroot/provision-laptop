@@ -8,8 +8,8 @@ python = "3.13"
 go = "latest"
 java = "25"
 
-# AI coding assistants (installed globally via npm)
-"npm:@anthropic-ai/claude-code" = "latest"
+# AI coding assistants
+# Claude Code uses native installer (see mise/apply.sh), not npm.
 "npm:@openai/codex" = "latest"
 "npm:@google/gemini-cli" = "latest"
 
