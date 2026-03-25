@@ -14,7 +14,7 @@ The provisioning system handles:
 2. Layering `1password` and `1password-cli` via rpm-ostree
 3. Configuring `SSH_AUTH_SOCK` to point to the 1Password agent (dotfiles)
 4. Configuring `~/.ssh/config` to use the agent socket (dotfiles)
-5. Git commit/tag signing via `op-ssh-sign` (dotfiles)
+5. Git commit/tag signing via `git-ssh-sign` caching wrapper (dotfiles)
 6. SSH agent vault config (`~/.config/1Password/ssh/agent.toml`)
 7. Browser extension auto-install via managed policies (Firefox + Brave)
 
@@ -46,18 +46,53 @@ provisioning and exposes keys from the `degroot.dev` and `Private` vaults.
 
 ## Git Commit Signing
 
-All commits and tags are signed via SSH using `op-ssh-sign`. The signing key
-(public) is configured in `.gitconfig`. To verify signing works:
+All commits and tags are signed via SSH. To avoid repeated 1Password prompts
+(especially painful during rebases), signing uses a caching wrapper instead of
+calling `op-ssh-sign` directly.
+
+### How it works
+
+1. Git calls `~/.local/bin/git-ssh-sign` (configured as `gpg.ssh.program`)
+2. The wrapper checks a dedicated `ssh-agent` (socket at `$XDG_RUNTIME_DIR/ssh-signing-agent.sock`)
+3. **Key cached** → signs instantly via `ssh-keygen`, no prompt
+4. **Key not cached** → extracts the private key from 1Password via `op read`
+   (one biometric prompt), loads it into the agent with a 1-hour timeout, then signs
+5. After the timeout expires, the next commit triggers one prompt again
+6. If anything fails, the wrapper falls back to `op-ssh-sign`
+
+The signing agent runs as a systemd user service (`ssh-signing-agent.service`),
+started automatically on login.
+
+SSH authentication (push/pull) is **not affected** — it continues to use the
+1Password agent socket via `~/.ssh/config`.
+
+### Components
+
+| File | Purpose |
+|---|---|
+| `dotfiles/.local/bin/git-ssh-sign` | Caching wrapper script |
+| `dotfiles/.config/systemd/user/ssh-signing-agent.service` | Dedicated ssh-agent for signing |
+| `dotfiles/.gitconfig` | `gpg.ssh.program = ~/.local/bin/git-ssh-sign` |
+
+### Verification
 
 ```bash
-# Make a test commit — should not prompt if "Allow when unlocked" is set
-echo test > /tmp/test && cd /tmp && git init test-sign && cd test-sign && git commit --allow-empty -m "test"
+# First commit after boot — prompts 1Password once
+git commit --allow-empty -m "test signing"
 
-# Verify signature
-git log --show-signature -1
+# Second commit — should sign instantly, no prompt
+git commit --amend --no-edit
+
+# Check the signing agent has the key cached
+SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/ssh-signing-agent.sock ssh-add -l
+
+# Clear the cache (next commit will prompt again)
+SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/ssh-signing-agent.sock ssh-add -D
 ```
 
-Add the same public key to GitHub as a **signing key** (separate from the
+### GitHub setup
+
+Add the signing public key to GitHub as a **signing key** (separate from the
 authentication key):
 
 ```bash
@@ -211,6 +246,10 @@ op account list
 ## Security Notes
 
 - 1Password vault is encrypted locally
-- SSH keys never leave 1Password
+- SSH authentication keys never leave 1Password — every push/pull requires approval
+- The signing key is temporarily cached in a local `ssh-agent` (in-memory only,
+  on tmpfs) for up to 1 hour. The private key is extracted via `op read`, loaded
+  into the agent, and the temporary file is deleted immediately. Signing keys
+  only prove commit authorship — they cannot grant access to any server or repo.
 - Biometric unlock supported (fingerprint if available)
 - Lock timeout configurable in 1Password settings
