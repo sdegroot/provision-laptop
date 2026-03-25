@@ -258,3 +258,31 @@ fwupdmgr update
 ### Battery Charge Thresholds
 
 Battery charge thresholds are not available on this hardware — the Tongfang BIOS does not expose the required EC interface. This would require firmware support from SKIKK/Tongfang.
+
+### I/O Pressure (PSI) False Positive on Silverblue
+
+The system consistently reports high I/O pressure (~70-80% `some` in `/proc/pressure/io`)
+and ~16% iowait in `/proc/stat` even when both NVMe drives are fully idle (zero in-flight
+I/O, no processes in D state, no swap activity). This is a **kernel accounting artifact
+from composefs**, not real disk pressure.
+
+Fedora Silverblue 43 uses a composefs overlay for the root filesystem:
+
+```
+composefs on / type overlay (ro,lowerdir+=/run/ostree/.private/cfsroot-lower,
+  datadir+=/sysroot/ostree/repo/objects,redirect_dir=on,metacopy=on)
+```
+
+Every metadata lookup traverses the overlay stack, which the kernel counts as I/O stall
+time even when the data is served entirely from page cache. This inflates both the PSI
+metrics and the iowait counter.
+
+**How to confirm it's not real I/O:**
+- `/sys/block/nvme*/inflight` shows `0 0` (no pending reads/writes)
+- `/sys/block/dm-*/inflight` shows `0 0` (LUKS layer also idle)
+- `ps aux | awk '$8 ~ /D/'` returns nothing (no uninterruptible sleep)
+- `/proc/vmstat` shows `pswpin 0`, `pswpout 0` (no swap activity)
+- `/proc/pressure/memory` shows `0.00` (no memory pressure)
+
+**Impact:** None. The false iowait does not affect performance or cause fan spin-up.
+Ignore the I/O pressure numbers when diagnosing performance issues on Silverblue.
