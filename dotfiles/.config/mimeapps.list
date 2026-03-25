@@ -1,0 +1,10 @@
+[Added Associations]
+x-scheme-handler/sms=org.gnome.Shell.Extensions.GSConnect.desktop;
+x-scheme-handler/tel=org.gnome.Shell.Extensions.GSConnect.desktop;
+
+[Default Applications]
+text/html=re.sonny.Junction.desktop
+x-scheme-handler/http=re.sonny.Junction.desktop
+x-scheme-handler/https=re.sonny.Junction.desktop
+x-scheme-handler/about=re.sonny.Junction.desktop
+x-scheme-handler/unknown=re.sonny.Junction.desktop
