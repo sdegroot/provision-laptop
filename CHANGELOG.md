@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Junction browser chooser** — intercepts link opens and presents a picker
+  for which browser/profile to use. Set as default handler for HTTP/HTTPS via
+  xdg-settings. Added `re.sonny.Junction` Flatpak.
+- **Brave per-profile .desktop files** — six `.desktop` entries (Utrecht,
+  Epistola, Sittard-Geleen, Fluxzero, Personal, Company) that launch Brave
+  with `--profile-directory`, so Junction can offer each profile as a separate
+  target when opening links.
+
 ### Changed
 - **Brave GPU acceleration** — added `brave-flags.conf` enabling Vulkan renderer,
   Skia Graphite, GPU compositing, and ANGLE Vulkan backend. Shifts rendering work

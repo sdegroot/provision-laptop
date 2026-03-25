@@ -4,6 +4,7 @@
 # Browsers
 org.mozilla.firefox
 com.brave.Browser
+re.sonny.Junction
 
 # Development
 com.jetbrains.IntelliJ-IDEA-Ultimate

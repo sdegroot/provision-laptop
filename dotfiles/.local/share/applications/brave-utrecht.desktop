@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Brave (Utrecht)
+Comment=Brave Browser - Utrecht profile
+Exec=flatpak run com.brave.Browser --profile-directory=Default
+Icon=brave-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;

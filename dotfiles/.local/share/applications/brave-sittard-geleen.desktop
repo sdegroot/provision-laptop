@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Brave (Sittard-Geleen)
+Comment=Brave Browser - Sittard-Geleen profile
+Exec=flatpak run com.brave.Browser --profile-directory="Profile 2"
+Icon=brave-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
