@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **monitors.xml** — add EDID-only matching policy so GNOME remembers display
+  layout regardless of which DisplayPort connector the monitor lands on. Also
+  synced docked (Dell S2722DC + laptop) and undocked configurations.
+
 ### Added
 - **Forge GNOME extension** — i3/Sway-style auto-tiling window manager for GNOME.
   Automatically tiles windows into a tree layout with keyboard-driven split control,
