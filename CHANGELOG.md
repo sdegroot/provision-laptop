@@ -24,7 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the radeonsi VA-API driver to `/usr/lib64/dri-freeworld/` but libva only searches
   `/usr/lib64/dri/` by default. Brave (and other apps) fell back to software decoding,
   causing ~450% CPU usage during video playback. Added `LIBVA_DRIVERS_PATH` environment
-  variable via `environment.d` to point libva to the freeworld driver path.
+  variable via `environment.d` for host apps, and Flatpak overrides for Brave, Firefox,
+  and VLC (Flatpak sandbox has the driver at a different non-standard path).
 - **git-projects SSH failure on fresh install** — running `bin/apply` before
   configuring 1Password produced 53 cryptic "Permission denied (publickey)"
   errors. The git-projects module now checks for the 1Password SSH agent socket
