@@ -286,3 +286,25 @@ metrics and the iowait counter.
 
 **Impact:** None. The false iowait does not affect performance or cause fan spin-up.
 Ignore the I/O pressure numbers when diagnosing performance issues on Silverblue.
+
+## Known Limitations
+
+### No macOS-style pinch-to-zoom on GNOME/Wayland
+
+GNOME does not have smooth, compositor-level screen zoom like macOS (Ctrl+pinch on
+trackpad) or KDE Plasma (Meta+Ctrl+Scroll). The built-in accessibility magnifier
+(`org.gnome.desktop.a11y.magnifier`) can be enabled and combined with Ctrl+scroll,
+but it causes rendering artifacts on multi-workspace setups and the zoom-out behavior
+is unreliable (tested on GNOME 49.5, March 2025).
+
+**Alternatives investigated (2025-03):**
+
+| Tool | Status | Issue |
+|------|--------|-------|
+| GNOME built-in magnifier | Tested, reverted | Artifacts on virtual desktops, can't zoom back to 1.0x reliably |
+| [Better Desktop Zoom](https://github.com/popov895/better-desktop-zoom) | Not compatible | Supports GNOME 42-47 only; open issue for GNOME 48+ (#11); uses same magnifier backend |
+| wooz, woomer | Not suitable | Frozen-screenshot zoom, not live desktop |
+| Wayscriber | Not suitable | Presentation tool, frozen-screenshot zoom |
+
+KDE Plasma has proper compositor-level smooth zoom (KWin desktop effect). There is no
+equivalent in Mutter and no active GNOME development to add it.

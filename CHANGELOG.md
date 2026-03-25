@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with `--profile-directory`, so Junction can offer each profile as a separate
   target when opening links.
 
+### Added
+- **Known limitation: no macOS-style pinch-to-zoom** — documented in hardware-setup.md.
+  GNOME's built-in magnifier causes rendering artifacts and unreliable zoom-out on
+  GNOME 49.5. Best third-party option (Better Desktop Zoom) only supports GNOME 42-47.
+
 ### Changed
 - **Brave GPU acceleration** — added `brave-flags.conf` enabling Vulkan renderer,
   Skia Graphite, GPU compositing, and ANGLE Vulkan backend. Shifts rendering work
