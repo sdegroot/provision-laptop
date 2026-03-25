@@ -55,6 +55,15 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Install OpenCode native binary
+if [[ -z "$PROVISION_ROOT" ]]; then
+    if [[ ! -x "${HOME}/.opencode/bin/opencode" ]]; then
+        log_info "Installing OpenCode (native binary)..."
+        curl -fsSL https://opencode.ai/install | bash
+        changes_made=1
+    fi
+fi
+
 # -------------------------------------------------------------------------
 # Create ~/.jdks/ symlinks for IntelliJ auto-discovery
 # -------------------------------------------------------------------------
