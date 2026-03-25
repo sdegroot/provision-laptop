@@ -2,7 +2,7 @@
 Name=Brave (Fluxzero)
 Comment=Brave Browser - Fluxzero profile
 Exec=flatpak run com.brave.Browser --profile-directory=Fluxzero %U
-Icon=brave-browser
+Icon=brave-fluxzero
 Type=Application
 Categories=Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;

@@ -2,7 +2,7 @@
 Name=Brave (Utrecht)
 Comment=Brave Browser - Utrecht profile
 Exec=flatpak run com.brave.Browser --profile-directory=Utrecht %U
-Icon=brave-browser
+Icon=brave-utrecht
 Type=Application
 Categories=Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
