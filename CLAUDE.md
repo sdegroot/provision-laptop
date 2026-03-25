@@ -16,7 +16,7 @@ To run a single module: `bin/apply --module <name>` (also works with `bin/check`
 
 ### Modules (execution order)
 
-directories, repos, host-packages, flatpaks, dotfiles, security, hardware, mise, git-projects, toolboxes, containers
+directories, repos, host-packages, flatpaks, dotfiles, security, hardware, mise, usr-tools, git-projects, toolboxes, containers
 
 ### State files
 
