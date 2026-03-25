@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - **EasyEffects** Flatpak — PipeWire audio effects processor with RNNoise-based
   noise reduction for microphone input (filters keyboard typing sounds during calls).
+- **cameractrls** Flatpak — GTK app for tuning webcam settings (exposure, white
+  balance, brightness, contrast) via v4l2 controls.
 
 ### Changed
 - **monitors.xml** — add EDID-only matching policy so GNOME remembers display
