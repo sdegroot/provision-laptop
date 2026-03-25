@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Brave (Sittard-Geleen)
 Comment=Brave Browser - Sittard-Geleen profile
-Exec=flatpak run com.brave.Browser --profile-directory="Profile 1"
+Exec=flatpak run com.brave.Browser --profile-directory=Sittard-Geleen
 Icon=brave-browser
 Type=Application
 Categories=Network;WebBrowser;

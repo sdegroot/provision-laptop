@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Brave (Company)
 Comment=Brave Browser - Company profile
-Exec=flatpak run com.brave.Browser --profile-directory="Profile 5"
+Exec=flatpak run com.brave.Browser --profile-directory=Company
 Icon=brave-browser
 Type=Application
 Categories=Network;WebBrowser;

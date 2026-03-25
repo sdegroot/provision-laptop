@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Brave (Fluxzero)
 Comment=Brave Browser - Fluxzero profile
-Exec=flatpak run com.brave.Browser --profile-directory="Profile 4"
+Exec=flatpak run com.brave.Browser --profile-directory=Fluxzero
 Icon=brave-browser
 Type=Application
 Categories=Network;WebBrowser;

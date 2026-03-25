@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Brave (Personal)
 Comment=Brave Browser - Personal profile
-Exec=flatpak run com.brave.Browser --profile-directory=Default
+Exec=flatpak run com.brave.Browser --profile-directory=Personal
 Icon=brave-browser
 Type=Application
 Categories=Network;WebBrowser;
