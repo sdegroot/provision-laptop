@@ -61,10 +61,11 @@ if [[ "$key_cached" == false ]]; then
     # op:// URIs use the form op://<vault>/<item>/<field>.
     # A 1Password CLI bug corrupts the session after a failed op read,
     # so we must find the right account on the first try. We cache the
-    # vault→account mapping in $XDG_RUNTIME_DIR (cleared on reboot).
+    # vault→account mapping persistently. If an account moves, delete
+    # the cache file to trigger a fresh lookup.
     op_vault="${OP_KEY_REF#op://}"
     op_vault="${op_vault%%/*}"
-    op_cache="${XDG_RUNTIME_DIR}/.git-sign-accounts"
+    op_cache="${HOME}/.config/git-ssh-sign/vault-accounts.json"
     op_account=""
 
     # Try cached mapping first.
@@ -72,7 +73,7 @@ if [[ "$key_cached" == false ]]; then
         op_account="$(jq -r --arg v "$op_vault" '.[$v] // empty' "$op_cache" 2>/dev/null)"
     fi
 
-    # No cache — match vault name against account emails.
+    # No cache (or stale) — match vault name against account emails.
     if [[ -z "$op_account" ]]; then
         op_account="$(op account list --format=json 2>/dev/null \
             | jq -r --arg v "$op_vault" \
@@ -80,11 +81,27 @@ if [[ "$key_cached" == false ]]; then
     fi
 
     if [[ -z "$op_account" ]] || ! op read --account "$op_account" --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
-        rm -f "$tmp_key"
-        exec /opt/1Password/op-ssh-sign "$@"
+        # Cached account may be stale — clear it and retry with email lookup.
+        if [[ -f "$op_cache" ]]; then
+            jq --arg v "$op_vault" 'del(.[$v])' "$op_cache" > "${op_cache}.tmp" \
+                && mv "${op_cache}.tmp" "$op_cache"
+            op_account="$(op account list --format=json 2>/dev/null \
+                | jq -r --arg v "$op_vault" \
+                    '(.[] | select(.email | contains($v)) | .user_uuid) // (.[0].user_uuid)')"
+            if [[ -n "$op_account" ]] && op read --account "$op_account" --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
+                : # success — will cache below
+            else
+                rm -f "$tmp_key"
+                exec /opt/1Password/op-ssh-sign "$@"
+            fi
+        else
+            rm -f "$tmp_key"
+            exec /opt/1Password/op-ssh-sign "$@"
+        fi
     fi
 
     # Cache the successful mapping for future runs.
+    mkdir -p "$(dirname "$op_cache")"
     if [[ -f "$op_cache" ]]; then
         jq --arg v "$op_vault" --arg a "$op_account" '.[$v] = $a' "$op_cache" > "${op_cache}.tmp" \
             && mv "${op_cache}.tmp" "$op_cache"

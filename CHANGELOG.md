@@ -21,8 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   failed silently when multiple accounts were configured, falling back to the
   1Password GUI prompt on every commit. Resolves the correct account by matching
   the vault name from the `op://` URI against account emails, and caches the
-  vault→account mapping in `$XDG_RUNTIME_DIR`. Works around a 1Password CLI bug
-  where a failed `--account` call corrupts subsequent calls in the same session.
+  vault→account mapping persistently in `~/.config/git-ssh-sign/`. Works around
+  a 1Password CLI bug where a failed `--account` call corrupts subsequent calls
+  in the same session. Stale cache entries are auto-cleared and re-resolved.
 - **AC power state lost after suspend/resume** — ACPI BIOS bug causes
   `\_SB.ACDC.RTAC` to fail on resume, so the kernel misses AC adapter state.
   Added `ac-power-resume-refresh.service` that pokes the power_supply uevent
