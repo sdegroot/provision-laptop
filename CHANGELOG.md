@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   causing crashes (IOT instruction core dump, starship thread spawn failures).
 
 ### Fixed
+- **Keyboard intermittently dead after resume** — `i8042-resume-rescan.service`
+  was racing the kernel's own `i8042.reset=1` controller reset, causing
+  "Failed to enable keyboard" errors. Added a 2-second delay before the
+  reconnect to let the kernel reset complete first.
 - **SSH commit signing cache broken with multiple 1Password accounts** — `op read`
   failed silently when multiple accounts were configured, falling back to the
   1Password GUI prompt on every commit. Resolves the correct account by matching
