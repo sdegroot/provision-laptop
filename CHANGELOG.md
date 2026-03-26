@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   causing crashes (IOT instruction core dump, starship thread spawn failures).
 
 ### Fixed
+- **SSH commit signing cache broken with multiple 1Password accounts** — `op read`
+  failed silently when multiple accounts were configured, falling back to the
+  1Password GUI prompt on every commit. Now iterates accounts automatically.
 - **AC power state lost after suspend/resume** — ACPI BIOS bug causes
   `\_SB.ACDC.RTAC` to fail on resume, so the kernel misses AC adapter state.
   Added `ac-power-resume-refresh.service` that pokes the power_supply uevent

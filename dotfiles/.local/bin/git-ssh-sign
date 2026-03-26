@@ -57,7 +57,15 @@ if [[ "$key_cached" == false ]]; then
     tmp_key="${XDG_RUNTIME_DIR}/.git-sign-key-$$"
     trap 'rm -f "$tmp_key"' EXIT
 
-    if ! op read --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
+    key_loaded=false
+    while IFS= read -r acct_id; do
+        if op read --account "$acct_id" --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
+            key_loaded=true
+            break
+        fi
+    done < <(op account list --format=json 2>/dev/null | jq -r '.[].account_uuid')
+
+    if [[ "$key_loaded" == false ]]; then
         rm -f "$tmp_key"
         exec /opt/1Password/op-ssh-sign "$@"
     fi
