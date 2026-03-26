@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Disable-while-typing not working with keyd** — keyd grabs the physical
+  keyboard and re-emits keystrokes from a virtual keyboard, which libinput
+  treated as external (skipping DWT). Added a libinput quirk marking the keyd
+  virtual keyboard as internal so palm rejection works while typing.
+
 ### Added
 - **Junction browser chooser** — intercepts link opens and presents a picker
   for which browser/profile to use. Set as default handler for HTTP/HTTPS via
