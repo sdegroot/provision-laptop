@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Canonical HOME path via environment.d** — sets `HOME=/var/home/sdegroot` in
+  the systemd user session, eliminating `/home` vs `/var/home` symlink ambiguity
+  that caused duplicate file entries in IntelliJ conflict resolution.
+
 ### Changed
 - **Raise app.slice TasksMax from 4096 to 8192** — 4096 was too tight with
   IntelliJ, Brave, Gradle daemons, and Claude Code all running concurrently,
