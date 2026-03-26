@@ -57,17 +57,39 @@ if [[ "$key_cached" == false ]]; then
     tmp_key="${XDG_RUNTIME_DIR}/.git-sign-key-$$"
     trap 'rm -f "$tmp_key"' EXIT
 
-    key_loaded=false
-    while IFS= read -r acct_id; do
-        if op read --account "$acct_id" --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
-            key_loaded=true
-            break
-        fi
-    done < <(op account list --format=json 2>/dev/null | jq -r '.[].account_uuid')
+    # Resolve the 1Password account for the vault in OP_KEY_REF.
+    # op:// URIs use the form op://<vault>/<item>/<field>.
+    # A 1Password CLI bug corrupts the session after a failed op read,
+    # so we must find the right account on the first try. We cache the
+    # vault→account mapping in $XDG_RUNTIME_DIR (cleared on reboot).
+    op_vault="${OP_KEY_REF#op://}"
+    op_vault="${op_vault%%/*}"
+    op_cache="${XDG_RUNTIME_DIR}/.git-sign-accounts"
+    op_account=""
 
-    if [[ "$key_loaded" == false ]]; then
+    # Try cached mapping first.
+    if [[ -f "$op_cache" ]]; then
+        op_account="$(jq -r --arg v "$op_vault" '.[$v] // empty' "$op_cache" 2>/dev/null)"
+    fi
+
+    # No cache — match vault name against account emails.
+    if [[ -z "$op_account" ]]; then
+        op_account="$(op account list --format=json 2>/dev/null \
+            | jq -r --arg v "$op_vault" \
+                '(.[] | select(.email | contains($v)) | .user_uuid) // (.[0].user_uuid)')"
+    fi
+
+    if [[ -z "$op_account" ]] || ! op read --account "$op_account" --out-file "$tmp_key" "$OP_KEY_REF" 2>/dev/null; then
         rm -f "$tmp_key"
         exec /opt/1Password/op-ssh-sign "$@"
+    fi
+
+    # Cache the successful mapping for future runs.
+    if [[ -f "$op_cache" ]]; then
+        jq --arg v "$op_vault" --arg a "$op_account" '.[$v] = $a' "$op_cache" > "${op_cache}.tmp" \
+            && mv "${op_cache}.tmp" "$op_cache"
+    else
+        jq -n --arg v "$op_vault" --arg a "$op_account" '{($v): $a}' > "$op_cache"
     fi
 
     chmod 600 "$tmp_key"
