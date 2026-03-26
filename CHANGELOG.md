@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **AC power state lost after suspend/resume** — ACPI BIOS bug causes
+  `\_SB.ACDC.RTAC` to fail on resume, so the kernel misses AC adapter state.
+  Added `ac-power-resume-refresh.service` that pokes the power_supply uevent
+  after resume to force the EC to re-report the correct state.
 - **Disable-while-typing not working with keyd** — keyd grabs the physical
   keyboard and re-emits keystrokes from a virtual keyboard, which libinput
   treated as external (skipping DWT). Added a libinput quirk marking the keyd

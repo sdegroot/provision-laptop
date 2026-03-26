@@ -126,6 +126,13 @@ check_timers() {
         drift_found=1
     fi
 
+    if systemctl is-enabled --quiet ac-power-resume-refresh.service 2>/dev/null; then
+        log_ok "Service enabled: ac-power-resume-refresh.service"
+    else
+        log_error "Service not enabled: ac-power-resume-refresh.service"
+        drift_found=1
+    fi
+
     if has_command netbird; then
         if systemctl is-enabled --quiet netbird.service 2>/dev/null; then
             log_ok "Service enabled: netbird.service"

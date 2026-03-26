@@ -209,6 +209,12 @@ apply_timers() {
         changes_made=1
     fi
 
+    if ! systemctl is-enabled --quiet ac-power-resume-refresh.service 2>/dev/null; then
+        log_info "Enabling ac-power-resume-refresh.service"
+        sudo systemctl enable ac-power-resume-refresh.service
+        changes_made=1
+    fi
+
     if has_command netbird && ! systemctl is-enabled --quiet netbird.service 2>/dev/null; then
         log_info "Enabling netbird.service"
         sudo systemctl enable --now netbird.service
