@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Raise app.slice TasksMax from 4096 to 8192** — 4096 was too tight with
+  IntelliJ, Brave, Gradle daemons, and Claude Code all running concurrently,
+  causing crashes (IOT instruction core dump, starship thread spawn failures).
+
 ### Fixed
 - **AC power state lost after suspend/resume** — ACPI BIOS bug causes
   `\_SB.ACDC.RTAC` to fail on resume, so the kernel misses AC adapter state.
