@@ -19,6 +19,15 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check Docker Compose v2 plugin
+if [[ -z "$PROVISION_ROOT" ]]; then
+    COMPOSE_PLUGIN="${HOME}/.docker/cli-plugins/docker-compose"
+    if [[ ! -x "$COMPOSE_PLUGIN" ]]; then
+        log_plan "Would install Docker Compose v2 plugin (podman-compose lacks --scale support)"
+        changes_planned=1
+    fi
+fi
+
 while IFS= read -r line; do
     IFS=':' read -r name build_ctx description <<< "$line"
 
