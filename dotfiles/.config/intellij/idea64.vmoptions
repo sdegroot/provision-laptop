@@ -22,3 +22,4 @@
 -Djava.nio.file.spi.DefaultFileSystemProvider=com.intellij.platform.core.nio.fs.MultiRoutingFileSystemProvider
 -Dsun.tools.attach.tmp.only=true
 -Dawt.lock.fair=true
+-Duser.home=/var/home/sdegroot

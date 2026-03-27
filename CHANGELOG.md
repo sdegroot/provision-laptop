@@ -17,8 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **IntelliJ duplicate directories in project view** — IntelliJ (Flatpak) resolves
   the `/home → /var/home` symlink and writes `/var/home/...` into `.idea` files,
   while `$HOME` remains `/home/...`. This mismatch caused duplicate directory entries.
-  Added `HOME=/var/home/sdegroot` Flatpak environment override for IntelliJ so both
-  paths are consistent.
+  Added `HOME=/var/home/sdegroot` Flatpak environment override and
+  `-Duser.home=/var/home/sdegroot` JVM property for IntelliJ so both
+  the shell and Java use the canonical path.
 
 ### Changed
 - **Raise app.slice TasksMax from 4096 to 8192** — 4096 was too tight with
