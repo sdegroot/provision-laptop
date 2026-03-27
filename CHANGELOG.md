@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **GPU-accelerated webcam enhancement** — GStreamer + VA-API pipeline that applies
+  noise reduction and sharpening on the AMD GPU via `vaapipostproc`, outputting to a
+  v4l2loopback virtual camera ("Enhanced Webcam"). Apps like Zoom and Chrome see the
+  enhanced feed as a regular camera. New `webcam` module with `bin/webcam-enhance`
+  script and systemd user service. Packages: `akmod-v4l2loopback`, `v4l2loopback`,
+  `gstreamer1-vaapi`.
 - **Workspaces on all monitors** — sets `workspaces-only-on-primary` to `false`
   so GNOME workspaces span all connected displays, not just the primary.
 - **Canonical HOME path via environment.d** — sets `HOME=/var/home/sdegroot` in

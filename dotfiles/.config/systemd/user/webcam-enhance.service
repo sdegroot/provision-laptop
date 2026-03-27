@@ -1,0 +1,12 @@
+[Unit]
+Description=GPU-accelerated webcam enhancement (GStreamer + VA-API)
+ConditionPathExists=/dev/video10
+
+[Service]
+Type=simple
+ExecStart=%h/scm/sdegroot/provision-laptop/bin/webcam-enhance
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
