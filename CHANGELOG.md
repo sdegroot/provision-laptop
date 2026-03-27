@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Java version. All mise-managed JDKs remain auto-discoverable via `~/.jdks/java-*` for
   per-project SDK selection.
 
+### Fixed
+- **External monitor position not restored on reconnect** — the Dell S2722DC connector name
+  varies between reconnections (DP-1 through DP-7). Added a monitors.xml configuration entry
+  for every DP connector so GNOME always finds a matching layout regardless of which connector
+  the monitor appears on.
+
 ### Changed
 - **Touchpad accuracy** — switched from adaptive to flat acceleration profile and re-tuned
   speed (0.5 → 0.35). The adaptive profile decelerates slow movements, which on this
