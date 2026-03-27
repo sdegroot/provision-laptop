@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   that caused duplicate file entries in IntelliJ conflict resolution.
 
 ### Fixed
+- **Touchpad tap-to-click and fluidity** — relaxed palm rejection thresholds
+  (`AttrPalmPressureThreshold` 130→200, `AttrPalmSizeThreshold` 900→1100) so
+  light taps register reliably, and increased touchpad speed from 0.25 to 0.5
+  for smoother cursor movement. The keyd DWT quirk still handles typing rejection.
 - **IntelliJ duplicate directories in project view** — IntelliJ (Flatpak) resolves
   the `/home → /var/home` symlink and writes `/var/home/...` into `.idea` files,
   while `$HOME` remains `/home/...`. This mismatch caused duplicate directory entries.
