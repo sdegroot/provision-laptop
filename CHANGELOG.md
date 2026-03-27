@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Workspaces on all monitors** — sets `workspaces-only-on-primary` to `false`
+  so GNOME workspaces span all connected displays, not just the primary.
 - **Canonical HOME path via environment.d** — sets `HOME=/var/home/sdegroot` in
   the systemd user session, eliminating `/home` vs `/var/home` symlink ambiguity
   that caused duplicate file entries in IntelliJ conflict resolution.
