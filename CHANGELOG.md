@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the systemd user session, eliminating `/home` vs `/var/home` symlink ambiguity
   that caused duplicate file entries in IntelliJ conflict resolution.
 
+### Fixed
+- **IntelliJ duplicate directories in project view** — IntelliJ (Flatpak) resolves
+  the `/home → /var/home` symlink and writes `/var/home/...` into `.idea` files,
+  while `$HOME` remains `/home/...`. This mismatch caused duplicate directory entries.
+  Added `HOME=/var/home/sdegroot` Flatpak environment override for IntelliJ so both
+  paths are consistent.
+
 ### Changed
 - **Raise app.slice TasksMax from 4096 to 8192** — 4096 was too tight with
   IntelliJ, Brave, Gradle daemons, and Claude Code all running concurrently,
