@@ -47,6 +47,18 @@ if [[ -z "$PROVISION_ROOT" ]] && [[ -d "${MISE_INSTALLS}/java" ]]; then
     done
 fi
 
+# Check ~/.jdks/default symlink
+if [[ -z "$PROVISION_ROOT" ]]; then
+    default_link="${JDKS_DIR}/default"
+    active_java="$(mise where java 2>/dev/null)"
+    if [[ -n "$active_java" ]]; then
+        if [[ ! -L "$default_link" ]] || [[ "$(readlink "$default_link")" != "$active_java" ]]; then
+            log_plan "Would create default JDK symlink -> ${active_java}"
+            changes_planned=1
+        fi
+    fi
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No mise changes needed"
 fi

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **IntelliJ JAVA_HOME from mise** — set JAVA_HOME in IntelliJ's Flatpak overrides to
+  `~/.jdks/default`, a symlink managed by the mise module that tracks the active global
+  Java version. All mise-managed JDKs remain auto-discoverable via `~/.jdks/java-*` for
+  per-project SDK selection.
+
 ### Changed
 - **IntelliJ vmoptions** — added new 2026.1 default flags (`skiko.rendering.useScreenMenuBar`,
   `awt.toolkit.name`) to custom vmoptions file.

@@ -79,6 +79,26 @@ if [[ -z "$PROVISION_ROOT" ]] && [[ -d "${MISE_INSTALLS}/java" ]]; then
         fi
     done
 
+    # Create/update ~/.jdks/default symlink to mise's active Java version.
+    # IntelliJ uses this as JAVA_HOME via the flatpak override.
+    default_link="${JDKS_DIR}/default"
+    active_java="$(mise where java 2>/dev/null)"
+    if [[ -n "$active_java" ]]; then
+        if [[ -L "$default_link" ]]; then
+            current_target="$(readlink "$default_link")"
+            if [[ "$current_target" != "$active_java" ]]; then
+                log_info "Updating default JDK symlink -> ${active_java}"
+                rm "$default_link"
+                ln -s "$active_java" "$default_link"
+                changes_made=1
+            fi
+        else
+            log_info "Creating default JDK symlink -> ${active_java}"
+            ln -s "$active_java" "$default_link"
+            changes_made=1
+        fi
+    fi
+
     # Clean up stale symlinks (JDK versions removed from mise)
     for link in "${JDKS_DIR}"/java-*; do
         [[ -L "$link" ]] || continue
