@@ -72,6 +72,21 @@ plan_hibernate() {
         log_plan "Would add swapfile to fstab"
         changes_planned=1
     fi
+
+    # Check resume_offset drift
+    if [[ -f "$SWAPFILE_PATH" ]]; then
+        local actual_offset active_offset
+        actual_offset="$(get_swapfile_resume_offset "$SWAPFILE_PATH")"
+        active_offset="$(get_active_resume_offset)"
+
+        if [[ -z "$active_offset" ]]; then
+            log_plan "Would add resume_offset=${actual_offset} kernel param"
+            changes_planned=1
+        elif [[ -n "$actual_offset" ]] && [[ "$actual_offset" != "$active_offset" ]]; then
+            log_plan "Would fix resume_offset drift: ${active_offset} -> ${actual_offset}"
+            changes_planned=1
+        fi
+    fi
 }
 
 # -------------------------------------------------------------------------

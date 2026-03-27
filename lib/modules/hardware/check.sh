@@ -93,6 +93,25 @@ check_hibernate() {
             drift_found=1
         fi
     fi
+
+    # Check resume_offset matches actual btrfs swapfile physical offset
+    if [[ -z "${PROVISION_ROOT:-}" ]] && [[ -f "$swapfile" ]]; then
+        local actual_offset active_offset
+        actual_offset="$(get_swapfile_resume_offset "$swapfile")"
+        active_offset="$(get_active_resume_offset)"
+
+        if [[ -z "$active_offset" ]]; then
+            log_error "Missing resume_offset kernel param (hibernate won't work)"
+            drift_found=1
+        elif [[ -z "$actual_offset" ]]; then
+            log_warn "Could not determine swapfile physical offset"
+        elif [[ "$actual_offset" != "$active_offset" ]]; then
+            log_error "resume_offset drift: kernel has ${active_offset}, swapfile is at ${actual_offset}"
+            drift_found=1
+        else
+            log_ok "resume_offset: ${active_offset}"
+        fi
+    fi
 }
 
 # -------------------------------------------------------------------------

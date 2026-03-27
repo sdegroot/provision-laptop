@@ -153,7 +153,7 @@ apply_hibernate() {
     if ! echo "$current_kargs" | grep -q "resume="; then
         if [[ -n "$root_uuid" ]]; then
             local resume_offset
-            resume_offset="$(sudo filefrag -v "$SWAPFILE_PATH" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
+            resume_offset="$(get_swapfile_resume_offset "$SWAPFILE_PATH")"
             if [[ -n "$resume_offset" ]]; then
                 wait_for_rpm_ostree
                 log_info "Adding hibernate resume kernel params"
@@ -162,19 +162,17 @@ apply_hibernate() {
                 changes_made=1
             fi
         fi
-    elif [[ "$swapfile_needs_creation" -eq 1 ]] && echo "$current_kargs" | grep -q "resume_offset="; then
-        # Swapfile was recreated — the physical offset has changed
-        local new_offset
-        new_offset="$(sudo filefrag -v "$SWAPFILE_PATH" 2>/dev/null | awk 'NR==4{print $4}' | sed 's/\.\.//' || true)"
-        if [[ -n "$new_offset" ]]; then
-            local old_offset
-            old_offset="$(echo "$current_kargs" | grep -o 'resume_offset=[^ ]*')"
-            if [[ "resume_offset=${new_offset}" != "$old_offset" ]]; then
-                wait_for_rpm_ostree
-                log_info "Updating hibernate resume_offset kernel param"
-                sudo rpm-ostree kargs --replace="resume_offset=${new_offset}"
-                changes_made=1
-            fi
+    elif echo "$current_kargs" | grep -q "resume_offset="; then
+        # Always check for offset drift — btrfs balance can shift the
+        # swapfile's physical location without recreating the file.
+        local new_offset active_offset
+        new_offset="$(get_swapfile_resume_offset "$SWAPFILE_PATH")"
+        active_offset="$(get_active_resume_offset)"
+        if [[ -n "$new_offset" ]] && [[ "$new_offset" != "$active_offset" ]]; then
+            wait_for_rpm_ostree
+            log_info "Fixing resume_offset drift: ${active_offset} -> ${new_offset}"
+            sudo rpm-ostree kargs --replace="resume_offset=${new_offset}"
+            changes_made=1
         fi
     fi
 }

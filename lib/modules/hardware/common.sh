@@ -24,6 +24,19 @@ get_swapfile_expected_bytes() {
     echo $(( SWAPFILE_SIZE_GB * 1024 * 1024 * 1024 ))
 }
 
+# get_swapfile_resume_offset — return the physical offset for the btrfs swapfile.
+# Uses `btrfs inspect-internal map-swapfile` (correct for btrfs; filefrag is unreliable).
+get_swapfile_resume_offset() {
+    local path="${1:-${SWAPFILE_PATH}}"
+    sudo btrfs inspect-internal map-swapfile "$path" 2>/dev/null \
+        | awk '/Resume offset:/{print $NF}'
+}
+
+# get_active_resume_offset — return the resume_offset currently in kernel params.
+get_active_resume_offset() {
+    rpm-ostree kargs 2>/dev/null | grep -o 'resume_offset=[^ ]*' | cut -d= -f2
+}
+
 # ---------------------------------------------------------------------------
 # Config file iteration
 # ---------------------------------------------------------------------------

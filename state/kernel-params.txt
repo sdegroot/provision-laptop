@@ -22,9 +22,8 @@ i8042.reset=1
 # Helps AMD laptops reach the deepest S0ix sleep state
 acpi.ec_no_wakeup=1
 
-# Hibernate resume device and offset for btrfs swapfile at /var/swap/swapfile
-# The UUID matches the root btrfs filesystem on the LUKS device
-# The offset MUST match `btrfs inspect-internal map-swapfile /var/swap/swapfile`
-# If the swapfile is recreated or btrfs balance runs, the offset will change
+# Hibernate resume device — UUID of the root btrfs filesystem on the LUKS device
 resume=UUID=d30795fa-f9bf-4055-88e1-39f6fdde4b09
-resume_offset=61482240
+# NOTE: resume_offset is managed dynamically by check/apply (not in this file)
+# because btrfs balance can shift the swapfile's physical offset at any time.
+# See check_hibernate() and apply_hibernate() in lib/modules/hardware/.

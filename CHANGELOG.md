@@ -26,7 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   bug (`\_SB.ACDC.RTAC` not found) that prevents AC adapter detection during
   s2idle, the laptop drained battery instead of charging. Updated offset to
   match `btrfs inspect-internal map-swapfile` output and added resume params
-  to `state/kernel-params.txt` for drift detection.
+  to `state/kernel-params.txt` for drift detection. Added automatic
+  resume_offset drift detection to check/plan/apply — the offset is now
+  verified against `btrfs inspect-internal map-swapfile` on every run,
+  preventing silent breakage from btrfs balance or defrag.
 - **Keyboard intermittently dead after resume** — `i8042-resume-rescan.service`
   was racing the kernel's own `i8042.reset=1` controller reset, causing
   "Failed to enable keyboard" errors. Added a 2-second delay before the
