@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **IntelliJ vmoptions** — added new 2026.1 default flags (`skiko.rendering.useScreenMenuBar`,
+  `awt.toolkit.name`) to custom vmoptions file.
+
 ### Added
 - **GPU-accelerated webcam enhancement** — GStreamer + VA-API pipeline that applies
   noise reduction and sharpening on the AMD GPU via `vaapipostproc`, outputting to a

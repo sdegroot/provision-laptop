@@ -19,7 +19,9 @@
 -Djdk.nio.maxCachedBufferSize=2097152
 -Djava.util.zip.use.nio.for.zip.file.access=true
 -Dkotlinx.coroutines.debug=off
+-Dskiko.rendering.useScreenMenuBar=false
 -Djava.nio.file.spi.DefaultFileSystemProvider=com.intellij.platform.core.nio.fs.MultiRoutingFileSystemProvider
 -Dsun.tools.attach.tmp.only=true
 -Dawt.lock.fair=true
+-Dawt.toolkit.name=auto
 -Duser.home=/var/home/sdegroot
