@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   per-project SDK selection.
 
 ### Changed
+- **Touchpad accuracy** — switched from adaptive to flat acceleration profile and re-tuned
+  speed (0.5 → 0.35). The adaptive profile decelerates slow movements, which on this
+  low-resolution touchpad (12 units/mm) made fine cursor positioning feel sticky and imprecise.
 - **IntelliJ vmoptions** — added new 2026.1 default flags (`skiko.rendering.useScreenMenuBar`,
   `awt.toolkit.name`) to custom vmoptions file.
 
