@@ -13,10 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   per-project SDK selection.
 
 ### Fixed
-- **External monitor position not restored on reconnect** — the Dell S2722DC connector name
-  varies between reconnections (DP-1 through DP-7). Added a monitors.xml configuration entry
-  for every DP connector so GNOME always finds a matching layout regardless of which connector
-  the monitor appears on.
+- **External monitor position not restored on reconnect** — two issues: (1) the Dell S2722DC
+  connector name varies between reconnections (DP-1 through DP-7), so added monitors.xml entries
+  for every DP connector; (2) monitors.xml was symlinked, but Mutter needs a regular file it can
+  read and atomically rewrite. Introduced "seed files" (`state/dotfiles-seed.txt`) — files that
+  are copied once on first run, then left for the owning application to manage.
 
 ### Changed
 - **Touchpad accuracy** — switched from adaptive to flat acceleration profile and re-tuned
