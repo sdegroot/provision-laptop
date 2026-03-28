@@ -83,6 +83,16 @@ check_hibernate() {
         drift_found=1
     fi
 
+    # Check SELinux context on swapfile
+    if [[ -z "${PROVISION_ROOT:-}" ]] && command -v semanage &>/dev/null && [[ -f "$swapfile" ]]; then
+        if [[ "$(stat -c %C "$swapfile" 2>/dev/null)" == *:swapfile_t:* ]]; then
+            log_ok "Swapfile SELinux context: swapfile_t"
+        else
+            log_error "Swapfile SELinux context is not swapfile_t (run apply to fix)"
+            drift_found=1
+        fi
+    fi
+
     # Check fstab entry
     local fstab="${effective_root}/etc/fstab"
     if [[ -f "$fstab" ]]; then

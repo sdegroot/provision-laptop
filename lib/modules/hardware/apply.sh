@@ -134,6 +134,20 @@ apply_hibernate() {
         changes_made=1
     fi
 
+    # --- Step 1b: Ensure swapfile has correct SELinux context ---
+    if command -v semanage &>/dev/null; then
+        if ! sudo semanage fcontext -l | grep -q "$SWAPFILE_PATH"; then
+            log_info "Adding SELinux fcontext rule for swapfile"
+            sudo semanage fcontext -a -t swapfile_t "$SWAPFILE_PATH"
+            sudo restorecon -v "$SWAPFILE_PATH"
+            changes_made=1
+        elif [[ "$(stat -c %C "$SWAPFILE_PATH" 2>/dev/null)" != *:swapfile_t:* ]]; then
+            log_info "Restoring SELinux context on swapfile"
+            sudo restorecon -v "$SWAPFILE_PATH"
+            changes_made=1
+        fi
+    fi
+
     # --- Step 2: Ensure swapfile is in fstab ---
     if ! grep -q "$SWAPFILE_PATH" /etc/fstab 2>/dev/null; then
         log_info "Adding swapfile to fstab"
