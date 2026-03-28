@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   instead of `swapfile_t`, causing SELinux to block logind from reading it. This triggered a
   suspend-then-hibernate fallback loop that locked the screen even during active use. Apply now
   sets the correct fcontext rule and check verifies it.
+- **Suspend loop on battery** — `HandleLidSwitch=suspend-then-hibernate` caused a suspend loop
+  on battery because hibernate is not supported. Changed to plain `suspend` for both battery
+  and AC power.
 
 ### Added
 - **IntelliJ JAVA_HOME from mise** — set JAVA_HOME in IntelliJ's Flatpak overrides to
