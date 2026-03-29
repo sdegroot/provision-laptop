@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Mistral desktop launchers (previously all showed the generic Brave browser icon).
 
 ### Fixed
+- **Health report notification not showing** — `notify-send --action` kept the process alive waiting
+  for user interaction, but systemd killed it when the oneshot service exited. Replaced with a
+  simple fire-and-forget notification that includes a clickable link to the HTML report.
 - **Swapfile SELinux context** — swapfile at `/var/swap/swapfile` was created with `var_t` context
   instead of `swapfile_t`, causing SELinux to block logind from reading it. This triggered a
   suspend-then-hibernate fallback loop that locked the screen even during active use. Apply now

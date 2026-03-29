@@ -478,17 +478,13 @@ send_notification() {
         urgency="critical"
     fi
 
-    # notify-send with action to open HTML report
+    # Send notification synchronously (no --action, which requires a long-lived
+    # process that gets killed when the oneshot service exits its cgroup).
     notify-send \
         --urgency="$urgency" \
         --app-name="System Health" \
-        --action="open=Open Report" \
         "System Health Review" \
-        "$status_line" 2>/dev/null | while read -r action; do
-            if [[ "$action" == "open" ]]; then
-                xdg-open "$html_file" 2>/dev/null &
-            fi
-        done &
+        "${status_line}\n<a href=\"file://${html_file}\">Open Report</a>" 2>/dev/null || true
 }
 
 # ---------------------------------------------------------------------------
