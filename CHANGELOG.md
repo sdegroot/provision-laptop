@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on login, preventing startup failures after hard shutdowns.
 - **Dotfiles module enables services** — the dotfiles module now auto-enables `.service` units
   (with an `[Install]` section) in addition to timers.
+- **AI app launcher icons** — added distinct SVG icons for Claude, ChatGPT, Codex, Gemini, and
+  Mistral desktop launchers (previously all showed the Brave browser icon).
 
 ### Fixed
 - **Swapfile SELinux context** — swapfile at `/var/swap/swapfile` was created with `var_t` context

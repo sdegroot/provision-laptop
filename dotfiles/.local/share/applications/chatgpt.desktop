@@ -2,7 +2,7 @@
 Name=ChatGPT
 Comment=OpenAI ChatGPT
 Exec=flatpak run com.brave.Browser --app=https://chatgpt.com
-Icon=brave-browser
+Icon=chatgpt
 Type=Application
 Categories=Network;Chat;
 StartupWMClass=chatgpt.com__
