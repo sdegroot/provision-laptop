@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **IntelliJ lock cleanup service** — systemd user service that removes stale IntelliJ lock files
+  on login, preventing startup failures after hard shutdowns.
+- **Dotfiles module enables services** — the dotfiles module now auto-enables `.service` units
+  (with an `[Install]` section) in addition to timers.
+
 ### Fixed
 - **Swapfile SELinux context** — swapfile at `/var/swap/swapfile` was created with `var_t` context
   instead of `swapfile_t`, causing SELinux to block logind from reading it. This triggered a

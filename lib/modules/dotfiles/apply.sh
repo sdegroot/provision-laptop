@@ -115,15 +115,18 @@ if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
     done < <(parse_state_file "$ZSH_PLUGINS_FILE")
 fi
 
-# Enable systemd user timers
+# Enable systemd user timers and services
 if [[ -z "${PROVISION_ROOT:-}" ]] && has_command systemctl; then
-    for timer in "${DOTFILES_DIR}/.config/systemd/user/"*.timer; do
-        [[ -f "$timer" ]] || continue
+    for unit in "${DOTFILES_DIR}/.config/systemd/user/"*.timer \
+                "${DOTFILES_DIR}/.config/systemd/user/"*.service; do
+        [[ -f "$unit" ]] || continue
+        # Only enable units that have an [Install] section
+        grep -q '^\[Install\]' "$unit" || continue
         systemctl --user daemon-reload 2>/dev/null || true
-        timer_name="$(basename "$timer")"
-        if ! systemctl --user is-enabled --quiet "$timer_name" 2>/dev/null; then
-            log_info "Enabling user timer: ${timer_name}"
-            systemctl --user enable --now "$timer_name"
+        unit_name="$(basename "$unit")"
+        if ! systemctl --user is-enabled --quiet "$unit_name" 2>/dev/null; then
+            log_info "Enabling user unit: ${unit_name}"
+            systemctl --user enable --now "$unit_name"
             changes_made=1
         fi
     done
