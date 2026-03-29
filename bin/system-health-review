@@ -153,6 +153,90 @@ collect_security_advisories() {
     _cap_output "$outfile"
 }
 
+collect_sleep_cycles() {
+    local outfile="$1"
+    {
+        echo "=== Sleep configuration ==="
+        echo "mem_sleep: $(cat /sys/power/mem_sleep 2>/dev/null)"
+        echo ""
+
+        echo "=== Suspend/resume events (last 24h) ==="
+        journalctl --since="24 hours ago" --no-pager -q 2>/dev/null \
+            | grep -iE 'PM: suspend|PM: resume|systemd-sleep|Lid (open|clos)|suspend entry|suspend exit|amd_pmc|s0i3|lps0|Timekeeping suspended' \
+            || echo "(no suspend/resume events)"
+        echo ""
+
+        echo "=== Sleep state warnings (last 24h) ==="
+        journalctl --since="24 hours ago" --no-pager -q --priority=0..4 2>/dev/null \
+            | grep -iE 'suspend|sleep|wake|amd_pmc|s2idle|s0i3|deep.*sleep' \
+            || echo "(no sleep warnings)"
+    } > "$outfile"
+    _cap_output "$outfile"
+}
+
+collect_battery() {
+    local outfile="$1"
+    {
+        echo "=== Battery status ==="
+        local bat_path=""
+        for p in /sys/class/power_supply/BAT*; do
+            [[ -d "$p" ]] || continue
+            bat_path="$p"
+            echo "Device: $(basename "$p")"
+            echo "Status: $(cat "$p/status" 2>/dev/null)"
+            echo "Capacity: $(cat "$p/capacity" 2>/dev/null)%"
+            echo "Technology: $(cat "$p/technology" 2>/dev/null)"
+            echo "Cycle count: $(cat "$p/cycle_count" 2>/dev/null)"
+
+            local design_uah full_uah now_uah
+            design_uah="$(cat "$p/charge_full_design" 2>/dev/null)" || true
+            full_uah="$(cat "$p/charge_full" 2>/dev/null)" || true
+            now_uah="$(cat "$p/charge_now" 2>/dev/null)" || true
+
+            if [[ -n "$design_uah" && -n "$full_uah" && "$design_uah" -gt 0 ]]; then
+                local health=$(( full_uah * 100 / design_uah ))
+                echo "Design capacity: $(( design_uah / 1000 )) mAh"
+                echo "Full capacity: $(( full_uah / 1000 )) mAh"
+                echo "Battery health: ${health}%"
+            fi
+
+            local current_ua voltage_uv
+            current_ua="$(cat "$p/current_now" 2>/dev/null)" || true
+            voltage_uv="$(cat "$p/voltage_now" 2>/dev/null)" || true
+            if [[ -n "$current_ua" && -n "$voltage_uv" ]]; then
+                echo "Current draw: $(( current_ua / 1000 )) mA"
+                echo "Voltage: $(( voltage_uv / 1000 )) mV"
+                if [[ "$current_ua" -gt 0 && "$voltage_uv" -gt 0 ]]; then
+                    local power_mw=$(( current_ua / 1000 * (voltage_uv / 1000) / 1000 ))
+                    echo "Power draw: ${power_mw} mW"
+                fi
+            fi
+            echo ""
+        done
+
+        if [[ -z "$bat_path" ]]; then
+            echo "(no battery found)"
+        fi
+
+        echo "=== AC adapter ==="
+        for p in /sys/class/power_supply/AC* /sys/class/power_supply/ADP*; do
+            [[ -d "$p" ]] || continue
+            echo "Device: $(basename "$p")"
+            echo "Online: $(cat "$p/online" 2>/dev/null)"
+        done
+
+        echo ""
+        echo "=== USB-C power supplies ==="
+        for p in /sys/class/power_supply/ucsi-*; do
+            [[ -d "$p" ]] || continue
+            echo "Device: $(basename "$p")"
+            echo "Online: $(cat "$p/online" 2>/dev/null)"
+            echo "Type: $(cat "$p/type" 2>/dev/null)"
+        done
+    } > "$outfile"
+    _cap_output "$outfile"
+}
+
 # ---------------------------------------------------------------------------
 # Data file descriptions (used for Claude prompt and fallback report)
 # ---------------------------------------------------------------------------
@@ -167,6 +251,8 @@ DATA_FILES=(
     "network_state:Network State (IP addresses, listening ports)"
     "disk_usage:Disk Usage and Btrfs Device Stats"
     "security_advisories:Security Advisories (CVEs)"
+    "sleep_cycles:Sleep/Suspend Cycles and Wake Events"
+    "battery:Battery Status, Health, and Power Draw"
 )
 
 # print_collected_data <data_dir>
@@ -215,6 +301,8 @@ This is especially important for:
 - Failed services (search if this is a known Fedora issue, check if it affects system stability)
 - Btrfs errors (any non-zero device stats are serious — investigate immediately)
 - Recurring patterns in journal logs (same error repeating = something is broken)
+- Sleep/suspend issues (shallow sleep states, failed suspends, unexpected wake events)
+- Battery health degradation (compare full capacity vs design capacity, unusual drain rates)
 
 ## Output format
 Produce a concise Markdown report with exactly these sections:
@@ -232,6 +320,17 @@ and how to fix or restart it.
 
 ## Networking
 Any connectivity problems found. Include specific errors and fixes.
+
+## Sleep & Suspend
+Analyze suspend/resume cycles: how many in the last 24h, sleep durations, whether
+the system reached deepest sleep state (S0i3). Flag shallow sleep (amd_pmc warnings),
+unexpected wake events, and frequent short cycles (lid bounce). Calculate estimated
+battery drain per hour of sleep if data is available.
+
+## Battery & Power
+Current charge level, health (full vs design capacity percentage), cycle count,
+and current power draw. Flag battery health below 80%, unusual drain rates, or
+charging issues. If the system was on battery, estimate remaining time.
 
 ## Available Upgrades
 Summarize available OS and Flatpak updates. Call out security updates explicitly.
@@ -529,6 +628,8 @@ main() {
     collect_network_state "${data_dir}/network_state"
     collect_disk_usage "${data_dir}/disk_usage"
     collect_security_advisories "${data_dir}/security_advisories"
+    collect_sleep_cycles "${data_dir}/sleep_cycles"
+    collect_battery "${data_dir}/battery"
 
     log_info "Data saved to ${data_dir}"
 

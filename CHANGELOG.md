@@ -14,6 +14,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **AI app launcher icons** — added real brand icons for Claude, ChatGPT, Codex, Gemini, and
   Mistral desktop launchers (previously all showed the generic Brave browser icon).
 
+### Added
+- **Health report: sleep cycle tracking** — collects suspend/resume events, sleep durations,
+  sleep state config (s2idle vs deep), and amd_pmc warnings for shallow sleep detection.
+- **Health report: battery & power monitoring** — collects battery charge level, health
+  (full vs design capacity), cycle count, current power draw, AC/USB-C adapter status.
+
 ### Fixed
 - **Health report notification not showing** — `notify-send --action` kept the process alive waiting
   for user interaction, but systemd killed it when the oneshot service exited. Replaced with a
