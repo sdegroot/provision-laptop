@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - **sysstat** — added `sysstat` host package (provides `iostat`, `mpstat`, `pidstat`, `sar`).
 - **iotop** — added `iotop` host package for per-process I/O monitoring.
+- **Diagnostics tools** — added `smartmontools`, `dool`, `perf`, `nethogs`, and `tcpdump`.
 - **IntelliJ lock cleanup service** — systemd user service that removes stale IntelliJ lock files
   on login, preventing startup failures after hard shutdowns.
 - **Dotfiles module enables services** — the dotfiles module now auto-enables `.service` units

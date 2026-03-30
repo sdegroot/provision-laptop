@@ -37,6 +37,9 @@ libfprint
 lm_sensors
 sysstat
 iotop
+smartmontools
+dool
+[x86_64] perf
 [x86_64] kernel-tools
 [x86_64] powerstat
 
@@ -83,3 +86,5 @@ keyd
 # eBPF / network monitoring
 bcc-tools
 bpftrace
+nethogs
+tcpdump
