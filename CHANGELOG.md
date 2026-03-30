@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   driver after resume, fixing intermittent touchpad/mouse failures on the SKIKK laptop.
 
 ### Added
+- **sysstat** — added `sysstat` host package (provides `iostat`, `mpstat`, `sar`).
 - **IntelliJ lock cleanup service** — systemd user service that removes stale IntelliJ lock files
   on login, preventing startup failures after hard shutdowns.
 - **Dotfiles module enables services** — the dotfiles module now auto-enables `.service` units
