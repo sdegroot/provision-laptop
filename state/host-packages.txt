@@ -36,6 +36,7 @@ libfprint
 # Sensors and power monitoring
 lm_sensors
 sysstat
+iotop
 [x86_64] kernel-tools
 [x86_64] powerstat
 
