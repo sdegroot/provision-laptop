@@ -90,6 +90,11 @@ setup_test_tmpdir
 assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/i8042-resume-rescan.service"
 teardown_test_tmpdir
 
+begin_test "i2c-hid-resume-rebind service exists in repo"
+setup_test_tmpdir
+assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/i2c-hid-resume-rebind.service"
+teardown_test_tmpdir
+
 begin_test "sleep.conf exists in repo"
 setup_test_tmpdir
 assert_file_exists "${SCRIPT_DIR}/../hardware/systemd/sleep.conf"

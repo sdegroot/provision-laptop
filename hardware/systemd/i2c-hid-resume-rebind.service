@@ -1,0 +1,21 @@
+[Unit]
+Description=Rebind i2c-hid touchpad after resume
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+  hid_dev="0018:093A:0255.0001"; \
+  driver_path="/sys/bus/hid/drivers/hid-multitouch"; \
+  if [[ ! -d "$driver_path/$hid_dev" ]]; then \
+    echo "i2c-hid: device $hid_dev not found, skipping"; \
+    exit 0; \
+  fi; \
+  echo "i2c-hid: rebinding $hid_dev"; \
+  echo "$hid_dev" > "$driver_path/unbind" 2>/dev/null || true; \
+  sleep 1; \
+  echo "$hid_dev" > "$driver_path/bind" 2>/dev/null; \
+  echo "i2c-hid: rebind complete"'
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

@@ -162,6 +162,13 @@ check_timers() {
         drift_found=1
     fi
 
+    if systemctl is-enabled --quiet i2c-hid-resume-rebind.service 2>/dev/null; then
+        log_ok "Service enabled: i2c-hid-resume-rebind.service"
+    else
+        log_error "Service not enabled: i2c-hid-resume-rebind.service"
+        drift_found=1
+    fi
+
     if has_command netbird; then
         if systemctl is-enabled --quiet netbird.service 2>/dev/null; then
             log_ok "Service enabled: netbird.service"

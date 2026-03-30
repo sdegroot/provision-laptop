@@ -118,6 +118,11 @@ plan_timers() {
         changes_planned=1
     fi
 
+    if ! systemctl is-enabled --quiet i2c-hid-resume-rebind.service 2>/dev/null; then
+        log_plan "Would enable i2c-hid-resume-rebind.service"
+        changes_planned=1
+    fi
+
     if has_command netbird && ! systemctl is-enabled --quiet netbird.service 2>/dev/null; then
         log_plan "Would enable netbird.service"
         changes_planned=1

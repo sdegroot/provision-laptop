@@ -227,6 +227,12 @@ apply_timers() {
         changes_made=1
     fi
 
+    if ! systemctl is-enabled --quiet i2c-hid-resume-rebind.service 2>/dev/null; then
+        log_info "Enabling i2c-hid-resume-rebind.service"
+        sudo systemctl enable i2c-hid-resume-rebind.service
+        changes_made=1
+    fi
+
     if has_command netbird && ! systemctl is-enabled --quiet netbird.service 2>/dev/null; then
         log_info "Enabling netbird.service"
         sudo systemctl enable --now netbird.service

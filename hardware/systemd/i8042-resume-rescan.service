@@ -1,10 +1,23 @@
 [Unit]
-Description=Rescan i8042 keyboard after resume
+Description=Rescan i8042 keyboard/touchpad after resume
 After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'sleep 2; printf reconnect > /sys/bus/serio/devices/serio0/drvctl'
+ExecStart=/bin/bash -c '\
+  max=5; \
+  for attempt in $(seq 1 $max); do \
+    sleep 2; \
+    printf reconnect > /sys/bus/serio/devices/serio0/drvctl 2>/dev/null; \
+    sleep 1; \
+    if cat /sys/bus/serio/devices/serio0/description 2>/dev/null | grep -q "KBD"; then \
+      echo "i8042: keyboard reconnected on attempt $attempt"; \
+      exit 0; \
+    fi; \
+    echo "i8042: attempt $attempt/$max failed, retrying..."; \
+  done; \
+  echo "i8042: all $max attempts failed" >&2; \
+  exit 1'
 
 [Install]
 WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
