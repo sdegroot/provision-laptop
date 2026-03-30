@@ -1,23 +1,23 @@
 [Unit]
-Description=Rescan i8042 keyboard/touchpad after resume
+Description=Reset i8042 keyboard controller after resume
 After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
 
 [Service]
 Type=oneshot
 ExecStart=/bin/bash -c '\
-  max=5; \
-  for attempt in $(seq 1 $max); do \
-    sleep 2; \
-    printf reconnect > /sys/bus/serio/devices/serio0/drvctl 2>/dev/null; \
-    sleep 1; \
-    if cat /sys/bus/serio/devices/serio0/description 2>/dev/null | grep -q "KBD"; then \
-      echo "i8042: keyboard reconnected on attempt $attempt"; \
-      exit 0; \
-    fi; \
-    echo "i8042: attempt $attempt/$max failed, retrying..."; \
-  done; \
-  echo "i8042: all $max attempts failed" >&2; \
-  exit 1'
+  sleep 1; \
+  echo "i8042: unbinding platform driver..."; \
+  echo -n i8042 > /sys/bus/platform/drivers/i8042/unbind 2>/dev/null; \
+  sleep 1; \
+  echo "i8042: rebinding platform driver..."; \
+  echo -n i8042 > /sys/bus/platform/drivers/i8042/bind 2>/dev/null; \
+  sleep 2; \
+  if grep -rq "KBD" /sys/bus/serio/devices/serio*/description 2>/dev/null; then \
+    echo "i8042: keyboard controller reset successfully"; \
+  else \
+    echo "i8042: WARNING — no keyboard serio device after rebind" >&2; \
+    exit 1; \
+  fi'
 
 [Install]
 WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
