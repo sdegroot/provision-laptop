@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Launch a Brave web app, or focus its existing window if already open.
+# Usage: brave-app <url> <wm_class>
+#
+# - Uses the Default profile so sessions/cookies persist across launches
+# - Activates an existing window via GNOME Shell D-Bus instead of opening duplicates
+set -euo pipefail
+
+URL="${1:?Usage: brave-app <url> <wm_class>}"
+WM_CLASS="${2:?Usage: brave-app <url> <wm_class>}"
+
+# Try to activate an existing window matching the WM class via GNOME Shell
+activate_existing() {
+    local js
+    # GNOME Shell Eval runs JavaScript in the compositor context
+    js="$(cat <<JS
+(function() {
+    let dominated = global.get_window_actors()
+        .map(a => a.get_meta_window())
+        .find(w => w.get_wm_class() === '${WM_CLASS}'
+                 || w.get_wm_class_instance() === '${WM_CLASS}');
+    if (dominated) {
+        dominated.activate(global.get_current_time());
+        return 'activated';
+    }
+    return 'not_found';
+})()
+JS
+)"
+    local result
+    result=$(gdbus call --session \
+        --dest org.gnome.Shell \
+        --object-path /org/gnome/Shell \
+        --method org.gnome.Shell.Eval \
+        "$js" 2>/dev/null) || return 1
+
+    [[ "$result" == *"'activated'"* ]]
+}
+
+if activate_existing; then
+    exit 0
+fi
+
+exec flatpak run com.brave.Browser --profile-directory=Default --app="$URL"

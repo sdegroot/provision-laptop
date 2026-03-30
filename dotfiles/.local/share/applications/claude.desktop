@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Claude
 Comment=Anthropic Claude
-Exec=flatpak run com.brave.Browser --app=https://claude.ai
+Exec=brave-app https://claude.ai claude.ai__
 Icon=claude
 Type=Application
 Categories=Network;Chat;

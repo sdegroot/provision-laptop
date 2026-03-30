@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Improved
+- **AI app launchers** — persist authentication across launches by pinning Brave's Default profile,
+  and reuse existing windows instead of opening duplicates (via GNOME Shell D-Bus activation).
 - **i8042 keyboard resume** — added retry logic (up to 5 attempts) to the `i8042-resume-rescan`
   service so the internal keyboard reliably reconnects after suspend, instead of silently failing.
 - **i2c-hid touchpad resume** — new `i2c-hid-resume-rebind` service rebinds the i2c-hid-multitouch

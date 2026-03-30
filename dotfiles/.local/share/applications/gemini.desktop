@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Gemini
 Comment=Google Gemini
-Exec=flatpak run com.brave.Browser --app=https://gemini.google.com
+Exec=brave-app https://gemini.google.com gemini.google.com__
 Icon=gemini
 Type=Application
 Categories=Network;Chat;
