@@ -1,44 +1,28 @@
 #!/usr/bin/env bash
-# Launch a Brave web app, or focus its existing window if already open.
+# Launch a Brave web app, preventing duplicate windows.
 # Usage: brave-app <url> <wm_class>
 #
 # - Uses the Default profile so sessions/cookies persist across launches
-# - Activates an existing window via GNOME Shell D-Bus instead of opening duplicates
+# - Uses a lock file to prevent opening duplicate app windows
+# - Lock is cleared automatically when Brave is no longer running
 set -euo pipefail
 
 URL="${1:?Usage: brave-app <url> <wm_class>}"
 WM_CLASS="${2:?Usage: brave-app <url> <wm_class>}"
 
-# Try to activate an existing window matching the WM class via GNOME Shell
-activate_existing() {
-    local js
-    # GNOME Shell Eval runs JavaScript in the compositor context
-    js="$(cat <<JS
-(function() {
-    let dominated = global.get_window_actors()
-        .map(a => a.get_meta_window())
-        .find(w => w.get_wm_class() === '${WM_CLASS}'
-                 || w.get_wm_class_instance() === '${WM_CLASS}');
-    if (dominated) {
-        dominated.activate(global.get_current_time());
-        return 'activated';
-    }
-    return 'not_found';
-})()
-JS
-)"
-    local result
-    result=$(gdbus call --session \
-        --dest org.gnome.Shell \
-        --object-path /org/gnome/Shell \
-        --method org.gnome.Shell.Eval \
-        "$js" 2>/dev/null) || return 1
+LOCK_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/brave-app"
+mkdir -p "$LOCK_DIR"
+LOCK_FILE="${LOCK_DIR}/${WM_CLASS}.lock"
 
-    [[ "$result" == *"'activated'"* ]]
-}
+# Clean ALL stale locks if Brave is not running at all
+if ! pgrep -f "/app/brave/brave" > /dev/null 2>&1; then
+    rm -f "$LOCK_DIR"/*.lock
+fi
 
-if activate_existing; then
+# If lock exists, the app window is still open — don't launch a duplicate
+if [ -f "$LOCK_FILE" ]; then
     exit 0
 fi
 
+touch "$LOCK_FILE"
 exec flatpak run com.brave.Browser --profile-directory=Default --app="$URL"
