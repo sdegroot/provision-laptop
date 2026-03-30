@@ -187,6 +187,54 @@ For detailed diagnostics output, known ACPI issues, and workarounds, see [S2idle
 
 To run sleep diagnostics: `bin/s2idle-debug`
 
+### Resume Workarounds
+
+The SKIKK Green 7 has several devices that intermittently fail to reinitialize after
+suspend/resume. The hardware module deploys systemd services that run automatically on
+every resume to recover these devices.
+
+**`i8042-resume-rescan.service`** — Internal keyboard (PS/2 via i8042)
+
+The PS/2 keyboard controller (`atkbd serio0`) intermittently fails to deactivate/enable
+on resume, leaving the keyboard completely unresponsive. The kernel logs:
+```
+atkbd serio0: Failed to deactivate keyboard on isa0060/serio0
+atkbd serio0: Failed to enable keyboard on isa0060/serio0
+```
+This happens despite `i8042.reset=1` in the kernel parameters. The service sends a
+`reconnect` command to `/sys/bus/serio/devices/serio0/drvctl` and verifies the keyboard
+came back. It retries up to 5 times (2s wait + reconnect + 1s verify each) because a
+single attempt often fails — the controller may need multiple pokes to recover.
+
+**`i2c-hid-resume-rebind.service`** — Touchpad (i2c-hid via hid-multitouch)
+
+The touchpad (`UNIW0001:00 093A:0255`, HID device `0018:093A:0255.0001`) is connected
+via i2c-hid and bound to the `hid-multitouch` driver. After resume, the i2c-hid layer
+occasionally fails to re-enumerate the device, causing the mouse cursor to freeze. The
+service unbinds and rebinds the HID device from `hid-multitouch`, forcing a clean
+re-enumeration.
+
+**`ucsi-resume-rebind.service`** — USB-C hotplug (ucsi_acpi)
+
+The UCSI (USB Type-C Connector System Software Interface) driver loses its state after
+resume, breaking USB-C hotplug detection. The service unbinds and rebinds all USBC
+devices from the `ucsi_acpi` platform driver.
+
+**`ac-power-resume-refresh.service`** — AC power state (ACPI workaround)
+
+The ACPI BIOS has a known bug where the `\_SB.ACDC.RTAC` symbol is missing, causing
+the PEP `_DSM` method to fail on resume. This can leave the AC power state stale.
+The service refreshes the power state after resume.
+
+**Debugging resume issues:**
+```bash
+# Check if services ran successfully on last resume
+journalctl -u i8042-resume-rescan -u i2c-hid-resume-rebind -u ucsi-resume-rebind -u ac-power-resume-refresh --since today
+
+# Watch for keyboard/touchpad errors
+journalctl -b 0 -p err | grep -iE 'atkbd|serio|i2c|hid|touchpad'
+```
+
 ### VA-API Video Acceleration (x86_64 only)
 
 The repos module swaps the default mesa VA-API drivers for freeworld versions:
