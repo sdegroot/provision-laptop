@@ -7,8 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
-- **1Password git credential** — pinned `op-account` for `git.sittard-geleen.nl` to the
-  `degroot.dev` account, fixing push failures where the CLI defaulted to the wrong account (Flux).
+- **1Password git credential** — added `op-account` support to `git-credential-1password` helper
+  and pinned `git.sittard-geleen.nl` to the `degroot.dev` account, fixing push failures where `op`
+  defaulted to the wrong account (Flux).
 
 ### Improved
 - **AI app launchers** — persist authentication across launches by pinning Brave's Default profile,
