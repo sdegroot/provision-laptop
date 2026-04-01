@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Window Is Ready extension** — install GNOME Shell extension that suppresses the "is ready"
+  notification and focuses the window directly when clicking an already-open app in the launcher.
+
 ### Fixed
 - **1Password git credential** — added `op-account` support to `git-credential-1password` helper
   and pinned `git.sittard-geleen.nl` to the `degroot.dev` account, fixing push failures where `op`

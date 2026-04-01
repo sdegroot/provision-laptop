@@ -9,3 +9,6 @@ impatience@gfxmonk.net
 
 # Forge — i3/Sway-style auto-tiling window manager for GNOME
 forge@jmmaranan.com
+
+# Window Is Ready — remove "is ready" notification and focus the window
+windowIsReady_Remover@nunofarruca@gmail.com
