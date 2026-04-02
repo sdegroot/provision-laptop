@@ -4,6 +4,10 @@
 
 - Always commit changes to the repo after completing work.
 
+## System
+
+- This is a **Fedora Atomic** (immutable) system. Never use `dnf` — it is not available. Use `rpm-ostree` for host package management instead.
+
 ## Running Provisioning
 
 Use `make` targets or `bin/` scripts directly:
