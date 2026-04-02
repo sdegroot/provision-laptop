@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Mic noise suppression** — PipeWire echo-cancel module with WebRTC audio processing for
+  automatic noise suppression, echo cancellation, and gain control. Creates a "Noise Suppressed
+  Mic" virtual source that loads automatically — no extra app required.
 - **Window Is Ready extension** — install GNOME Shell extension that suppresses the "is ready"
   notification and focuses the window directly when clicking an already-open app in the launcher.
 
