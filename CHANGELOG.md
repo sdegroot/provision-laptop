@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Window Is Ready extension** — install GNOME Shell extension that suppresses the "is ready"
   notification and focuses the window directly when clicking an already-open app in the launcher.
 
+### Changed
+- **Ghostty** — disable `gtk-single-instance` to prevent ghost windows caused by D-Bus relay
+  race conditions when opening new windows with Ctrl+Shift+N.
+
 ### Fixed
 - **1Password git credential** — added `op-account` support to `git-credential-1password` helper
   and pinned `git.sittard-geleen.nl` to the `degroot.dev` account, fixing push failures where `op`
