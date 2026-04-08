@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **OBS Studio** — add Flatpak for webcam post-processing and virtual camera output via v4l2loopback.
 - **Mic noise suppression** — PipeWire echo-cancel module with WebRTC audio processing for
   automatic noise suppression, echo cancellation, and gain control. Creates a "Noise Suppressed
   Mic" virtual source that loads automatically — no extra app required.

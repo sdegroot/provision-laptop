@@ -22,6 +22,7 @@ com.protonvpn.www
 
 # Audio / Video
 com.github.wwmm.easyeffects
+com.obsproject.Studio
 hu.irl.cameractrls
 
 # Media
