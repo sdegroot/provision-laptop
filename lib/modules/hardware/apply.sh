@@ -50,7 +50,11 @@ deploy_config_file() {
     log_info "Deploying: ${dest}"
     sudo mkdir -p "$dest_dir"
     sudo cp "$src" "$dest"
-    sudo chmod 644 "$dest"
+    if [[ "$dest" == */system-sleep/* ]]; then
+        sudo chmod 755 "$dest"
+    else
+        sudo chmod 644 "$dest"
+    fi
     changes_made=1
 
     # Restart polkit if rules changed so they take effect immediately

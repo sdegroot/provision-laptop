@@ -138,4 +138,10 @@ iter_hardware_config_files() {
         [[ -f "$src" ]] || continue
         "$callback" "$src" "${effective_root}/etc/containers/$(basename "$src")"
     done
+
+    # system-sleep hooks -> /etc/systemd/system-sleep/
+    for src in "${hardware_dir}"/system-sleep/*.sh; do
+        [[ -f "$src" ]] || continue
+        "$callback" "$src" "${effective_root}/etc/systemd/system-sleep/$(basename "$src")"
+    done
 }

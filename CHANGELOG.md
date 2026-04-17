@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **S0i3 sleep hook** — unload v4l2loopback before suspend to allow the media engine (IPU/UMSCH/VPE) to idle,
+  enabling S0i3 deep sleep. Reloads the module on resume. Deployed via `hardware/system-sleep/`.
 - **OBS Studio** — add Flatpak for webcam post-processing and virtual camera output via v4l2loopback.
 - **Mic noise suppression** — PipeWire echo-cancel module with WebRTC audio processing for
   automatic noise suppression, echo cancellation, and gain control. Creates a "Noise Suppressed
