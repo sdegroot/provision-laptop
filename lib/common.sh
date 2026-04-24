@@ -21,6 +21,13 @@ PROVISION_ROOT="${PROVISION_ROOT:-}"
 # Ensure ~/.local/bin is in PATH (not always set in non-interactive shells)
 [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
 
+# Ensure Homebrew is in PATH (not set in non-interactive bash shells)
+if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+fi
+
 # ---------------------------------------------------------------------------
 # Color support
 # ---------------------------------------------------------------------------
