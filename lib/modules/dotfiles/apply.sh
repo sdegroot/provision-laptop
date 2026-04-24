@@ -72,20 +72,6 @@ while IFS= read -r src_file; do
     changes_made=1
 done < <(find "$DOTFILES_DIR" -type f | sort)
 
-# Apply dconf settings
-DCONF_FILE="$(state_file_path "dconf-settings.conf")"
-if [[ -f "$DCONF_FILE" ]]; then
-    while IFS= read -r line; do
-        read -r key value <<< "$line"
-        current="$(dconf read "$key" 2>/dev/null)"
-        if [[ "$current" != "$value" ]]; then
-            log_info "Setting dconf: ${key} = ${value}"
-            dconf write "$key" "$value"
-            changes_made=1
-        fi
-    done < <(parse_state_file "$DCONF_FILE")
-fi
-
 # Install zsh plugins via git clone
 ZSH_PLUGINS_FILE="$(state_file_path "zsh-plugins.conf")"
 ZSH_PLUGINS_DIR="${TARGET_HOME}/.local/share/zsh-plugins"
@@ -115,80 +101,9 @@ if [[ -f "$ZSH_PLUGINS_FILE" ]]; then
     done < <(parse_state_file "$ZSH_PLUGINS_FILE")
 fi
 
-# Enable systemd user timers and services
-if [[ -z "${PROVISION_ROOT:-}" ]] && has_command systemctl; then
-    for unit in "${DOTFILES_DIR}/.config/systemd/user/"*.timer \
-                "${DOTFILES_DIR}/.config/systemd/user/"*.service; do
-        [[ -f "$unit" ]] || continue
-        # Only enable units that have an [Install] section
-        grep -q '^\[Install\]' "$unit" || continue
-        systemctl --user daemon-reload 2>/dev/null || true
-        unit_name="$(basename "$unit")"
-        if ! systemctl --user is-enabled --quiet "$unit_name" 2>/dev/null; then
-            log_info "Enabling user unit: ${unit_name}"
-            systemctl --user enable --now "$unit_name"
-            changes_made=1
-        fi
-    done
-fi
-
-# Enable RPM-installed GNOME Shell extensions
-if [[ -z "$PROVISION_ROOT" ]] && has_command gnome-extensions; then
-    for ext_dir in /usr/share/gnome-shell/extensions/*/; do
-        [[ -d "$ext_dir" ]] || continue
-        uuid="$(basename "$ext_dir")"
-        if ! gnome-extensions info "$uuid" 2>/dev/null | grep -q 'Enabled: Yes'; then
-            log_info "Enabling RPM GNOME extension: ${uuid}"
-            gnome-extensions enable "$uuid" 2>/dev/null || true
-            changes_made=1
-        fi
-    done
-fi
-
-# Install GNOME Shell extensions from extensions.gnome.org
-GNOME_EXT_FILE="$(state_file_path "gnome-extensions.txt")"
-if [[ -z "$PROVISION_ROOT" ]] && [[ -f "$GNOME_EXT_FILE" ]] && has_command gnome-extensions; then
-    shell_version="$(gnome-shell --version 2>/dev/null | awk '{print int($3)}')"
-
-    while IFS= read -r uuid; do
-        if [[ -d "${HOME}/.local/share/gnome-shell/extensions/${uuid}" ]]; then
-            continue
-        fi
-
-        log_info "Installing GNOME extension: ${uuid}"
-        # Download from extensions.gnome.org
-        ext_info="$(curl -sf "https://extensions.gnome.org/extension-info/?uuid=${uuid}&shell_version=${shell_version}" 2>/dev/null || true)"
-        if [[ -z "$ext_info" ]]; then
-            log_error "Failed to fetch info for extension: ${uuid}"
-            continue
-        fi
-
-        download_url="$(echo "$ext_info" | python3 -c "
-import json,sys
-d=json.loads(sys.stdin.read(), strict=False)
-dl=d.get('download_url','')
-if dl: print(f'https://extensions.gnome.org{dl}')
-" 2>/dev/null || true)"
-
-        if [[ -z "$download_url" ]]; then
-            log_error "No compatible version for GNOME ${shell_version}: ${uuid}"
-            continue
-        fi
-
-        tmp_zip="$(mktemp /tmp/gnome-ext-XXXXXX.zip)"
-        if curl -sfL -o "$tmp_zip" "$download_url" && gnome-extensions install "$tmp_zip" 2>/dev/null; then
-            gnome-extensions enable "$uuid" 2>/dev/null || true
-            changes_made=1
-        else
-            log_error "Failed to install extension: ${uuid}"
-        fi
-        rm -f "$tmp_zip"
-    done < <(parse_state_file "$GNOME_EXT_FILE")
-fi
-
 # Configure Brave browser profiles (names + theme colors)
 BRAVE_PROFILES_FILE="$(state_file_path "brave-profiles.conf")"
-BRAVE_CONFIG_DIR="${TARGET_HOME}/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser"
+BRAVE_CONFIG_DIR="${TARGET_HOME}/Library/Application Support/BraveSoftware/Brave-Browser"
 
 if [[ -f "$BRAVE_PROFILES_FILE" ]] && [[ -d "$BRAVE_CONFIG_DIR" ]]; then
     while IFS= read -r line; do

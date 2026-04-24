@@ -1,4 +1,0 @@
-# Keep the I2C bus hosting the touchpad awake to prevent ~1s input lag
-# after idle. The AMDI0010:01 controller auto-suspends after 1000ms,
-# requiring a full bus wake on the next touch.
-ACTION=="add", SUBSYSTEM=="platform", KERNEL=="AMDI0010:01", ATTR{power/control}="on"

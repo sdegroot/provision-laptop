@@ -6,6 +6,17 @@
 ZSH_PLUGINS="${HOME}/.local/share/zsh-plugins"
 
 # ---------------------------------------------------------------------------
+# Homebrew
+# ---------------------------------------------------------------------------
+
+# Ensure Homebrew is in PATH (Apple Silicon vs Intel)
+if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+# ---------------------------------------------------------------------------
 # Completion
 # ---------------------------------------------------------------------------
 
@@ -25,19 +36,20 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" # Colored completions
     source "${ZSH_PLUGINS}/fzf-tab/fzf-tab.plugin.zsh"
 
 zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse --border
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color=always $realpath'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls -G $realpath'
 
 # ---------------------------------------------------------------------------
 # Plugins
 # ---------------------------------------------------------------------------
 
-# Syntax highlighting (RPM: zsh-syntax-highlighting)
-[[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
-    source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# Syntax highlighting (Homebrew)
+_brew_prefix="${HOMEBREW_PREFIX:-/opt/homebrew}"
+[[ -f "${_brew_prefix}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && \
+    source "${_brew_prefix}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
-# Autosuggestions (RPM: zsh-autosuggestions)
-[[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
-    source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+# Autosuggestions (Homebrew)
+[[ -f "${_brew_prefix}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && \
+    source "${_brew_prefix}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
 # History substring search
 [[ -f "${ZSH_PLUGINS}/zsh-history-substring-search/zsh-history-substring-search.zsh" ]] && \
@@ -90,10 +102,14 @@ bindkey '^[[3~' delete-char
 bindkey '^[[1;5D' backward-word
 bindkey '^[[1;5C' forward-word
 
+# Option+Left/Right for macOS
+bindkey '^[b' backward-word
+bindkey '^[f' forward-word
+
 # ---------------------------------------------------------------------------
 # Aliases
 # ---------------------------------------------------------------------------
-alias ls='ls --color=auto'
+alias ls='ls -G'
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
@@ -104,11 +120,13 @@ alias grep='grep --color=auto'
 # ---------------------------------------------------------------------------
 export PATH="${HOME}/.local/bin:${PATH}"
 
-# 1Password SSH agent (overrides GNOME Keyring)
+# 1Password SSH agent
 export SSH_AUTH_SOCK="${HOME}/.1password/agent.sock"
 
 # Podman socket — Docker-compatible API for tools like Testcontainers
-export DOCKER_HOST="unix://${XDG_RUNTIME_DIR}/podman/podman.sock"
+if [[ -S "${HOME}/.local/share/containers/podman/machine/podman.sock" ]]; then
+    export DOCKER_HOST="unix://${HOME}/.local/share/containers/podman/machine/podman.sock"
+fi
 
 # ---------------------------------------------------------------------------
 # Integrations
@@ -135,6 +153,3 @@ fi
 if [[ -f "${HOME}/.zshrc.local" ]]; then
     source "${HOME}/.zshrc.local"
 fi
-
-# opencode
-export PATH=/home/sdegroot/.opencode/bin:$PATH

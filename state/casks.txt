@@ -1,0 +1,52 @@
+# Homebrew casks (GUI applications)
+
+# Browsers
+firefox
+brave-browser
+
+# Development
+intellij-idea
+visual-studio-code
+
+# Communication
+signal
+slack
+mattermost
+element
+
+# Proton (Mail includes Calendar)
+proton-mail
+protonvpn
+
+# Media
+obs
+vlc
+transmission
+spotify
+
+# Privacy
+tor-browser
+
+# Connectivity
+localsend
+
+# Office / Productivity
+libreoffice
+drawio
+calibre
+
+# Security
+1password
+yubikey-manager
+
+# VPN
+tailscale
+
+# Window management
+rectangle
+
+# Key remapping
+karabiner-elements
+
+# Containers
+podman-desktop

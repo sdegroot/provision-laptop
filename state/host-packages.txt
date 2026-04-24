@@ -1,13 +1,10 @@
-# rpm-ostree layered packages
-# Keep this list minimal — prefer Flatpak and Toolbox over host packages.
+# Homebrew formulae (CLI tools and libraries)
+# Keep this list minimal — prefer casks for GUI apps.
 
 # Essential tools
-vim-enhanced
+vim
 htop
 git
-
-# Firmware and hardware
-fwupd
 
 # Shells
 zsh
@@ -17,73 +14,40 @@ zsh-autosuggestions
 # CLI tools
 gh
 fzf
-
-# YubiKey
-libfido2
-pam-u2f
-pamu2fcfg
-yubikey-manager
-
-# Fingerprint reader
-fprintd
-libfprint
-
-# ACPI / EDID diagnostics (dependencies of amd-debug-tools)
-[x86_64] acpica-tools
-[x86_64] edid-decode
-[x86_64] libdisplay-info-tools
-
-# Sensors and power monitoring
-lm_sensors
-sysstat
-iotop
-smartmontools
-[x86_64] perf
-[x86_64] kernel-tools
-[x86_64] powerstat
+ripgrep
+jq
+wget
+curl
+tree
 
 # Terminal
 ghostty
-jetbrains-mono-fonts
 
-# Fonts
-google-noto-sans-fonts
-google-arimo-fonts
-google-tinos-fonts
-google-cousine-fonts
-google-crosextra-caladea-fonts
-google-roboto-fonts
+# Fonts (requires homebrew/cask-fonts tap)
+font-jetbrains-mono
+font-noto-sans
+font-roboto
+font-liberation
 
 # Podman
+podman
 podman-compose
-podman-docker
 
-# Power management (tuned-ppd is in F43 base image, replaces power-profiles-daemon)
-
-# GNOME extensions
-gnome-shell-extension-appindicator
-gnome-shell-extension-gsconnect
-
-# 1Password (native RPM for SSH agent and browser integration)
-1password
+# Security
 1password-cli
+libfido2
 
 # VPN
 netbird
-netbird-ui
-tailscale
-trayscale
 
-# Webcam enhancement (virtual camera + GPU-accelerated pipeline)
-[x86_64] akmod-v4l2loopback
-[x86_64] v4l2loopback
-[x86_64] gstreamer1-vaapi
+# Monitoring
+smartmontools
 
-# Key remapping
-keyd
-
-# eBPF / network monitoring
-bcc-tools
-bpftrace
-nethogs
+# Network
 tcpdump
+
+# Prompt
+starship
+
+# Mise (runtime version manager)
+mise

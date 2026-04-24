@@ -17,14 +17,11 @@
 ~/.config/ai-sandbox:${USER}:0700
 ~/.local/share/ai-sandbox/logs:${USER}:0755
 
-# Zsh / zinit
-~/.local/share/zinit:${USER}:0755
+# Zsh plugins
+~/.local/share/zsh-plugins:${USER}:0755
 
-# YubiKey
-~/.config/Yubico:${USER}:0700
+# Screenshots (macOS defaults write points here)
+~/Pictures/Screenshots:${USER}:0755
 
-# System health reports
-~/.local/share/system-health/reports:${USER}:0755
-
-# Netbird VPN
-~/.config/netbird:${USER}:0700
+# Docker CLI plugins (for Docker Compose v2)
+~/.docker/cli-plugins:${USER}:0755

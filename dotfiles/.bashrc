@@ -3,6 +3,13 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
+# Homebrew
+if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+fi
+
 # History
 HISTSIZE=10000
 HISTFILESIZE=20000
@@ -18,7 +25,7 @@ shopt -s cdspell 2>/dev/null
 PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 
 # Aliases
-alias ls='ls --color=auto'
+alias ls='ls -G'
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
@@ -27,11 +34,13 @@ alias grep='grep --color=auto'
 # Local bin
 export PATH="${HOME}/.local/bin:${PATH}"
 
-# 1Password SSH agent (overrides GNOME Keyring)
+# 1Password SSH agent
 export SSH_AUTH_SOCK="${HOME}/.1password/agent.sock"
 
 # Podman socket — Docker-compatible API for tools like Testcontainers
-export DOCKER_HOST="unix://${XDG_RUNTIME_DIR}/podman/podman.sock"
+if [[ -S "${HOME}/.local/share/containers/podman/machine/podman.sock" ]]; then
+    export DOCKER_HOST="unix://${HOME}/.local/share/containers/podman/machine/podman.sock"
+fi
 
 # Mise (runtime version manager)
 if command -v mise &>/dev/null; then

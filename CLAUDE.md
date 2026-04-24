@@ -6,7 +6,7 @@
 
 ## System
 
-- This is a **Fedora Atomic** (immutable) system. Never use `dnf` — it is not available. Use `rpm-ostree` for host package management instead.
+- This is a **macOS** system. Use `brew` (Homebrew) for package management.
 
 ## Running Provisioning
 
@@ -20,8 +20,8 @@ To run a single module: `bin/apply --module <name>` (also works with `bin/check`
 
 ### Modules (execution order)
 
-directories, repos, host-packages, flatpaks, dotfiles, security, hardware, mise, usr-tools, git-projects, toolboxes, containers
+directories, taps, host-packages, casks, dotfiles, security, mise, usr-tools, git-projects, containers, mac-defaults
 
 ### State files
 
-Module configuration lives in `state/` (e.g., `state/gnome-extensions.txt`, `state/flatpaks.txt`, `state/host-packages.txt`). Module scripts live in `lib/modules/<name>/` with `apply.sh`, `check.sh`, and `plan.sh`.
+Module configuration lives in `state/` (e.g., `state/casks.txt`, `state/host-packages.txt`, `state/mac-defaults.conf`). Module scripts live in `lib/modules/<name>/` with `apply.sh`, `check.sh`, and `plan.sh`.

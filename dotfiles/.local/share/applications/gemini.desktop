@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Gemini
-Comment=Google Gemini
-Exec=brave-app https://gemini.google.com gemini.google.com__
-Icon=gemini
-Type=Application
-Categories=Network;Chat;
-StartupWMClass=gemini.google.com__

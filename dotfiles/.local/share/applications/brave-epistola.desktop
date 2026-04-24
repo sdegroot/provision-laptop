@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Brave (Epistola)
-Comment=Brave Browser - Epistola profile
-Exec=flatpak run com.brave.Browser --profile-directory=Epistola %U
-Icon=brave-epistola
-Type=Application
-Categories=Network;WebBrowser;
-MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;

@@ -4,29 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [Unreleased] — macOS Port
 
-### Changed
-- **Containers module** — rewrite for macOS with Podman: manage `podman machine` lifecycle
-  (init/start), download Docker Compose v2 darwin binary, remove systemd socket checks.
-  Switch ai-sandbox Containerfile from Fedora 43 + dnf to Ubuntu 24.04 + apt-get.
-- **Security module** — rewrite for macOS: use `dscl` for shell check, `stat -f` for permissions,
-  macOS path for 1Password `custom_allowed_browsers`, and `chsh` for shell changes. Removed all
-  Linux-specific checks (authselect, PAM/U2F, firewall, Flatpak browser policies, GNOME extensions).
+Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to macOS.
 
 ### Added
-- **S0i3 sleep hook** — unload v4l2loopback before suspend to allow the media engine (IPU/UMSCH/VPE) to idle,
-  enabling S0i3 deep sleep. Reloads the module on resume. Deployed via `hardware/system-sleep/`.
-- **OBS Studio** — add Flatpak for webcam post-processing and virtual camera output via v4l2loopback.
-- **Mic noise suppression** — PipeWire echo-cancel module with WebRTC audio processing for
-  automatic noise suppression, echo cancellation, and gain control. Creates a "Noise Suppressed
-  Mic" virtual source that loads automatically — no extra app required.
-- **Window Is Ready extension** — install GNOME Shell extension that suppresses the "is ready"
-  notification and focuses the window directly when clicking an already-open app in the launcher.
+- **taps module** — manage Homebrew taps (third-party repositories)
+- **casks module** — manage Homebrew cask GUI applications (replaces Flatpak)
+- **mac-defaults module** — apply macOS system preferences via `defaults write`
+- **bootstrap/mac.sh** — first-run setup script for a fresh Mac (Xcode CLI tools, Homebrew)
 
 ### Changed
-- **Ghostty** — disable `gtk-single-instance` to prevent ghost windows caused by D-Bus relay
-  race conditions when opening new windows with Ctrl+Shift+N.
+- **common.sh** — replace Linux helpers (rpm-ostree, silverblue) with macOS helpers
+  (homebrew_prefix, get_brew_formulae, get_brew_casks, is_macos)
+- **host-packages** — rewrite from rpm-ostree to Homebrew formulae
+- **dotfiles module** — remove GNOME/systemd/dconf/Flatpak logic, update Brave paths to
+  `~/Library/Application Support/BraveSoftware/Brave-Browser/`
+- **security module** — use `dscl` for shell check, `stat -f` for permissions, `chsh` for
+  shell changes, macOS path for 1Password
+- **containers module** — manage `podman machine` lifecycle (init/start), download Docker
+  Compose v2 darwin binary. Switch ai-sandbox from Fedora 43 to Ubuntu 24.04
+- **engine.sh** — remove Silverblue kickstart-packages wait logic
+- **.zshrc/.bashrc** — add Homebrew init, macOS-style `ls -G`, Homebrew plugin paths,
+  conditional Podman socket, Option+arrow key bindings
+- **directories state** — add macOS-specific dirs (Screenshots, docker cli-plugins)
+- **CLAUDE.md** — update for macOS system and new module list
+
+### Removed
+- **hardware module** — kernel params, modprobe, udev, sysctl, systemd sleep, hibernation
+- **webcam module** — v4l2loopback virtual camera
+- **toolboxes module** — Fedora Toolbox containers
+- **repos module** — RPM repositories and COPR (replaced by taps)
+- **flatpaks module** — Flatpak apps (replaced by casks)
+- Linux-only dotfiles: systemd units, autostart, pipewire, mimeapps.list, .desktop files,
+  icons, flatpak-host-shell, brave-app wrapper, .var/ Flatpak configs
+- Linux-only state files: kernel-params, repos.conf, flatpaks.txt, flatpak-overrides.conf,
+  toolbox-profiles.yml, gnome-extensions.txt, dconf-settings.conf, base-removals.txt,
+  authselect-features.txt, hostname.txt, browser-policies/, netbird-accounts.conf
+- `hardware/` directory with all modprobe, sysctl, udev, systemd, dracut configs
+- `lib/yaml.sh` (was only used by toolboxes module)
 
 ### Fixed
 - **1Password git credential** — added `op-account` support to `git-credential-1password` helper

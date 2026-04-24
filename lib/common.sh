@@ -81,7 +81,7 @@ state_file_path() {
 }
 
 # current_arch
-#   Returns the machine architecture (e.g. x86_64, aarch64).
+#   Returns the machine architecture (e.g. x86_64, arm64).
 #   Can be overridden via PROVISION_ARCH for testing.
 current_arch() {
     printf '%s\n' "${PROVISION_ARCH:-$(uname -m)}"
@@ -94,8 +94,8 @@ current_arch() {
 #
 #   Architecture tags: lines prefixed with [arch] are only included when
 #   the current architecture matches. Example:
-#     [x86_64] tuxedo-drivers    — only on x86_64
-#     vim-enhanced               — on all architectures
+#     [arm64] some-tool              — only on Apple Silicon
+#     vim                            — on all architectures
 parse_state_file() {
     local filepath="${1:?parse_state_file requires a file path argument}"
 
@@ -127,72 +127,41 @@ parse_state_file() {
 }
 
 # ---------------------------------------------------------------------------
-# Environment checks
+# Platform helpers
 # ---------------------------------------------------------------------------
 
-# require_root
-#   Exits with an error unless the script is running as root.
-#   Set PROVISION_ALLOW_NONROOT=1 to bypass this check (useful in tests).
-require_root() {
-    if [[ "${PROVISION_ALLOW_NONROOT:-}" == "1" ]]; then
-        return 0
-    fi
-
-    if [[ "$(id -u)" -ne 0 ]]; then
-        log_error "This script must be run as root."
-        exit 1
-    fi
+# is_macos
+#   Returns 0 if running on macOS, 1 otherwise.
+is_macos() {
+    [[ "$(uname)" == "Darwin" ]]
 }
 
-# is_silverblue
-#   Returns 0 if the system appears to be Fedora Silverblue, 1 otherwise.
-is_silverblue() {
-    [[ -x "${PROVISION_ROOT}/usr/bin/rpm-ostree" ]]
-}
-
-# wait_for_rpm_ostree [max_wait_seconds]
-#   Blocks until no rpm-ostree transaction is in progress.
-#   rpm-ostree can only run one transaction at a time; calling rpm-ostree
-#   while another transaction is active causes "transaction in progress"
-#   errors. This function polls `rpm-ostree status` for "State: busy" and
-#   waits until the daemon becomes idle.
-#   Returns 1 if the timeout is reached.
-wait_for_rpm_ostree() {
-    local max_wait="${1:-300}"
-    local waited=0
-    while rpm-ostree status 2>&1 | grep -qi "State:.*busy\|transaction in progress"; do
-        if [[ $waited -ge $max_wait ]]; then
-            log_error "Timed out waiting for rpm-ostree transaction (${max_wait}s)"
-            return 1
-        fi
-        if [[ $waited -eq 0 ]]; then
-            log_info "Waiting for rpm-ostree transaction to complete..."
-        fi
-        sleep 5
-        waited=$((waited + 5))
-    done
-}
-
-# wait_for_kickstart_packages
-#   If kickstart-packages.service is still running (first boot), wait for it
-#   to finish before proceeding. This avoids rpm-ostree transaction conflicts
-#   when the user runs bin/apply before the first-boot package layering completes.
-wait_for_kickstart_packages() {
-    if systemctl is-active --quiet kickstart-packages.service 2>/dev/null; then
-        log_info "Waiting for kickstart-packages.service to finish..."
-        local waited=0
-        local max_wait=600  # 10 minutes — first-boot layering can be slow
-        while systemctl is-active --quiet kickstart-packages.service 2>/dev/null; do
-            if [[ $waited -ge $max_wait ]]; then
-                log_error "Timed out waiting for kickstart-packages.service (${max_wait}s)"
-                return 1
-            fi
-            sleep 5
-            waited=$((waited + 5))
-        done
-        log_ok "kickstart-packages.service completed"
+# homebrew_prefix
+#   Returns the Homebrew prefix directory.
+#   /opt/homebrew on Apple Silicon, /usr/local on Intel.
+homebrew_prefix() {
+    if [[ "$(current_arch)" == "arm64" ]]; then
+        printf '%s\n' "/opt/homebrew"
+    else
+        printf '%s\n' "/usr/local"
     fi
 }
+
+# get_brew_formulae
+#   Prints the list of installed Homebrew formulae, one per line.
+get_brew_formulae() {
+    brew list --formula -1 2>/dev/null || true
+}
+
+# get_brew_casks
+#   Prints the list of installed Homebrew casks, one per line.
+get_brew_casks() {
+    brew list --cask -1 2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Environment checks
+# ---------------------------------------------------------------------------
 
 # has_command <command>
 #   Returns 0 if the given command is available on PATH, 1 otherwise.
@@ -200,19 +169,3 @@ has_command() {
     local cmd="${1:?has_command requires a command name argument}"
     command -v "$cmd" >/dev/null 2>&1
 }
-
-# get_layered_packages
-#   Prints the list of requested (layered) packages from the current
-#   rpm-ostree deployment, one per line.
-get_layered_packages() {
-    rpm-ostree status --json 2>/dev/null | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-deployments = data.get("deployments", [])
-if deployments:
-    pkgs = deployments[0].get("requested-packages", [])
-    for p in pkgs:
-        print(p)
-' 2>/dev/null || true
-}
-

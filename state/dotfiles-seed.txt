@@ -1,4 +1,3 @@
 # Seed files: copied from dotfiles/ on first run, then left alone.
-# Use for files that applications need to own and modify (e.g. GNOME monitors.xml).
+# Use for files that applications need to own and modify.
 # Paths are relative to the dotfiles/ directory.
-.config/monitors.xml

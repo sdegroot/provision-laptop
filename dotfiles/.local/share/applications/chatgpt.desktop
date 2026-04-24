@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=ChatGPT
-Comment=OpenAI ChatGPT
-Exec=brave-app https://chatgpt.com chatgpt.com__
-Icon=chatgpt
-Type=Application
-Categories=Network;Chat;
-StartupWMClass=chatgpt.com__
