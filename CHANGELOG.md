@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Containers module** — rewrite for macOS with Podman: manage `podman machine` lifecycle
+  (init/start), download Docker Compose v2 darwin binary, remove systemd socket checks.
+  Switch ai-sandbox Containerfile from Fedora 43 + dnf to Ubuntu 24.04 + apt-get.
+- **Security module** — rewrite for macOS: use `dscl` for shell check, `stat -f` for permissions,
+  macOS path for 1Password `custom_allowed_browsers`, and `chsh` for shell changes. Removed all
+  Linux-specific checks (authselect, PAM/U2F, firewall, Flatpak browser policies, GNOME extensions).
+
 ### Added
 - **S0i3 sleep hook** — unload v4l2loopback before suspend to allow the media engine (IPU/UMSCH/VPE) to idle,
   enabling S0i3 deep sleep. Reloads the module on resume. Deployed via `hardware/system-sleep/`.

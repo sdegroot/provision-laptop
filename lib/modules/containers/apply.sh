@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# containers/apply.sh — Build container images and install Docker Compose v2 plugin.
+# containers/apply.sh — Init Podman machine, install Docker Compose v2, build images on macOS.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../common.sh"
 
@@ -12,45 +12,49 @@ if ! has_command podman; then
     exit 0
 fi
 
-# Enable podman socket (Docker-compatible API for Testcontainers, etc.)
-if [[ -z "$PROVISION_ROOT" ]]; then
-    if ! systemctl --user is-enabled podman.socket &>/dev/null; then
-        log_info "Enabling podman.socket (Docker-compatible API)..."
-        systemctl --user enable --now podman.socket
-        changes_made=1
-    fi
+# Init Podman machine if none exists
+machine_name="$(podman machine list --format '{{.Name}}' 2>/dev/null | head -1)"
+if [[ -z "$machine_name" ]]; then
+    log_info "Initialising Podman machine..."
+    podman machine init
+    changes_made=1
+fi
+
+# Start Podman machine if not running
+machine_running="$(podman machine list --format '{{.Running}}' 2>/dev/null | head -1)"
+if [[ "$machine_running" != "true" ]]; then
+    log_info "Starting Podman machine..."
+    podman machine start
+    changes_made=1
 fi
 
 # Install Docker Compose v2 standalone plugin.
-# podman-docker shims `docker compose` to podman-compose, which lacks full
-# Docker Compose v2 compatibility (e.g. --scale). Installing the real
-# Docker Compose v2 binary as a CLI plugin takes priority over podman-compose.
-if [[ -z "$PROVISION_ROOT" ]]; then
-    COMPOSE_PLUGIN_DIR="${HOME}/.docker/cli-plugins"
-    COMPOSE_PLUGIN="${COMPOSE_PLUGIN_DIR}/docker-compose"
-    COMPOSE_ARCH="$(uname -m)"
-    # Docker releases use x86_64 and aarch64
-    COMPOSE_URL="https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${COMPOSE_ARCH}"
+# podman-compose lacks full Docker Compose v2 compatibility (e.g. --scale).
+# Installing the real Docker Compose v2 binary as a CLI plugin takes priority.
+COMPOSE_PLUGIN_DIR="${HOME}/.docker/cli-plugins"
+COMPOSE_PLUGIN="${COMPOSE_PLUGIN_DIR}/docker-compose"
+COMPOSE_ARCH="$(uname -m)"
+COMPOSE_URL="https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-darwin-${COMPOSE_ARCH}"
 
-    install_compose=0
-    if [[ ! -x "$COMPOSE_PLUGIN" ]]; then
-        install_compose=1
-    elif ! "${COMPOSE_PLUGIN}" version 2>/dev/null | grep -q "${DOCKER_COMPOSE_VERSION}"; then
-        install_compose=1
-    fi
+install_compose=0
+if [[ ! -x "$COMPOSE_PLUGIN" ]]; then
+    install_compose=1
+elif ! "${COMPOSE_PLUGIN}" version 2>/dev/null | grep -q "${DOCKER_COMPOSE_VERSION}"; then
+    install_compose=1
+fi
 
-    if [[ $install_compose -eq 1 ]]; then
-        log_info "Installing Docker Compose v${DOCKER_COMPOSE_VERSION} plugin..."
-        mkdir -p "$COMPOSE_PLUGIN_DIR"
-        if curl -fsSL "$COMPOSE_URL" -o "$COMPOSE_PLUGIN" && chmod +x "$COMPOSE_PLUGIN"; then
-            log_ok "Docker Compose v${DOCKER_COMPOSE_VERSION} installed"
-            changes_made=1
-        else
-            log_error "Failed to download Docker Compose v${DOCKER_COMPOSE_VERSION}"
-        fi
+if [[ $install_compose -eq 1 ]]; then
+    log_info "Installing Docker Compose v${DOCKER_COMPOSE_VERSION} plugin..."
+    mkdir -p "$COMPOSE_PLUGIN_DIR"
+    if curl -fsSL "$COMPOSE_URL" -o "$COMPOSE_PLUGIN" && chmod +x "$COMPOSE_PLUGIN"; then
+        log_ok "Docker Compose v${DOCKER_COMPOSE_VERSION} installed"
+        changes_made=1
+    else
+        log_error "Failed to download Docker Compose v${DOCKER_COMPOSE_VERSION}"
     fi
 fi
 
+# Build container images
 while IFS= read -r line; do
     IFS=':' read -r name build_ctx description <<< "$line"
 
