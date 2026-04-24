@@ -50,5 +50,11 @@ raycast
 # Key remapping
 karabiner-elements
 
+# Fonts
+font-jetbrains-mono
+font-noto-sans
+font-roboto
+font-liberation
+
 # Containers
 podman-desktop

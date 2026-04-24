@@ -1,4 +1,2 @@
 # Homebrew taps (third-party repositories)
 # One tap per line
-
-homebrew/cask-fonts

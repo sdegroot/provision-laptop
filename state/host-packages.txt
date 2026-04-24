@@ -23,11 +23,6 @@ tree
 # Terminal
 ghostty
 
-# Fonts (requires homebrew/cask-fonts tap)
-font-jetbrains-mono
-font-noto-sans
-font-roboto
-font-liberation
 
 # Podman
 podman
