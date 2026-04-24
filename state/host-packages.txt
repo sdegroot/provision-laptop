@@ -33,6 +33,9 @@ font-liberation
 podman
 podman-compose
 
+# Apple Containerization (native Linux containers on Apple Silicon)
+container
+
 # Security
 1password-cli
 libfido2
