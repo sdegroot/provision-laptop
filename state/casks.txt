@@ -4,6 +4,7 @@
 firefox
 brave-browser
 finicky
+browserosaurus
 
 # Terminal
 ghostty
