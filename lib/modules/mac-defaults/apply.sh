@@ -33,6 +33,29 @@ if [[ $changes_made -eq 1 ]]; then
     log_info "Restarting Dock and Finder to apply changes..."
     killall Dock 2>/dev/null || true
     killall Finder 2>/dev/null || true
+fi
+
+# Set default browser to Finicky (link chooser)
+if has_command defaultbrowser; then
+    current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
+    if [[ "$current_browser" != "finicky" ]]; then
+        log_info "Setting default browser to Finicky..."
+        # Set default and auto-confirm the macOS dialog
+        osascript - <<'APPLESCRIPT' &>/dev/null &
+            delay 1
+            tell application "System Events"
+                try
+                    click button 2 of window 1 of application process "CoreServicesUIAgent"
+                end try
+            end tell
+APPLESCRIPT
+        defaultbrowser finicky
+        wait
+        changes_made=1
+    fi
+fi
+
+if [[ $changes_made -eq 1 ]]; then
     log_ok "macOS defaults applied"
 else
     log_ok "All macOS defaults already match desired state"

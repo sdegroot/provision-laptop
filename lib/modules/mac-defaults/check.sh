@@ -35,6 +35,17 @@ while IFS= read -r line; do
     fi
 done < <(parse_state_file "$STATE_FILE")
 
+# Check default browser
+if has_command defaultbrowser; then
+    current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
+    if [[ "$current_browser" == "finicky" ]]; then
+        log_ok "Default browser: finicky"
+    else
+        log_error "Default browser is ${current_browser} (expected finicky)"
+        drift_found=1
+    fi
+fi
+
 if [[ $drift_found -eq 0 ]]; then
     log_ok "All macOS defaults match desired state"
 fi

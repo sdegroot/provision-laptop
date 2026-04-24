@@ -31,6 +31,9 @@ container
 # VPN (requires netbirdio/tap)
 netbirdio/tap/netbird
 
+# Default browser switcher
+defaultbrowser
+
 # Network
 nmap
 
