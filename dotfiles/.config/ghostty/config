@@ -2,7 +2,6 @@
 # https://ghostty.org/docs/config/reference
 
 # Font
-font-family = JetBrains Mono
 font-size = 13
 
 # Window

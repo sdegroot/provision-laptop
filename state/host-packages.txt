@@ -2,12 +2,10 @@
 # Keep this list minimal — prefer casks for GUI apps.
 
 # Essential tools
-vim
 htop
 git
 
 # Shells
-zsh
 zsh-syntax-highlighting
 zsh-autosuggestions
 
@@ -17,11 +15,7 @@ fzf
 ripgrep
 jq
 wget
-curl
 tree
-
-# Terminal
-ghostty
 
 
 # Podman
@@ -38,11 +32,7 @@ libfido2
 # VPN
 netbird
 
-# Monitoring
-smartmontools
-
 # Network
-tcpdump
 nmap
 
 # Prompt

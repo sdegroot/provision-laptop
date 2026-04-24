@@ -5,6 +5,9 @@ firefox
 brave-browser
 finicky
 
+# Terminal
+ghostty
+
 # Development
 intellij-idea
 visual-studio-code
@@ -49,12 +52,6 @@ raycast
 
 # Key remapping
 karabiner-elements
-
-# Fonts
-font-jetbrains-mono
-font-noto-sans
-font-roboto
-font-liberation
 
 # Containers
 podman-desktop
