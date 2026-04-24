@@ -30,6 +30,6 @@ clipboard-paste-protection = true
 # Mouse
 mouse-hide-while-typing = true
 
-# GTK (Fedora/GNOME-specific)
-gtk-titlebar = true
-gtk-single-instance = false
+# macOS
+macos-titlebar-style = transparent
+macos-option-as-alt = true
