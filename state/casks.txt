@@ -43,6 +43,9 @@ yubikey-manager
 # VPN
 tailscale
 
+# Launcher & productivity
+raycast
+
 # Window management
 rectangle
 
