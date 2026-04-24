@@ -27,7 +27,6 @@ container
 
 # Security
 1password-cli
-libfido2
 
 # VPN (requires netbirdio/tap)
 netbirdio/tap/netbird
