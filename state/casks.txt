@@ -3,6 +3,7 @@
 # Browsers
 firefox
 brave-browser
+finicky
 
 # Development
 intellij-idea
