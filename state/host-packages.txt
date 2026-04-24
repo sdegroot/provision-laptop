@@ -29,8 +29,8 @@ container
 1password-cli
 libfido2
 
-# VPN
-netbird
+# VPN (requires netbirdio/tap)
+netbirdio/tap/netbird
 
 # Network
 nmap
