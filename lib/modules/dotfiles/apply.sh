@@ -105,7 +105,8 @@ fi
 BRAVE_PROFILES_FILE="$(state_file_path "brave-profiles.conf")"
 BRAVE_CONFIG_DIR="${TARGET_HOME}/Library/Application Support/BraveSoftware/Brave-Browser"
 
-if [[ -f "$BRAVE_PROFILES_FILE" ]] && [[ -d "$BRAVE_CONFIG_DIR" ]]; then
+if [[ -f "$BRAVE_PROFILES_FILE" ]]; then
+    mkdir -p "$BRAVE_CONFIG_DIR"
     while IFS= read -r line; do
         read -r dir_name display_name hex_color <<< "$line"
         [[ -z "$dir_name" ]] && continue
