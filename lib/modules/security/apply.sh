@@ -43,6 +43,16 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Install and start Netbird service
+if [[ -z "$PROVISION_ROOT" ]] && has_command netbird; then
+    if ! sudo netbird service status &>/dev/null; then
+        log_info "Installing and starting Netbird service..."
+        sudo netbird service install 2>/dev/null || true
+        sudo netbird service start
+        changes_made=1
+    fi
+fi
+
 if [[ $changes_made -eq 0 ]]; then
     log_ok "Security configuration already correct"
 else

@@ -74,6 +74,16 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check Netbird service
+if [[ -z "$PROVISION_ROOT" ]] && has_command netbird; then
+    if sudo netbird service status &>/dev/null; then
+        log_ok "Netbird service running"
+    else
+        log_error "Netbird service not running"
+        drift_found=1
+    fi
+fi
+
 if [[ $drift_found -eq 0 ]]; then
     log_ok "Security configuration matches desired state"
 fi

@@ -36,6 +36,14 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
+# Check Netbird service
+if [[ -z "$PROVISION_ROOT" ]] && has_command netbird; then
+    if ! sudo netbird service status &>/dev/null; then
+        log_plan "Would install and start Netbird service"
+        changes_planned=1
+    fi
+fi
+
 if [[ $changes_planned -eq 0 ]]; then
     log_ok "No security changes needed"
 fi
