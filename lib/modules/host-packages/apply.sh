@@ -24,9 +24,17 @@ if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
     exit 0
 fi
 
-log_info "Installing ${#missing_pkgs[@]} formulae: ${missing_pkgs[*]}"
-if ! brew install "${missing_pkgs[@]}"; then
-    log_error "brew install failed for: ${missing_pkgs[*]}"
+has_errors=0
+for pkg in "${missing_pkgs[@]}"; do
+    log_info "Installing formula: ${pkg}"
+    if ! brew install "$pkg"; then
+        log_error "Failed to install: ${pkg}"
+        has_errors=1
+    fi
+done
+
+if [[ $has_errors -eq 1 ]]; then
+    log_error "Some formulae failed to install"
     exit 1
 fi
 log_ok "Homebrew formulae applied"
