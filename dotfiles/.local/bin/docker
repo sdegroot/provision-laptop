@@ -1,0 +1,3 @@
+#!/bin/sh
+# docker → podman shim (replaces podman-docker RPM on Linux)
+exec podman "$@"
