@@ -84,11 +84,10 @@ run_module() {
 
     log_info "Running module '${module_name}' in ${mode} mode..."
 
-    # Run the module script in a subshell to isolate side effects.
+    # Run the module script in the current shell so it can interact
+    # with the terminal (e.g. read input for manual setup prompts).
     local exit_code=0
-    (
-        source "$module_script"
-    ) || exit_code=$?
+    source "$module_script" || exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
         log_ok "Module '${module_name}' (${mode}): passed"
