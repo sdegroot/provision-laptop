@@ -55,6 +55,13 @@ APPLESCRIPT
     fi
 fi
 
+# Configure Chowser browser picker
+if [[ -e "${HOME}/Applications/Chowser.app" ]] || [[ -e "/Applications/Chowser.app" ]]; then
+    if "${PROVISION_DIR}/bin/configure-chowser"; then
+        changes_made=1
+    fi
+fi
+
 if [[ $changes_made -eq 1 ]]; then
     log_ok "macOS defaults applied"
 else

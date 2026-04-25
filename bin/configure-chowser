@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# configure-chowser — Pre-configure Chowser browser picker with default browsers.
+#
+# Writes browser config directly to Chowser's UserDefaults so browsers
+# appear in the picker without manual "Add Browser" steps.
+
+set -euo pipefail
+
+DOMAIN="in.sreerams.Chowser"
+
+# Check if already configured
+existing="$(defaults read "$DOMAIN" configuredBrowsers 2>/dev/null || echo "")"
+if [[ -n "$existing" && "$existing" != "()" ]]; then
+    echo "Chowser already has browsers configured — skipping"
+    exit 0
+fi
+
+# Build browser config JSON
+config='[
+    {"id":"B1","name":"Brave Browser","bundleId":"com.brave.Browser","shortcutKey":"1","profile":null,"customArguments":null},
+    {"id":"B2","name":"Firefox","bundleId":"org.mozilla.firefox","shortcutKey":"2","profile":null,"customArguments":null},
+    {"id":"B3","name":"Safari","bundleId":"com.apple.Safari","shortcutKey":"3","profile":null,"customArguments":null}
+]'
+
+# Write as data blob (Chowser stores JSON-encoded data in UserDefaults)
+# Use python to convert JSON string to base64 plist data format
+python3 -c "
+import json, subprocess, sys
+
+config = json.loads('''$config''')
+json_bytes = json.dumps(config).encode('utf-8')
+
+# Write raw JSON bytes as NSData via defaults
+import plistlib, base64
+# defaults write expects plist-compatible types; use base64-encoded data
+data = base64.b64encode(json_bytes).decode()
+
+# Write via plutil-compatible format
+subprocess.run([
+    'defaults', 'write', '$DOMAIN', 'configuredBrowsers',
+    '-data', json_bytes.hex()
+], check=True)
+"
+
+echo "Chowser configured with: Brave Browser, Firefox, Safari"
+echo "Restart Chowser to pick up changes"
