@@ -77,5 +77,8 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         for line in "${reminders[@]}"; do
             log_warn "$line"
         done
+        echo ""
+        log_warn "Complete the steps above, then press Enter to continue..."
+        read -r
     fi
 fi
