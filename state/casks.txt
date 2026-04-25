@@ -4,7 +4,6 @@
 firefox
 brave-browser
 finicky
-velja
 
 # Terminal
 ghostty
