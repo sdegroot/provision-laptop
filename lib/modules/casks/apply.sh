@@ -27,7 +27,7 @@ fi
 has_errors=0
 for cask in "${missing_casks[@]}"; do
     log_info "Installing cask: ${cask}"
-    if ! brew install --cask --no-quarantine "$cask" 2>&1; then
+    if ! brew install --cask "$cask" 2>&1; then
         # If the app already exists (installed outside Homebrew), adopt it
         if brew install --cask --adopt "$cask" 2>&1; then
             log_info "Adopted existing app: ${cask}"
