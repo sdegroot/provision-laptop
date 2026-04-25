@@ -63,12 +63,17 @@ fi
 if [[ -z "$PROVISION_ROOT" ]]; then
     reminders=()
 
-    if has_command 1password && [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
+    if [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
         reminders+=("")
-        reminders+=("1Password — open Settings > Developer:")
-        reminders+=("  - Enable 'Use the SSH agent'")
-        reminders+=("  - Enable 'Integrate with 1Password CLI'")
-        reminders+=("  - Set SSH agent authorization to 'Allow when unlocked'")
+        reminders+=("1Password SSH agent is not running. To set up:")
+        reminders+=("  1. Open 1Password and sign in")
+        reminders+=("  2. Go to Settings > Developer")
+        reminders+=("  3. Enable 'Use the SSH agent'")
+        reminders+=("  4. Enable 'Integrate with 1Password CLI'")
+        reminders+=("  5. Set SSH agent authorization to 'Allow when unlocked'")
+        reminders+=("  6. Re-run: bin/apply")
+        reminders+=("")
+        reminders+=("  Without this, git-projects module will be skipped.")
     fi
 
     if [[ ${#reminders[@]} -gt 0 ]]; then

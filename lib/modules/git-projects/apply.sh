@@ -14,7 +14,8 @@ if [[ ! -f "$STATE_FILE" ]]; then
 fi
 
 if ! require_ssh_agent "$STATE_FILE"; then
-    exit 1
+    log_warn "Skipping git-projects — set up 1Password SSH agent first"
+    exit 0
 fi
 
 while IFS= read -r line; do
