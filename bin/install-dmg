@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# install-dmg — Download a DMG from a URL, mount it, copy the .app to /Applications.
+#
+# Usage: install-dmg <url> <app_name>
+#   url      — direct download URL for the .dmg
+#   app_name — name of the .app inside the DMG (e.g. "Chowser")
+
+set -euo pipefail
+
+url="${1:?Usage: install-dmg <url> <app_name>}"
+app_name="${2:?Usage: install-dmg <url> <app_name>}"
+
+dmg_path="$(mktemp /tmp/install-dmg-XXXXXX.dmg)"
+trap 'rm -f "$dmg_path"' EXIT
+
+echo "Downloading ${app_name}..."
+curl -fsSL -o "$dmg_path" "$url"
+
+echo "Mounting DMG..."
+mount_point="$(hdiutil attach -nobrowse -readonly "$dmg_path" 2>/dev/null | tail -1 | awk -F'\t' '{print $NF}')"
+trap 'hdiutil detach "$mount_point" -quiet 2>/dev/null; rm -f "$dmg_path"' EXIT
+
+app_path="${mount_point}/${app_name}.app"
+if [[ ! -d "$app_path" ]]; then
+    echo "ERROR: ${app_name}.app not found in DMG" >&2
+    ls "$mount_point"
+    exit 1
+fi
+
+echo "Installing to /Applications..."
+cp -R "$app_path" "/Applications/${app_name}.app"
+
+echo "${app_name} installed successfully"

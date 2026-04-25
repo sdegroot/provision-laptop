@@ -12,7 +12,7 @@ while IFS= read -r line; do
 
     check_path="${check_path/#\~/$HOME}"
 
-    if [[ -x "$check_path" ]]; then
+    if [[ -e "$check_path" ]]; then
         log_ok "${name} installed"
     else
         log_error "${name} not found at ${check_path}"

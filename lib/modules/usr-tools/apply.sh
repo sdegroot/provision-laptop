@@ -19,7 +19,7 @@ while IFS= read -r line; do
     # Expand ~ to $HOME
     check_path="${check_path/#\~/$HOME}"
 
-    if [[ -x "$check_path" ]]; then
+    if [[ -e "$check_path" ]]; then
         continue
     fi
 
