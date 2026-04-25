@@ -14,13 +14,17 @@ if [[ ! -d "$DOTFILES_DIR" ]]; then
 fi
 
 # Load seed file list (files copied once, then left for the application to manage)
-declare -A SEED_FILES=()
+SEED_FILES=""
 SEED_FILE="$(state_file_path "dotfiles-seed.txt")"
 if [[ -f "$SEED_FILE" ]]; then
-    while IFS= read -r seed_path; do
-        SEED_FILES["$seed_path"]=1
-    done < <(parse_state_file "$SEED_FILE")
+    SEED_FILES="$(parse_state_file "$SEED_FILE")"
 fi
+
+# is_seed_file <rel_path>
+#   Returns 0 if the path is in the seed file list.
+is_seed_file() {
+    echo "$SEED_FILES" | grep -qxF "$1"
+}
 
 while IFS= read -r src_file; do
     rel_path="${src_file#${DOTFILES_DIR}/}"
@@ -28,7 +32,7 @@ while IFS= read -r src_file; do
     target_dir="$(dirname "$target")"
 
     # Seed files: copy once if missing (or upgrade from symlink), then leave alone
-    if [[ -n "${SEED_FILES[$rel_path]+x}" ]]; then
+    if is_seed_file "$rel_path"; then
         if [[ -L "$target" ]]; then
             # Upgrade: replace symlink with a regular copy
             log_info "Seeding (replacing symlink): ${rel_path}"

@@ -35,11 +35,11 @@ if [[ $changes_made -eq 1 ]]; then
     killall Finder 2>/dev/null || true
 fi
 
-# Set default browser to Finicky (link chooser)
+# Set default browser to Velja (browser picker)
 if has_command defaultbrowser; then
     current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
-    if [[ "$current_browser" != "finicky" ]]; then
-        log_info "Setting default browser to Finicky..."
+    if [[ "$current_browser" != "velja" ]]; then
+        log_info "Setting default browser to Velja..."
         # Set default and auto-confirm the macOS dialog
         osascript - <<'APPLESCRIPT' &>/dev/null &
             delay 1
@@ -49,7 +49,7 @@ if has_command defaultbrowser; then
                 end try
             end tell
 APPLESCRIPT
-        defaultbrowser finicky
+        defaultbrowser velja
         wait
         changes_made=1
     fi

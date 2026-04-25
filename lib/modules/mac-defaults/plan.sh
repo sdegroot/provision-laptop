@@ -29,8 +29,8 @@ done < <(parse_state_file "$STATE_FILE")
 # Check default browser
 if has_command defaultbrowser; then
     current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
-    if [[ "$current_browser" != "finicky" ]]; then
-        log_plan "Would set default browser to finicky (currently ${current_browser})"
+    if [[ "$current_browser" != "velja" ]]; then
+        log_plan "Would set default browser to velja (currently ${current_browser})"
         changes_planned=1
     fi
 fi

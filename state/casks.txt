@@ -3,7 +3,6 @@
 # Browsers
 firefox
 brave-browser
-finicky
 
 # Terminal
 ghostty

@@ -32,6 +32,9 @@ container
 # VPN (requires netbirdio/tap)
 netbirdio/tap/netbird
 
+# Mac App Store CLI
+mas
+
 # Default browser switcher
 defaultbrowser
 

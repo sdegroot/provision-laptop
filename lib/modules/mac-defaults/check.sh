@@ -38,10 +38,10 @@ done < <(parse_state_file "$STATE_FILE")
 # Check default browser
 if has_command defaultbrowser; then
     current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
-    if [[ "$current_browser" == "finicky" ]]; then
-        log_ok "Default browser: finicky"
+    if [[ "$current_browser" == "velja" ]]; then
+        log_ok "Default browser: velja"
     else
-        log_error "Default browser is ${current_browser} (expected finicky)"
+        log_error "Default browser is ${current_browser} (expected velja)"
         drift_found=1
     fi
 fi
