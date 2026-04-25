@@ -25,17 +25,6 @@ if [[ -z "$PROVISION_ROOT" ]] && has_command zsh; then
     fi
 fi
 
-# Check 1Password custom_allowed_browsers
-if [[ -z "$PROVISION_ROOT" ]]; then
-    onepassword_state_dir="$(state_file_path "1password")"
-    cab_src="${onepassword_state_dir}/custom_allowed_browsers"
-    cab_dest="/Library/Application Support/1Password/custom_allowed_browsers"
-    if [[ -f "$cab_src" ]] && ! diff -q "$cab_src" "$cab_dest" &>/dev/null; then
-        log_plan "Would deploy 1Password custom_allowed_browsers"
-        changes_planned=1
-    fi
-fi
-
 # Check Netbird service
 if [[ -z "$PROVISION_ROOT" ]] && has_command netbird; then
     if ! sudo netbird service status &>/dev/null; then

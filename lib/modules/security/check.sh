@@ -59,21 +59,6 @@ if [[ -z "$PROVISION_ROOT" ]]; then
     fi
 fi
 
-# Check 1Password custom_allowed_browsers
-if [[ -z "$PROVISION_ROOT" ]]; then
-    onepassword_state_dir="$(state_file_path "1password")"
-    cab_src="${onepassword_state_dir}/custom_allowed_browsers"
-    cab_dest="/Library/Application Support/1Password/custom_allowed_browsers"
-    if [[ -f "$cab_src" ]]; then
-        if diff -q "$cab_src" "$cab_dest" &>/dev/null; then
-            log_ok "1Password custom_allowed_browsers deployed"
-        else
-            log_error "1Password custom_allowed_browsers missing or outdated"
-            drift_found=1
-        fi
-    fi
-fi
-
 # Check Netbird service
 if [[ -z "$PROVISION_ROOT" ]] && has_command netbird; then
     if sudo netbird service status &>/dev/null; then
