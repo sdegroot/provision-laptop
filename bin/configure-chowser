@@ -1,40 +1,65 @@
 #!/usr/bin/env bash
-# configure-chowser — Pre-configure Chowser browser picker with default browsers.
+# configure-chowser — Ensure desired browsers are configured in Chowser.
 #
-# Writes browser config directly to Chowser's UserDefaults so browsers
-# appear in the picker without manual "Add Browser" steps.
+# Reads existing config, adds any missing browsers, preserves user additions.
 
 set -euo pipefail
 
 DOMAIN="in.sreerams.Chowser"
 
-
-# Build browser config JSON
-config='[
-    {"id":"B1","name":"Brave Browser","bundleId":"com.brave.Browser","shortcutKey":"1","profile":null,"customArguments":null},
-    {"id":"B2","name":"Firefox","bundleId":"org.mozilla.firefox","shortcutKey":"2","profile":null,"customArguments":null},
-    {"id":"B3","name":"Safari","bundleId":"com.apple.Safari","shortcutKey":"3","profile":null,"customArguments":null}
-]'
-
-# Write as data blob (Chowser stores JSON-encoded data in UserDefaults)
-# Use python to convert JSON string to base64 plist data format
-python3 -c "
+python3 - "$DOMAIN" << 'PYTHON'
 import json, subprocess, sys
 
-config = json.loads('''$config''')
-json_bytes = json.dumps(config).encode('utf-8')
+domain = sys.argv[1]
 
-# Write raw JSON bytes as NSData via defaults
-import plistlib, base64
-# defaults write expects plist-compatible types; use base64-encoded data
-data = base64.b64encode(json_bytes).decode()
+# Desired browsers
+desired = [
+    {"id":"B1","name":"Brave Browser","bundleId":"com.brave.Browser","shortcutKey":"1","profile":None,"customArguments":None},
+    {"id":"B2","name":"Firefox","bundleId":"org.mozilla.firefox","shortcutKey":"2","profile":None,"customArguments":None},
+    {"id":"B3","name":"Safari","bundleId":"com.apple.Safari","shortcutKey":"3","profile":None,"customArguments":None},
+]
 
-# Write via plutil-compatible format
-subprocess.run([
-    'defaults', 'write', '$DOMAIN', 'configuredBrowsers',
-    '-data', json_bytes.hex()
-], check=True)
-"
+# Read existing config
+try:
+    result = subprocess.run(
+        ["defaults", "read-type", domain, "configuredBrowsers"],
+        capture_output=True, text=True
+    )
+    if "data" in result.stdout:
+        # Read raw hex data and decode
+        raw = subprocess.run(
+            ["defaults", "export", domain, "-"],
+            capture_output=True
+        )
+        import plistlib
+        plist = plistlib.loads(raw.stdout)
+        existing = json.loads(plist.get("configuredBrowsers", b"[]"))
+    else:
+        existing = []
+except Exception:
+    existing = []
 
-echo "Chowser configured with: Brave Browser, Firefox, Safari"
-echo "Restart Chowser to pick up changes"
+# Find which bundle IDs are already configured
+existing_ids = {b.get("bundleId") for b in existing}
+
+# Add missing browsers
+added = []
+for browser in desired:
+    if browser["bundleId"] not in existing_ids:
+        existing.append(browser)
+        added.append(browser["name"])
+
+if not added:
+    print("All browsers already configured in Chowser")
+    sys.exit(0)
+
+# Write back
+json_bytes = json.dumps(existing).encode("utf-8")
+subprocess.run(
+    ["defaults", "write", domain, "configuredBrowsers", "-data", json_bytes.hex()],
+    check=True
+)
+
+print(f"Added to Chowser: {', '.join(added)}")
+print("Restart Chowser to pick up changes")
+PYTHON
