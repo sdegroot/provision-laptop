@@ -8,5 +8,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/engine.sh"
 
+# Cache sudo credentials upfront so modules don't prompt individually
+log_info "Some modules require sudo — authenticating now..."
+sudo -v
+# Keep sudo alive in the background for the duration of the run
+while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
+
 log_info "Applying desired state..."
 parse_engine_args "apply" "$@"
