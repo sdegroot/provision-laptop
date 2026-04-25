@@ -40,7 +40,7 @@ calibre
 
 # Security
 1password
-yubikey-manager
+yubico-yubikey-manager
 
 # VPN (standalone variant — more features than App Store version)
 tailscale-app
