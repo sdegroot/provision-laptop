@@ -2,6 +2,7 @@
 # Keep this list minimal — prefer casks for GUI apps.
 
 # Essential tools
+bash
 htop
 git
 
