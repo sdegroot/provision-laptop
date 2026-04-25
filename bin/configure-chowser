@@ -8,12 +8,6 @@ set -euo pipefail
 
 DOMAIN="in.sreerams.Chowser"
 
-# Check if already configured
-existing="$(defaults read "$DOMAIN" configuredBrowsers 2>/dev/null || echo "")"
-if [[ -n "$existing" && "$existing" != "()" ]]; then
-    echo "Chowser already has browsers configured — skipping"
-    exit 0
-fi
 
 # Build browser config JSON
 config='[
