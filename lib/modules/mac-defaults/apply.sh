@@ -35,12 +35,11 @@ if [[ $changes_made -eq 1 ]]; then
     killall Finder 2>/dev/null || true
 fi
 
-# Set default browser to Velja (browser picker)
+# Set default browser to Chowser (browser picker)
 if has_command defaultbrowser; then
     current_browser="$(defaultbrowser 2>/dev/null | grep '^\*' | awk '{print $2}')"
-    if [[ "$current_browser" != "velja" ]]; then
-        log_info "Setting default browser to Velja..."
-        # Set default and auto-confirm the macOS dialog
+    if [[ "$current_browser" != "chowser" ]]; then
+        log_info "Setting default browser to Chowser..."
         osascript - <<'APPLESCRIPT' &>/dev/null &
             delay 1
             tell application "System Events"
@@ -49,15 +48,8 @@ if has_command defaultbrowser; then
                 end try
             end tell
 APPLESCRIPT
-        defaultbrowser velja
+        defaultbrowser chowser
         wait
-        changes_made=1
-    fi
-fi
-
-# Configure Chowser browser picker
-if [[ -e "${HOME}/Applications/Chowser.app" ]] || [[ -e "/Applications/Chowser.app" ]]; then
-    if "${PROVISION_DIR}/bin/configure-chowser"; then
         changes_made=1
     fi
 fi

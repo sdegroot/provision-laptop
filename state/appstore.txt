@@ -2,6 +2,3 @@
 # Format: app_id  app_name
 # Install with: mas install <app_id>
 # Find IDs with: mas search <name>
-
-# Browser picker
-1607635845 Velja

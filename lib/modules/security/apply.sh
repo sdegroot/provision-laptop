@@ -76,6 +76,18 @@ if [[ -z "$PROVISION_ROOT" ]]; then
         reminders+=("  Without this, git-projects module will be skipped.")
     fi
 
+    # Check if Chowser needs browser setup
+    if [[ -e "${HOME}/Applications/Chowser.app" ]] || [[ -e "/Applications/Chowser.app" ]]; then
+        browser_count="$(defaults read in.sreerams.Chowser configuredBrowsers 2>/dev/null | grep -c bundleId || echo 0)"
+        if [[ "$browser_count" -lt 2 ]]; then
+            reminders+=("")
+            reminders+=("Chowser — add your browsers:")
+            reminders+=("  1. Click the Chowser menu bar icon")
+            reminders+=("  2. Open Settings > Browsers")
+            reminders+=("  3. Click 'Add Browser' for Brave, Firefox, etc.")
+        fi
+    fi
+
     if [[ ${#reminders[@]} -gt 0 ]]; then
         log_warn "--- Manual setup required ---"
         for line in "${reminders[@]}"; do
