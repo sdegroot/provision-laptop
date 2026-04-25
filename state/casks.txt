@@ -43,8 +43,8 @@ calibre
 1password
 yubikey-manager
 
-# VPN
-tailscale
+# VPN (standalone variant — more features than App Store version)
+tailscale-app
 
 # Launcher & productivity
 raycast
