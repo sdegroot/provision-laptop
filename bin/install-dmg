@@ -27,7 +27,8 @@ if [[ ! -d "$app_path" ]]; then
     exit 1
 fi
 
-echo "Installing to /Applications..."
-cp -R "$app_path" "/Applications/${app_name}.app"
+echo "Installing to ~/Applications..."
+mkdir -p "${HOME}/Applications"
+cp -R "$app_path" "${HOME}/Applications/${app_name}.app"
 
 echo "${app_name} installed successfully"
