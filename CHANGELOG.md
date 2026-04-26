@@ -48,6 +48,9 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **1Password git credential** — added `op-account` support to `git-credential-1password` helper
   and pinned `git.sittard-geleen.nl` to the `degroot.dev` account, fixing push failures where `op`
   defaulted to the wrong account (Flux).
+- **SSH config 1Password agent path** — `dotfiles/.ssh/config` pointed `IdentityAgent` at the Linux
+  socket path (`~/.1password/agent.sock`), causing `Permission denied (publickey)` on `git clone`
+  even with 1Password set up. Replaced with the macOS Group Containers path.
 
 ### Improved
 - **AI app launchers** — persist authentication across launches by pinning Brave's Default profile,
