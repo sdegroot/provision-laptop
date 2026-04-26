@@ -51,6 +51,25 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **SSH config 1Password agent path** — `dotfiles/.ssh/config` pointed `IdentityAgent` at the Linux
   socket path (`~/.1password/agent.sock`), causing `Permission denied (publickey)` on `git clone`
   even with 1Password set up. Replaced with the macOS Group Containers path.
+- **Native macOS 1Password integration** — switched all 1Password agent references from the Linux
+  socket (`~/.1password/agent.sock`) to the macOS Group Containers path. Updated:
+  `dotfiles/.zshrc`, `dotfiles/.bashrc`, `lib/modules/security/{apply,check}.sh`,
+  `lib/modules/git-projects/common.sh`, `tests/test_module_git_projects.sh`,
+  `docs/1password-setup.md`, `docs/authentication-security.md`.
+- **Git commit signing** — switched `gpg.ssh.program` from the Linux caching wrapper
+  (`~/.local/bin/git-ssh-sign`) to 1Password's bundled
+  `/Applications/1Password.app/Contents/MacOS/op-ssh-sign`. Touch ID is fast enough that the
+  cache is unneeded on macOS.
+
+### Removed
+- **`git-ssh-sign` caching wrapper** (`dotfiles/.local/bin/git-ssh-sign`) — Linux-only workaround
+  that depended on `XDG_RUNTIME_DIR`, `systemctl --user`, and `/opt/1Password/op-ssh-sign`.
+  Replaced by direct use of 1Password's macOS `op-ssh-sign`.
+
+### Known stale documentation
+- `docs/authentication-security.md` still describes the Linux/Fedora setup
+  (LUKS/FIDO2 disk unlock, fprintd, PAM, Silverblue boot flow). Needs a macOS
+  rewrite (FileVault, Touch ID, macOS PAM).
 
 ### Improved
 - **AI app launchers** — persist authentication across launches by pinning Brave's Default profile,

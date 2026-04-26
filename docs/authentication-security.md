@@ -221,7 +221,7 @@ Action: Change 1Password master password immediately, rotate secrets
 - See: [YubiKey Setup](yubikey-setup.md)
 
 ### 1Password
-- **SSH agent socket:** `~/.1password/agent.sock`
+- **SSH agent socket:** `~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock`
 - **Lock timeout:** Settings → Security → Lock vault in background
 - **Biometric:** Settings → Security → Biometric unlock
 - See: [1Password Setup](1password-setup.md)

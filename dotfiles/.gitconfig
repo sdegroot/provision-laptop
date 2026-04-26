@@ -35,7 +35,7 @@
     gpgsign = true
 
 [gpg "ssh"]
-    program = ~/.local/bin/git-ssh-sign
+    program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
 
 [credential "https://git.sittard-geleen.nl"]
     helper = 1password

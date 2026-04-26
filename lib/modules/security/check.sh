@@ -51,7 +51,7 @@ fi
 
 # Check 1Password SSH agent socket
 if [[ -z "$PROVISION_ROOT" ]]; then
-    OP_AGENT_SOCK="${HOME}/.1password/agent.sock"
+    OP_AGENT_SOCK="${HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
     if [[ -S "$OP_AGENT_SOCK" ]]; then
         log_ok "1Password SSH agent socket present"
     else

@@ -110,11 +110,12 @@ CONF
 
 export HOME="${TEST_TMPDIR}/home"
 mkdir -p "$HOME"
-create_fake_socket "${HOME}/.1password/agent.sock"
+create_fake_socket "${HOME}/op-agent.sock"
 
 exit_code=0
 output="$(
     export HOME="${HOME}"
+    export OP_AGENT_SOCK="${HOME}/op-agent.sock"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/check.sh" 2>&1
 )" || exit_code=$?
@@ -139,11 +140,12 @@ git@github.com:testorg/testrepo.git myns
 CONF
 
 mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
-create_fake_socket "${TEST_TMPDIR}/home/.1password/agent.sock"
+create_fake_socket "${TEST_TMPDIR}/home/op-agent.sock"
 
 exit_code=0
 output="$(
     export HOME="${TEST_TMPDIR}/home"
+    export OP_AGENT_SOCK="${HOME}/op-agent.sock"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/check.sh" 2>&1
 )" || exit_code=$?
@@ -169,10 +171,11 @@ CONF
 
 export HOME="${TEST_TMPDIR}/home"
 mkdir -p "$HOME"
-create_fake_socket "${HOME}/.1password/agent.sock"
+create_fake_socket "${HOME}/op-agent.sock"
 
 output="$(
     export HOME="${HOME}"
+    export OP_AGENT_SOCK="${HOME}/op-agent.sock"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/plan.sh" 2>&1
 )"
@@ -194,10 +197,11 @@ git@github.com:testorg/testrepo.git myns
 CONF
 
 mkdir -p "${TEST_TMPDIR}/home/scm/myns/testrepo/.git"
-create_fake_socket "${TEST_TMPDIR}/home/.1password/agent.sock"
+create_fake_socket "${TEST_TMPDIR}/home/op-agent.sock"
 
 output="$(
     export HOME="${TEST_TMPDIR}/home"
+    export OP_AGENT_SOCK="${HOME}/op-agent.sock"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/plan.sh" 2>&1
 )"
@@ -207,7 +211,7 @@ teardown_test_tmpdir
 
 # --- SSH agent check ---
 
-begin_test "apply exits 1 when SSH URLs present and agent socket missing"
+begin_test "apply skips with warning when SSH URLs present and agent socket missing"
 setup_test_tmpdir
 
 custom_dir="${TEST_TMPDIR}/provision"
@@ -224,12 +228,12 @@ exit_code=0
 output="$(
     export HOME="${TEST_TMPDIR}/home"
     mkdir -p "$HOME"
-    # No agent.sock created — should fail
+    # No agent.sock created — apply should warn and skip
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/apply.sh" 2>&1
 )" || exit_code=$?
 
-assert_equals "1" "$exit_code"
+assert_equals "0" "$exit_code"
 assert_contains "$output" "1Password SSH agent"
 assert_contains "$output" "docs/1password-setup.md"
 teardown_test_tmpdir
@@ -249,11 +253,12 @@ CONF
 
 export HOME="${TEST_TMPDIR}/home"
 mkdir -p "$HOME/scm/myns/testrepo/.git"
-create_fake_socket "${HOME}/.1password/agent.sock"
+create_fake_socket "${HOME}/op-agent.sock"
 
 exit_code=0
 output="$(
     export HOME="${HOME}"
+    export OP_AGENT_SOCK="${HOME}/op-agent.sock"
     source "${custom_dir}/lib/common.sh"
     source "${custom_dir}/lib/modules/git-projects/apply.sh" 2>&1
 )" || exit_code=$?

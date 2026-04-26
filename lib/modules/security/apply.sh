@@ -47,7 +47,7 @@ fi
 if [[ -z "$PROVISION_ROOT" ]]; then
     reminders=()
 
-    if [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
+    if [[ ! -S "${HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]]; then
         reminders+=("")
         reminders+=("1Password SSH agent is not running. To set up:")
         reminders+=("  1. Open 1Password and sign in")

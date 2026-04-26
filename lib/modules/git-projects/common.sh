@@ -18,14 +18,15 @@ repo_name_from_url() {
 #   if the socket is missing. HTTPS-only configs pass without the check.
 require_ssh_agent() {
     local state_file="$1"
+    local sock="${OP_AGENT_SOCK:-${HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock}"
 
     if ! parse_state_file "$state_file" | grep -q '^git@'; then
         return 0
     fi
 
-    if [[ ! -S "${HOME}/.1password/agent.sock" ]]; then
+    if [[ ! -S "$sock" ]]; then
         log_error "SSH repos found in config but 1Password SSH agent is not available"
-        log_error "Socket missing: ~/.1password/agent.sock"
+        log_error "Socket missing: $sock"
         log_error "Set up 1Password first — see docs/1password-setup.md"
         log_error "Then re-run: bin/apply"
         return 1
