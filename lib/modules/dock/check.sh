@@ -21,13 +21,11 @@ while IFS= read -r line; do
     desired+=("$line")
 done < <(parse_state_file "$STATE_FILE")
 
-# Current Dock labels in order, via the plist
+# Current Dock persistent-app labels in order, via dockutil
 current=()
 while IFS= read -r label; do
     current+=("$label")
-done < <(/usr/libexec/PlistBuddy -c "Print :persistent-apps" \
-    "${HOME}/Library/Preferences/com.apple.dock.plist" 2>/dev/null \
-    | awk -F' = ' '/file-label/ {print $2}')
+done < <(dockutil --list 2>/dev/null | awk -F'\t' '$3 == "persistentApps" {print $1}')
 
 if [[ "${#desired[@]}" -ne "${#current[@]}" ]]; then
     log_error "Dock has ${#current[@]} items, expected ${#desired[@]}"

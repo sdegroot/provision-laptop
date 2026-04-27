@@ -23,9 +23,7 @@ done < <(parse_state_file "$STATE_FILE")
 current=()
 while IFS= read -r label; do
     current+=("$label")
-done < <(/usr/libexec/PlistBuddy -c "Print :persistent-apps" \
-    "${HOME}/Library/Preferences/com.apple.dock.plist" 2>/dev/null \
-    | awk -F' = ' '/file-label/ {print $2}')
+done < <(dockutil --list 2>/dev/null | awk -F'\t' '$3 == "persistentApps" {print $1}')
 
 # Idempotency check
 if [[ "${#desired[@]}" -eq "${#current[@]}" ]]; then
