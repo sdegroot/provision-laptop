@@ -20,7 +20,7 @@ To run a single module: `bin/apply --module <name>` (also works with `bin/check`
 
 ### Modules (execution order)
 
-directories, taps, host-packages, casks, dotfiles, security, mise, usr-tools, git-projects, containers, mac-defaults
+directories, taps, host-packages, casks, appstore, dotfiles, security, mise, usr-tools, git-projects, containers, mac-defaults, dock
 
 ### State files
 

@@ -38,6 +38,9 @@ mas
 # Default browser switcher
 defaultbrowser
 
+# Dock management
+dockutil
+
 # Network
 nmap
 

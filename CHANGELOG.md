@@ -12,6 +12,9 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **taps module** — manage Homebrew taps (third-party repositories)
 - **casks module** — manage Homebrew cask GUI applications (replaces Flatpak)
 - **mac-defaults module** — apply macOS system preferences via `defaults write`
+- **dock module** — manage the macOS Dock declaratively from `state/dock.txt`
+  via `dockutil`. Idempotent: only rebuilds the Dock when entries differ.
+  Added `dockutil` to `state/host-packages.txt`.
 - **bootstrap/mac.sh** — first-run setup script for a fresh Mac (Xcode CLI tools, Homebrew)
 
 ### Changed

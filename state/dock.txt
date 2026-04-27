@@ -1,0 +1,30 @@
+# Dock items (left to right).
+#
+# Format: one app name per line. Names are resolved by dockutil — full paths
+# are also accepted. Comments and blank lines are ignored.
+#
+# Apply replaces the entire persistent-apps list. Folders and stacks
+# (persistent-others) are not managed by this module.
+
+# Browsers
+Brave Browser
+
+# Terminal
+Ghostty
+
+# Development
+IntelliJ IDEA
+Visual Studio Code
+
+# Communication
+Slack
+Mattermost
+Element
+Signal
+
+# Mail / Calendar
+Proton Mail
+
+# Productivity
+1Password
+Raycast
