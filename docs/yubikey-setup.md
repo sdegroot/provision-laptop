@@ -24,12 +24,13 @@ YubiKey provides hardware-backed security for:
 ssh-keygen -t ed25519-sk -O resident -O verify-required
 ```
 
-## YubiKey Manager
+## YubiKey Authenticator
 
-Install the YubiKey Manager GUI for configuration (firmware, OTP slots, FIDO2 PIN):
+Install the YubiKey Authenticator GUI for configuration (TOTP, FIDO2 PIN, etc.).
+This replaces the discontinued YubiKey Manager (Yubico merged the tools in 2025):
 
 ```bash
-brew install --cask yubico-yubikey-manager
+brew install --cask yubico-authenticator
 ```
 
 The CLI is available as `ykman`:
