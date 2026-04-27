@@ -54,3 +54,6 @@ karabiner-elements
 
 # Containers
 podman-desktop
+
+# System info
+coconutbattery
