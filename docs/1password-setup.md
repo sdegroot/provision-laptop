@@ -132,8 +132,6 @@ git -C ~/scm/sittard-geleen/epistola fetch
 install the extension from the browser's extension store and enable
 **Settings → Browser → Connect with 1Password**.
 
-No flatpak / sandbox bridging is required on macOS.
-
 ## Verification
 
 ```bash

@@ -41,27 +41,4 @@ else
 fi
 teardown_test_tmpdir
 
-begin_test "host-packages check skips gracefully on non-Silverblue"
-setup_test_tmpdir
-
-custom_dir="${TEST_TMPDIR}/provision"
-mkdir -p "${custom_dir}/lib/modules/host-packages"
-mkdir -p "${custom_dir}/state"
-
-cp "${SCRIPT_DIR}/../lib/common.sh" "${custom_dir}/lib/"
-cp "${SCRIPT_DIR}/../lib/modules/host-packages/check.sh" "${custom_dir}/lib/modules/host-packages/"
-cp "${SCRIPT_DIR}/../state/host-packages.txt" "${custom_dir}/state/"
-
-exit_code=0
-output="$(
-    export PROVISION_ROOT="${TEST_TMPDIR}/fake-root"
-    mkdir -p "${PROVISION_ROOT}"
-    source "${custom_dir}/lib/common.sh"
-    source "${custom_dir}/lib/modules/host-packages/check.sh"
-) 2>&1" || exit_code=$?
-
-# Should exit 0 and skip gracefully (not Silverblue)
-assert_equals "0" "$exit_code"
-teardown_test_tmpdir
-
 print_test_summary "module: host-packages"

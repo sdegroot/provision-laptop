@@ -65,11 +65,37 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **`git-ssh-sign` caching wrapper** (`dotfiles/.local/bin/git-ssh-sign`) — Linux-only workaround
   that depended on `XDG_RUNTIME_DIR`, `systemctl --user`, and `/opt/1Password/op-ssh-sign`.
   Replaced by direct use of 1Password's macOS `op-ssh-sign`.
+- **Linux-only test files** — `tests/test_module_{flatpaks,repos,toolboxes,hardware}.sh`,
+  `tests/test_netbird.sh`, `tests/test_system_health_review.sh`, `tests/helpers_hardware.sh`.
+  These tested modules and scripts that were already removed in earlier macOS-port commits.
+- **Linux test sections in `tests/test_common.sh`** — `is_silverblue`,
+  `wait_for_rpm_ostree`, `wait_for_kickstart_packages`, and the stale `require_root` test.
+- **`tests/vm/` and `tests/smoke/`** — Fedora QEMU VM tooling and Linux smoke tests, orphaned
+  without the rest of the Linux infrastructure.
+- **`usb/`** — Bootable Fedora Silverblue USB builder.
+- **`kickstart/`** — Anaconda kickstart files for Fedora installs.
+- **`toolbox/`** — Fedora Toolbox container profiles using `dnf`.
+- **`plan.md`** — Original Fedora/Silverblue design doc, fully obsolete after the macOS port.
+- **VM make targets** — `make vm-download/create/start/ssh/destroy/kickstart/reset` and
+  the `tests/vm/*` `.gitignore` entries.
+- **Stale `host-packages` test** — "skips gracefully on non-Silverblue" tested behavior
+  the macOS module doesn't have.
 
-### Known stale documentation
-- `docs/authentication-security.md` still describes the Linux/Fedora setup
-  (LUKS/FIDO2 disk unlock, fprintd, PAM, Silverblue boot flow). Needs a macOS
-  rewrite (FileVault, Touch ID, macOS PAM).
+### Updated
+- **`docs/authentication-security.md`** — rewritten for macOS (FileVault, Touch ID, sudo via
+  `pam_tid.so` in `/etc/pam.d/sudo_local`); removed LUKS/fprintd/Silverblue content.
+- **`docs/state-files.md`** — removed sections for deleted state files (flatpaks, repos,
+  kernel-params, toolbox-profiles, flatpak-overrides); added current macOS state files
+  (taps, casks, appstore, mac-defaults, brave-profiles, etc.).
+- **`docs/security-model.md`** — replaced LUKS/firewalld/SELinux with FileVault and the
+  macOS Application Firewall; dropped multi-user Linux client-isolation section.
+- **`docs/yubikey-setup.md`** — removed `systemd-cryptenroll` LUKS enrollment; documented
+  YubiKey Manager and `ykman` install via Homebrew.
+- **`docs/browser-chooser.md`** — replaced Junction (Flatpak) + `.desktop` files with Chowser
+  (macOS) + per-profile launch arguments. Brave profile management itself is unchanged.
+- **`docs/netbird-setup.md`** — slimmed down to the basic macOS install/start flow; removed
+  the multi-account `bin/netbird` wrapper docs (the wrapper itself was Linux-only).
+- **`dotfiles/.local/bin/idea`** — switched from `flatpak run` to the native macOS app binary.
 
 ### Improved
 - **AI app launchers** — persist authentication across launches by pinning Brave's Default profile,

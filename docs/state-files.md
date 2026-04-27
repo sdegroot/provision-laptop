@@ -2,36 +2,34 @@
 
 State files declare the desired system configuration. They live under `state/` and are read by the provisioning modules.
 
-## Common Syntax
+## Common syntax
 
 All state files share these rules:
+
 - Lines starting with `#` are comments (ignored)
 - Blank lines are ignored
 - Leading/trailing whitespace on non-comment lines is preserved
 
-## Architecture Tags
+## Architecture tags
 
 Any state file entry can be restricted to a specific CPU architecture using an `[arch]` prefix:
 
 ```
 # Included on all architectures
-vim-enhanced
+ripgrep
 
-# Only on x86_64
-[x86_64] tuxedo-drivers
+# Only on arm64 (Apple Silicon)
+[arm64] some-arm-only-formula
 
-# Only on aarch64
-[aarch64] some-arm-package
+# Only on x86_64 (Intel)
+[x86_64] some-intel-only-formula
 ```
 
 The current architecture is detected via `uname -m`. For testing, override with the `PROVISION_ARCH` environment variable:
 
 ```bash
-# Parse state file as if running on x86_64
 PROVISION_ARCH=x86_64 bin/check --module host-packages
 ```
-
-This is used to skip x86_64-specific packages (Tuxedo drivers, YT6801 Ethernet) when running in an aarch64 development VM.
 
 ## `state/directories.txt`
 
@@ -48,110 +46,66 @@ Directories to create. Format: `path:owner:mode`
 - `${USER}` expands to the current user
 - Owner defaults to `$USER`, mode defaults to `0755`
 
+## `state/taps.txt`
+
+**Module:** `taps`
+
+Homebrew taps (third-party formula/cask repositories), one per line.
+
+```
+homebrew/cask-fonts
+hashicorp/tap
+```
+
 ## `state/host-packages.txt`
 
 **Module:** `host-packages`
 
-rpm-ostree layered packages, one per line. Keep this list minimal — prefer Flatpak and Toolbox over host packages.
+Homebrew formulae installed at the host level, one per line.
 
 ```
-# Essential tools
-vim-enhanced
+ripgrep
+fd
 htop
-git
-
-# x86_64-only hardware drivers
-[x86_64] tuxedo-drivers
 ```
 
-## `state/flatpaks.txt`
+## `state/casks.txt`
 
-**Module:** `flatpaks`
+**Module:** `casks`
 
-Flatpak application IDs, one per line. Installed from Flathub.
-
-```
-org.mozilla.firefox
-com.visualstudio.code
-org.signal.Signal
-```
-
-## `state/repos.conf`
-
-**Module:** `repos`
-
-Third-party RPM repository definitions. Format: `type url-or-name`
-
-Supported types:
-
-| Type | Argument | How it's installed |
-|------|----------|-------------------|
-| `repofile` | URL to `.repo` file | Downloaded to `/etc/yum.repos.d/` via curl |
-| `rpmfusion-free` | _(none)_ | Release RPM installed via rpm-ostree |
-| `rpmfusion-nonfree` | _(none)_ | Release RPM installed via rpm-ostree |
-| `copr` | `owner/project` | `.repo` file downloaded from COPR API |
-
-Example:
+Homebrew casks (GUI applications), one per line.
 
 ```
-[x86_64] repofile https://rpm.tuxedocomputers.com/fedora/tuxedo.repo
-rpmfusion-free
-rpmfusion-nonfree
-[x86_64] copr nuzar/yt6801-dkms
+1password
+1password-cli
+ghostty
+brave-browser
 ```
 
-Note: Silverblue does not ship `dnf`. The repos module uses `curl` and `rpm-ostree` directly.
+## `state/appstore.txt`
 
-## `state/kernel-params.txt`
+**Module:** `appstore`
 
-**Module:** `hardware`
+Mac App Store apps installed via `mas`. Format: `app-id  # name`
 
-Kernel boot parameters, one per line. Applied via `rpm-ostree kargs --append`.
+## `state/mac-defaults.conf`
 
-```
-amd_pstate=active
-nowatchdog
-nmi_watchdog=0
-```
+**Module:** `mac-defaults`
 
-Verify active parameters: `cat /proc/cmdline`
+macOS system preferences applied via `defaults write`. See the file itself for format and examples.
 
-## `state/toolbox-profiles.yml`
+## `state/git-projects.conf`
 
-**Module:** `toolboxes`
+**Module:** `git-projects`
 
-YAML definitions of toolbox container profiles. Parsed via Python's PyYAML.
-
-```yaml
-profiles:
-  dev-base:
-    image: registry.fedoraproject.org/fedora-toolbox:43
-    packages:
-      - gcc
-      - make
-    setup_script: dev-base.sh
-```
-
-## `state/flatpak-overrides.conf`
-
-**Module:** `flatpaks`
-
-Flatpak permission overrides applied with `flatpak override --user`. Format: `app_id permission_type permission_value`
-
-Supported permission types:
-
-| Type | Maps to | Example |
-|------|---------|---------|
-| `filesystem` | `--filesystem=` | `~/.local/share/mise:ro` |
-| `env` | `--env=` | `MY_VAR=value` |
+Git repos to clone. Format: `clone-url  namespace`
 
 ```
-# Give IntelliJ access to mise-managed SDKs
-com.jetbrains.IntelliJ-IDEA-Ultimate filesystem ~/.local/share/mise:ro
-com.jetbrains.IntelliJ-IDEA-Ultimate filesystem ~/.jdks:ro
+git@github.com:org/repo.git  myorg
+https://gitlab.com/group/proj.git  internal
 ```
 
-This is used to give Flatpak applications access to directories they need but can't see due to sandboxing. IntelliJ needs access to mise-managed SDKs for auto-discovery.
+Repos are cloned to `~/scm/<namespace>/<repo>/`. SSH URLs require the 1Password SSH agent.
 
 ## `state/containers.conf`
 
@@ -159,7 +113,31 @@ This is used to give Flatpak applications access to directories they need but ca
 
 Podman container definitions for sandbox environments.
 
-## Adding New Entries
+## `state/brave-profiles.conf`
+
+**Module:** `dotfiles`
+
+Brave profile setup (used by browser-chooser launchers).
+
+## `state/dotfiles-seed.txt`
+
+**Module:** `dotfiles`
+
+Seed entries for dotfile bootstrap.
+
+## `state/usr-tools.conf`
+
+**Module:** `usr-tools`
+
+Tools installed under `/usr/local/` (or comparable) outside of Homebrew.
+
+## `state/zsh-plugins.conf`
+
+**Module:** `dotfiles`
+
+Zsh plugins to install (e.g. via clone or Homebrew).
+
+## Adding new entries
 
 1. Edit the relevant state file
 2. Run `bin/plan` to preview changes
@@ -169,7 +147,6 @@ Podman container definitions for sandbox environments.
 For arch-specific entries, add the `[arch]` prefix and test with `PROVISION_ARCH`:
 
 ```bash
-# Verify it parses correctly for both architectures
 PROVISION_ARCH=x86_64 bin/plan --module host-packages
-PROVISION_ARCH=aarch64 bin/plan --module host-packages
+PROVISION_ARCH=arm64  bin/plan --module host-packages
 ```
