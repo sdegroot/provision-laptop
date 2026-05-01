@@ -66,6 +66,11 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - `lib/yaml.sh` (was only used by toolboxes module)
 
 ### Fixed
+- **`.testcontainers.properties` socket path** — replaced `${user.name}` with the
+  literal `/Users/sdegroot` path. Java properties files are not interpolated by
+  Testcontainers at load time (only build tools like Maven/Gradle do that), so
+  the placeholder was being read as a literal string and the Podman socket
+  could not be reached.
 - **1Password git credential** — added `op-account` support to `git-credential-1password` helper
   and pinned `git.sittard-geleen.nl` to the `degroot.dev` account, fixing push failures where `op`
   defaulted to the wrong account (Flux).
