@@ -44,6 +44,7 @@ yubico-authenticator
 
 # VPN (standalone variant — more features than App Store version)
 tailscale-app
+netbird-ui
 
 # Launcher & productivity
 raycast
