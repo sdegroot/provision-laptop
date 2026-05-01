@@ -126,6 +126,30 @@ if [[ -f "$BRAVE_PROFILES_FILE" ]]; then
             changes_made=1
         fi
 
+        # Seed Bookmarks from repo state if the profile has none yet. Never
+        # overwrites existing bookmarks — re-runs are safe. See docs/bookmark-sync.md.
+        seed_file="${PROVISION_DIR}/state/bookmarks/brave-${dir_name}.json"
+        live_bookmarks="${profile_dir}/Bookmarks"
+        if [[ -f "$seed_file" ]]; then
+            should_seed=false
+            if [[ ! -f "$live_bookmarks" ]]; then
+                should_seed=true
+            elif python3 -c "
+import json, sys
+roots = (json.load(open(sys.argv[1])).get('roots') or {}).values()
+sys.exit(0 if not any(isinstance(r, dict) and r.get('children') for r in roots) else 1)
+" "$live_bookmarks" 2>/dev/null; then
+                should_seed=true
+            fi
+
+            if [[ "$should_seed" == "true" ]]; then
+                cp "$seed_file" "$live_bookmarks"
+                rm -f "${profile_dir}/Bookmarks.bak"
+                log_info "Seeded bookmarks for: ${display_name}"
+                changes_made=1
+            fi
+        fi
+
         # Set name and color via Python (JSON manipulation)
         if python3 - "$prefs_file" "$display_name" "$hex_color" << 'PYTHON'; then
 import json, sys, ctypes

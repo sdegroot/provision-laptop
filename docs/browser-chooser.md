@@ -57,6 +57,12 @@ Chowser is installed via Homebrew Cask (`state/casks.txt`) but its browser
 list is configured manually through its menu-bar UI — there's no machine-readable
 config provisioning for that yet.
 
+## Bookmarks
+
+Each Brave profile's bookmarks are tracked in this repo. See
+[bookmark-sync.md](bookmark-sync.md) for `bin/sync-bookmarks pull` / `push`
+and the apply-time seeding behavior.
+
 ## Troubleshooting
 
 **Profile shows wrong name in Brave:** Brave may overwrite the name on launch.

@@ -25,6 +25,15 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **netbird-ui** cask — menu-bar GUI companion to the existing `netbird` CLI
 - **chatgpt** cask — OpenAI's official ChatGPT desktop app
 - **codex-app** cask — OpenAI's Codex desktop app for managing coding agents
+- **`bin/sync-bookmarks`** + `state/bookmarks/` — pull/push Brave bookmarks
+  between live profiles and the repo. `pull` (live → repo) strips noisy
+  fields (`id`, `date_last_used`, `meta_info.last_visited_desktop`,
+  `checksum`, `sync_metadata`) so committed diffs only show real changes.
+  `push` (repo → live) refuses if Brave is running and removes Chromium's
+  `Bookmarks.bak` so the push isn't undone. The dotfiles module seeds
+  bookmarks into a profile only if it has none yet — never overwrites.
+  Safari is intentionally skipped (binary plist, sandbox-protected;
+  iCloud handles it). See `docs/bookmark-sync.md`.
 
 ### Changed
 - **common.sh** — replace Linux helpers (rpm-ostree, silverblue) with macOS helpers

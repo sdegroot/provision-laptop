@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# sync-bookmarks — Pull/push Brave bookmarks between live profiles and the repo state.
+#
+# Usage:
+#   sync-bookmarks pull    Read live Bookmarks for each profile, strip noisy fields,
+#                          write to state/bookmarks/brave-<profile>.json. Safe while
+#                          Brave is running.
+#   sync-bookmarks push    Copy state/bookmarks/brave-<profile>.json into the live
+#                          profile, replacing the existing Bookmarks file. Brave must
+#                          be quit first.
+#
+# Profiles are read from state/brave-profiles.conf.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVISION_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PROVISION_DIR}/lib/common.sh"
+
+BRAVE_BASE="${HOME}/Library/Application Support/BraveSoftware/Brave-Browser"
+BOOKMARKS_DIR="${PROVISION_DIR}/state/bookmarks"
+PROFILES_FILE="$(state_file_path "brave-profiles.conf")"
+
+# Strip noisy fields from a Chromium Bookmarks JSON file, writing canonical output
+# (sorted keys, indented) to stdout. See docs/bookmark-sync.md for the rules.
+strip_bookmarks() {
+    python3 - "$1" <<'PYTHON'
+import json, sys
+
+NOISY_TOP = {"checksum", "sync_metadata"}
+NOISY_NODE = {"id", "date_last_used"}
+NOISY_META = {"last_visited_desktop", "stars.cluster_uuid"}
+
+def strip_node(node):
+    for k in list(node.keys()):
+        if k in NOISY_NODE:
+            del node[k]
+    if isinstance(node.get("meta_info"), dict):
+        meta = {k: v for k, v in node["meta_info"].items() if k not in NOISY_META}
+        if meta:
+            node["meta_info"] = meta
+        else:
+            del node["meta_info"]
+    for child in node.get("children", []) or []:
+        strip_node(child)
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+for k in NOISY_TOP:
+    data.pop(k, None)
+for root in (data.get("roots") or {}).values():
+    if isinstance(root, dict):
+        strip_node(root)
+
+print(json.dumps(data, indent=2, sort_keys=True))
+PYTHON
+}
+
+# True if the live Bookmarks file represents an empty profile (all roots have no
+# children). Brave creates an empty Bookmarks file on first launch, so we treat
+# that as "not yet seeded".
+is_empty_bookmarks() {
+    python3 - "$1" <<'PYTHON' >/dev/null 2>&1
+import json, sys
+data = json.load(open(sys.argv[1]))
+roots = data.get("roots") or {}
+for root in roots.values():
+    if isinstance(root, dict) and root.get("children"):
+        sys.exit(1)  # has at least one bookmark
+sys.exit(0)         # all empty
+PYTHON
+}
+
+cmd_pull() {
+    if [[ ! -f "$PROFILES_FILE" ]]; then
+        log_error "No brave-profiles.conf found at $PROFILES_FILE"
+        exit 1
+    fi
+    mkdir -p "$BOOKMARKS_DIR"
+
+    local count=0
+    while IFS= read -r line; do
+        read -r dir_name _ <<< "$line"
+        [[ -z "$dir_name" ]] && continue
+
+        local live="${BRAVE_BASE}/${dir_name}/Bookmarks"
+        local target="${BOOKMARKS_DIR}/brave-${dir_name}.json"
+
+        if [[ ! -f "$live" ]]; then
+            log_warn "Profile ${dir_name}: no live Bookmarks file, skipping"
+            continue
+        fi
+
+        strip_bookmarks "$live" > "$target"
+        log_ok "Pulled ${dir_name} -> state/bookmarks/$(basename "$target")"
+        count=$((count + 1))
+    done < <(parse_state_file "$PROFILES_FILE")
+
+    log_info "Pulled bookmarks for ${count} profile(s). Run 'git diff state/bookmarks/' to review."
+}
+
+cmd_push() {
+    if [[ ! -f "$PROFILES_FILE" ]]; then
+        log_error "No brave-profiles.conf found at $PROFILES_FILE"
+        exit 1
+    fi
+    # SYNC_BOOKMARKS_SKIP_BRAVE_GUARD is for tests only — real users should quit Brave.
+    if [[ -z "${SYNC_BOOKMARKS_SKIP_BRAVE_GUARD:-}" ]] && pgrep -x "Brave Browser" >/dev/null 2>&1; then
+        log_error "Brave is running. Quit Brave first (Cmd+Q), then re-run."
+        exit 1
+    fi
+
+    local count=0
+    while IFS= read -r line; do
+        read -r dir_name _ <<< "$line"
+        [[ -z "$dir_name" ]] && continue
+
+        local source_file="${BOOKMARKS_DIR}/brave-${dir_name}.json"
+        local live_dir="${BRAVE_BASE}/${dir_name}"
+
+        if [[ ! -f "$source_file" ]]; then
+            log_warn "No repo bookmarks for ${dir_name}, skipping"
+            continue
+        fi
+        if [[ ! -d "$live_dir" ]]; then
+            log_warn "Profile dir ${dir_name} doesn't exist (run bin/apply --module dotfiles first), skipping"
+            continue
+        fi
+
+        cp "$source_file" "${live_dir}/Bookmarks"
+        # Chromium uses Bookmarks.bak as a self-recovery copy. Removing it forces
+        # Chromium to re-read our pushed file on next launch.
+        rm -f "${live_dir}/Bookmarks.bak"
+        log_ok "Pushed ${dir_name} <- state/bookmarks/$(basename "$source_file")"
+        count=$((count + 1))
+    done < <(parse_state_file "$PROFILES_FILE")
+
+    log_info "Pushed bookmarks to ${count} profile(s). Launch Brave to verify."
+}
+
+case "${1:-}" in
+    pull) cmd_pull ;;
+    push) cmd_push ;;
+    -h|--help|help)
+        sed -n '2,12p' "$0" | sed 's/^# \?//'
+        ;;
+    *)
+        echo "Usage: $0 {pull|push}" >&2
+        echo "       $0 --help" >&2
+        exit 2
+        ;;
+esac

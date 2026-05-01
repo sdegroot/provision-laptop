@@ -1,0 +1,60 @@
+{
+  "roots": {
+    "bookmark_bar": {
+      "children": [
+        {
+          "date_added": "13422099641397737",
+          "guid": "4732825c-d7ee-4e15-90df-59fb217ff48b",
+          "meta_info": {
+            "power_bookmark_meta": ""
+          },
+          "name": "Head",
+          "type": "url",
+          "url": "https://sbplus1.afasfocus.nl/headwind/a/0d6d7f65-bee4-4f20-81b9-bf829a37957c/home"
+        },
+        {
+          "date_added": "13422099647670831",
+          "guid": "20433da0-aaee-40cd-b07b-f581679766d4",
+          "meta_info": {
+            "power_bookmark_meta": ""
+          },
+          "name": "AFAS - Headwind IT",
+          "type": "url",
+          "url": "https://sbplus1.afasfocus.nl/headwind/a/ac877465-426e-487a-ab47-50bad2bb4b54/home"
+        },
+        {
+          "date_added": "13422101685490511",
+          "guid": "2ecd6050-7150-4dc9-80d2-080dcf012f52",
+          "meta_info": {
+            "power_bookmark_meta": ""
+          },
+          "name": "AFAS - Zoef.app",
+          "type": "url",
+          "url": "https://sbplus1.afasfocus.nl/headwind/a/9d29f2a7-8556-4d7d-ad11-3dc8a5ae27c0/home"
+        }
+      ],
+      "date_added": "13422099221996424",
+      "date_modified": "13422101685490511",
+      "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+      "name": "Bookmarks",
+      "type": "folder"
+    },
+    "other": {
+      "children": [],
+      "date_added": "13422099221996424",
+      "date_modified": "0",
+      "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+      "name": "Other Bookmarks",
+      "type": "folder"
+    },
+    "synced": {
+      "children": [],
+      "date_added": "13422099221996424",
+      "date_modified": "0",
+      "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+      "name": "Mobile Bookmarks",
+      "type": "folder"
+    }
+  },
+  "version": 1
+}
