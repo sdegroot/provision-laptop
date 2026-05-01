@@ -1,0 +1,5 @@
+# Desired hostname.
+# A single token applied to ComputerName, HostName, and LocalHostName.
+# Must be a valid Bonjour name: letters, digits, and hyphens only (no spaces).
+
+powerhorse

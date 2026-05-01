@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to macOS.
 
 ### Added
+- **hostname module** — declaratively set `ComputerName`, `HostName`, and
+  `LocalHostName` via `scutil` from a single token in `state/hostname.txt`.
+  Runs before `mac-defaults` in the apply order. Requires sudo.
 - **taps module** — manage Homebrew taps (third-party repositories)
 - **casks module** — manage Homebrew cask GUI applications (replaces Flatpak)
 - **mac-defaults module** — apply macOS system preferences via `defaults write`

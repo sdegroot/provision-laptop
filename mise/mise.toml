@@ -6,7 +6,7 @@
 node = "lts"
 python = "3.13"
 go = "latest"
-java = "25"
+java = "temurin-25"
 
 # AI coding assistants
 # Claude Code uses native installer (see mise/apply.sh), not npm.
