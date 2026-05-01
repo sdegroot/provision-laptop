@@ -69,6 +69,13 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - `lib/yaml.sh` (was only used by toolboxes module)
 
 ### Fixed
+- **`.testcontainers.properties` `docker.host` removed** — the hard-coded
+  `~/.local/share/containers/podman/machine/podman.sock` path no longer matches
+  Podman's actual socket (which now lives under a per-boot `$TMPDIR/podman/`
+  path that changes across restarts). Dropping the line lets Testcontainers
+  fall through to Docker context auto-detection — the same SSH-forwarded
+  socket the `docker` CLI already uses — so it survives `podman machine`
+  restarts.
 - **`.testcontainers.properties` socket path** — replaced `${user.name}` with the
   literal `/Users/sdegroot` path. Java properties files are not interpolated by
   Testcontainers at load time (only build tools like Maven/Gradle do that), so
