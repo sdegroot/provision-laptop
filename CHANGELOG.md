@@ -81,6 +81,12 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
   (`~/.local/bin/git-ssh-sign`) to 1Password's bundled
   `/Applications/1Password.app/Contents/MacOS/op-ssh-sign`. Touch ID is fast enough that the
   cache is unneeded on macOS.
+- **SSH signature verification** — commits were being signed correctly, but
+  `git log --show-signature` and `git verify-commit` errored out with
+  `gpg.ssh.allowedSignersFile needs to be configured and exist`. Added
+  `dotfiles/.ssh/allowed_signers` (symlinked into `~/.ssh/`) and pointed
+  `gpg.ssh.allowedSignersFile` at it in `dotfiles/.gitconfig`, so signatures
+  now verify locally as well as on GitHub.
 
 ### Removed
 - **`git-ssh-sign` caching wrapper** (`dotfiles/.local/bin/git-ssh-sign`) — Linux-only workaround
