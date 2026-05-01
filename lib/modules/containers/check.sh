@@ -38,6 +38,26 @@ else
     drift_found=1
 fi
 
+# Check Testcontainers properties file matches live Podman socket
+TESTCONTAINERS_PROPS="${HOME}/.testcontainers.properties"
+if [[ -L "$TESTCONTAINERS_PROPS" ]]; then
+    log_error "~/.testcontainers.properties is a symlink (legacy dotfile — run apply)"
+    drift_found=1
+elif [[ ! -f "$TESTCONTAINERS_PROPS" ]]; then
+    log_error "~/.testcontainers.properties missing (run apply)"
+    drift_found=1
+elif [[ "$machine_running" == "true" ]]; then
+    podman_socket="$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' 2>/dev/null || true)"
+    if [[ -n "$podman_socket" ]]; then
+        if grep -qxF "docker.host=unix://${podman_socket}" "$TESTCONTAINERS_PROPS"; then
+            log_ok "~/.testcontainers.properties matches live Podman socket"
+        else
+            log_error "~/.testcontainers.properties has stale docker.host (run apply)"
+            drift_found=1
+        fi
+    fi
+fi
+
 # Check container images
 while IFS= read -r line; do
     IFS=':' read -r name build_ctx description <<< "$line"
