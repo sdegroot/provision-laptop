@@ -15,6 +15,12 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
 - **dock module** — manage the macOS Dock declaratively from `state/dock.txt`
   via `dockutil`. Idempotent: only rebuilds the Dock when entries differ.
   Added `dockutil` to `state/host-packages.txt`.
+- **macMLX** (`state/usr-tools.conf`) — local LLM inference on Apple Silicon via
+  Apple's MLX framework. Single open-source SwiftUI app exposing OpenAI- and
+  Ollama-compatible APIs on `localhost:8000`, so existing Ollama-aware tools
+  work unchanged.
+- **`bin/install-dmg`** — strips quarantine xattr after install so unnotarized
+  DMGs (macMLX, Chowser) launch without manual `xattr -cr` intervention.
 - **bootstrap/mac.sh** — first-run setup script for a fresh Mac (Xcode CLI tools, Homebrew)
 
 ### Changed

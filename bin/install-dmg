@@ -30,5 +30,7 @@ fi
 echo "Installing to ~/Applications..."
 mkdir -p "${HOME}/Applications"
 cp -R "$app_path" "${HOME}/Applications/${app_name}.app"
+# Strip Gatekeeper quarantine so unnotarized DMGs launch without prompting.
+xattr -cr "${HOME}/Applications/${app_name}.app"
 
 echo "${app_name} installed successfully"
