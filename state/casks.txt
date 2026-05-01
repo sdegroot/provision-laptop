@@ -58,3 +58,7 @@ podman-desktop
 
 # System info
 coconutbattery
+
+# AI
+chatgpt
+codex-app

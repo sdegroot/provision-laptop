@@ -23,6 +23,8 @@ Complete rewrite of the provisioning system from Fedora Silverblue (Linux) to ma
   DMGs (macMLX, Chowser) launch without manual `xattr -cr` intervention.
 - **bootstrap/mac.sh** — first-run setup script for a fresh Mac (Xcode CLI tools, Homebrew)
 - **netbird-ui** cask — menu-bar GUI companion to the existing `netbird` CLI
+- **chatgpt** cask — OpenAI's official ChatGPT desktop app
+- **codex-app** cask — OpenAI's Codex desktop app for managing coding agents
 
 ### Changed
 - **common.sh** — replace Linux helpers (rpm-ostree, silverblue) with macOS helpers
