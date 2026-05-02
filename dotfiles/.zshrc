@@ -123,9 +123,21 @@ export PATH="${HOME}/.local/bin:${PATH}"
 # 1Password SSH agent
 export SSH_AUTH_SOCK="${HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 
-# Podman socket — Docker-compatible API for tools like Testcontainers
-if [[ -S "${HOME}/.local/share/containers/podman/machine/podman.sock" ]]; then
-    export DOCKER_HOST="unix://${HOME}/.local/share/containers/podman/machine/podman.sock"
+# Podman socket — Docker-compatible API for tools like Testcontainers.
+# Discovered dynamically because the $TMPDIR-based socket path can shift
+# (and the pre-5.x ~/.local/share path no longer exists).
+if command -v podman &>/dev/null; then
+    _podman_socket="$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' 2>/dev/null)"
+    if [[ -n "$_podman_socket" && -S "$_podman_socket" ]]; then
+        export DOCKER_HOST="unix://${_podman_socket}"
+        # Ryuk: mount the in-VM Linux socket, not the macOS host path.
+        # virtiofs returns EOPNOTSUPP trying to mkdir on a socket-typed inode.
+        export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+        # Disable Ryuk for rootless Podman. The properties-file key
+        # testcontainers.ryuk.disabled is no longer honored in TC 2.x.
+        export TESTCONTAINERS_RYUK_DISABLED=true
+    fi
+    unset _podman_socket
 fi
 
 # ---------------------------------------------------------------------------

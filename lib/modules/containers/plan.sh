@@ -32,17 +32,11 @@ if [[ ! -x "$COMPOSE_PLUGIN" ]]; then
     changes_planned=1
 fi
 
-# Check Testcontainers properties file
+# Legacy ~/.testcontainers.properties cleanup
 TESTCONTAINERS_PROPS="${HOME}/.testcontainers.properties"
-if [[ -L "$TESTCONTAINERS_PROPS" ]] || [[ ! -f "$TESTCONTAINERS_PROPS" ]]; then
-    log_plan "Would write ~/.testcontainers.properties with live Podman socket"
+if [[ -e "$TESTCONTAINERS_PROPS" || -L "$TESTCONTAINERS_PROPS" ]]; then
+    log_plan "Would remove legacy ~/.testcontainers.properties"
     changes_planned=1
-elif [[ "$machine_running" == "true" ]]; then
-    podman_socket="$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' 2>/dev/null || true)"
-    if [[ -n "$podman_socket" ]] && ! grep -qxF "docker.host=unix://${podman_socket}" "$TESTCONTAINERS_PROPS"; then
-        log_plan "Would refresh ~/.testcontainers.properties (socket path drift)"
-        changes_planned=1
-    fi
 fi
 
 # Check container images
