@@ -62,3 +62,6 @@ coconutbattery
 # AI
 chatgpt
 codex-app
+
+# Magic: The Gathering
+tolaria
